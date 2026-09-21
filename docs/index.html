@@ -25,7 +25,7 @@
   .nav-links { display: flex; align-items: center; gap: 16px; margin-left: auto; font-size: 14px; }
   .nav-links a:not(.btn) { color: var(--muted); }
   .nav-links a:not(.btn):hover { color: #fff; }
-  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); }
+  .icon-btn { display: none; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); }
   .icon-btn:hover { color: #fff; background: var(--card); }
   .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; padding: 9px 16px; font-weight: 650; font-size: 14px; cursor: pointer; }
   .btn-primary { background: var(--accent); color: #08130c; }
@@ -80,7 +80,7 @@
   footer { border-top: 1px solid var(--border); padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 13.5px; }
   footer .credits { margin-top: 10px; }
   footer a { color: #8ab4f8; }
-  @media (max-width: 640px) { .nav-links a:not(.btn):not(.icon-btn) { display: none; } }
+  @media (max-width: 640px) { .icon-btn { display: inline-flex; } .nav-links a:not(.btn):not(.icon-btn) { display: none; } }
 </style>
 </head>
 <body>
