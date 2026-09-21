@@ -35,6 +35,11 @@ If Form helps your training, consider supporting development:
 - Custom SAF vault plugin for secure user-picked storage
 - Screen wake lock during active workouts via `@capacitor-community/keep-awake`
 
+## Credits
+
+- [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) by [@hasaneyldrm](https://github.com/hasaneyldrm) — the exercise library: 1,324 exercises with animation GIFs, thumbnails, categories, and muscle data
+- [MuscleMapJS](https://github.com/abdofallah/MuscleMapJS) by [@abdofallah](https://github.com/abdofallah) — interactive human body muscle map visualization
+
 ## Repository
 
 - `www/` — the web app (source of truth)
