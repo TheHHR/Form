@@ -40,3 +40,4 @@ If Form helps your training, consider supporting development:
 - `www/` — the web app (source of truth)
 - `android/` — native Android project (Gradle)
 - `.github/workflows/android-build.yml` — CI: builds the signed release APK and publishes it to the [latest release](https://github.com/TheHHR/Form/releases/latest)
+- **Versioning** — edit `version.properties` (semver, e.g. `3.0.2`) and push; `versionCode` is derived as `major×10000 + minor×100 + patch`
