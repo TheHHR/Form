@@ -36,19 +36,29 @@
 
   .eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 12px; }
   header.hero { padding: 72px 0 0; }
-  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 44px; align-items: center; }
+  .hero-copy { max-width: 720px; margin: 0 auto; text-align: center; }
   h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -.03em; line-height: 1.06; margin: 0 0 18px; }
   h1 .hl { color: var(--accent); }
-  .lead { font-size: 17px; color: #c9c9cf; max-width: 470px; }
-  .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 30px; }
+  .lead { font-size: 17px; color: #c9c9cf; max-width: 470px; margin: 0 auto; }
+  .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 22px 0 30px; }
   .hero-badges span { font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; }
-  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero-cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
   .device { background: #000; border: 1px solid #2c2c31; border-radius: 26px; padding: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
   .device img { display: block; width: 100%; border-radius: 18px; }
-  .hero-stage { display: flex; justify-content: center; }
-  .hero-stage .device { width: min(260px, 68vw); }
+  .stage-bleed { margin-top: 46px; }
+  .stage { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 14px 24px 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .stage::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 auto; scroll-snap-align: center; }
+  .stage .device { width: 235px; max-width: 64vw; opacity: .35; transform: scale(.8); filter: grayscale(1); transition: opacity .35s, transform .35s, filter .35s, border-color .35s; }
+  .stage .slide.focused .device { opacity: 1; transform: scale(1.12); filter: none; border-color: var(--accent); }
+  .stage-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 0 0; }
+  .rnav { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: #e8e8ea; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; }
+  .rnav:hover { background: #222227; }
+  .dots { display: flex; gap: 7px; }
+  .dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: #3a3a40; cursor: pointer; padding: 0; }
+  .dots button.on { background: var(--accent); }
   .hero-fade { height: 64px; background: linear-gradient(180deg, transparent, var(--bg)); }
-  @media (max-width: 760px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } .hero-cta { justify-content: center; } .hero-badges { justify-content: center; } }
+  @media (prefers-reduced-motion: reduce) { .stage .device { transition: none; } }
 
   h2 { font-size: 28px; font-weight: 750; letter-spacing: -.02em; margin-bottom: 6px; }
   .section { padding: 56px 0; border-top: 1px solid var(--border); }
@@ -60,12 +70,6 @@
   .feature .f-icon { font-size: 24px; }
   .feature h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
   .feature p { color: var(--muted); font-size: 14px; }
-
-  .bleed { max-width: 1060px; margin: 0 auto; }
-  .rail { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 6px 20px 26px; -webkit-overflow-scrolling: touch; }
-  .rail::-webkit-scrollbar { display: none; }
-  .rail .device { flex: 0 0 224px; }
-  .rail-hint { color: var(--muted); font-size: 13px; text-align: center; }
 
   .donate-note { background: #241a10; border: 1px solid #4a3416; border-radius: 10px; padding: 12px 16px; color: #e8b56a; font-size: 13.5px; margin-bottom: 24px; max-width: 640px; }
   .coin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
@@ -92,7 +96,6 @@
     <a class="icon-btn" href="#donate" aria-label="Donate"><svg viewBox="0 0 24 24" width="17" height="17" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#screenshots">Screenshots</a>
       <a href="#donate">Donate</a>
       <a href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">GitHub</a>
       <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/latest">Download APK</a>
@@ -101,19 +104,38 @@
 </nav>
 
 <header class="hero">
-  <div class="wrap hero-grid">
-    <div class="hero-copy">
-      <p class="eyebrow">Form</p>
-      <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
-      <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
-      <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span></div>
-      <div class="hero-cta">
-        <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/latest">Download APK</a>
-        <a class="btn btn-ghost" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
-      </div>
+  <div class="wrap hero-copy">
+    <p class="eyebrow">Form</p>
+    <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
+    <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
+    <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span></div>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/latest">Download APK</a>
+      <a class="btn btn-ghost" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
     </div>
-    <div class="hero-stage">
-      <div class="device"><img src="screenshots/screenshot-1.png" alt="Form app screenshot" fetchpriority="high" decoding="async"></div>
+  </div>
+  <div class="stage-bleed">
+    <div class="stage" id="stage">
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-1.png" alt="Form app, week overview" fetchpriority="high" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-2.png" alt="Form app screen 2" loading="lazy" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-3.png" alt="Form app screen 3" loading="lazy" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-4.png" alt="Form app screen 4" loading="lazy" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-5.png" alt="Form app screen 5" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" loading="lazy" decoding="async"></div></div>
+    </div>
+    <div class="stage-controls">
+      <button class="rnav" id="stagePrev" type="button" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
+      <div class="dots" id="stageDots"></div>
+      <button class="rnav" id="stageNext" type="button" aria-label="Next screenshot"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></button>
     </div>
   </div>
   <div class="hero-fade"></div>
@@ -131,29 +153,10 @@
       <div class="feature"><div class="f-icon">📚</div><h3>1,324-exercise library</h3><p>Every exercise with an animated demo, category, target muscle and equipment — plus full support for your own custom exercises.</p></div>
       <div class="feature"><div class="f-icon">🥗</div><h3>Nutrition &amp; macros</h3><p>Meal logging with a built-in food database, calorie and macro tracking per day, and water intake.</p></div>
       <div class="feature"><div class="f-icon">📈</div><h3>Progress that shows</h3><p>Training history, personal records, charts and body metrics — see months of work at a glance.</p></div>
-      <div class="feature"><div class="f-icon">🔒</div><h3>Your data, your device</h3><p>Everything lives in a plain-text vault (.md) in a folder you pick on your own storage. Export, import, read it with any editor. No servers, ever.</p></div>
+      <div class="feature"><div class="f-icon">🔒</div><h3>Your data, your device</h3><p>Everything lives in a plain-text vault (.md) in a folder you pick on your own storage — and since it's just files, you can sync it between devices with Google Drive, Syncthing, or any folder-sync tool you like. No servers, ever.</p></div>
       <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Obsidian"><path fill="#9d7cfa" stroke="none" d="M19.355 18.538a68.967 68.959 0 0 0 1.858-2.954.81.81 0 0 0-.062-.9c-.516-.685-1.504-2.075-2.042-3.362-.553-1.321-.636-3.375-.64-4.377a1.707 1.707 0 0 0-.358-1.05l-3.198-4.064a3.744 3.744 0 0 1-.076.543c-.106.503-.307 1.004-.536 1.5-.134.29-.29.6-.446.914l-.31.626c-.516 1.068-.997 2.227-1.132 3.59-.124 1.26.046 2.73.815 4.481.128.011.257.025.386.044a6.363 6.363 0 0 1 3.326 1.505c.916.79 1.744 1.922 2.415 3.5zM8.199 22.569c.073.012.146.02.22.02.78.024 2.095.092 3.16.29.87.16 2.593.64 4.01 1.055 1.083.316 2.198-.548 2.355-1.664.114-.814.33-1.735.725-2.58l-.01.005c-.67-1.87-1.522-3.078-2.416-3.849a5.295 5.295 0 0 0-2.778-1.257c-1.54-.216-2.952.19-3.84.45.532 2.218.368 4.829-1.425 7.531zM5.533 9.938c-.023.1-.056.197-.098.29L2.82 16.059a1.602 1.602 0 0 0 .313 1.772l4.116 4.24c2.103-3.101 1.796-6.02.836-8.3-.728-1.73-1.832-3.081-2.55-3.831zM9.32 14.01c.615-.183 1.606-.465 2.745-.534-.683-1.725-.848-3.233-.716-4.577.154-1.552.7-2.847 1.235-3.95.113-.235.223-.454.328-.664.149-.297.288-.577.419-.86.217-.47.379-.885.46-1.27.08-.38.08-.72-.014-1.043-.095-.325-.297-.675-.68-1.06a1.6 1.6 0 0 0-1.475.36l-4.95 4.452a1.602 1.602 0 0 0-.513.952l-.427 2.83c.672.59 2.328 2.316 3.335 4.711.09.21.175.43.253.653z"/></svg></div><h3>Your data, in plain text</h3><p>Routines, sets, meals and settings are stored as human-readable Markdown files in a folder you choose — drop the folder into <a href="https://obsidian.md" target="_blank" rel="noopener noreferrer">Obsidian</a> and browse your training history like a personal wiki.</p></div>
     </div>
   </div>
-</section>
-
-<section class="section" id="screenshots">
-  <div class="wrap">
-    <div class="sec-head">
-      <p class="eyebrow">Screenshots</p>
-      <h2>A quick look inside.</h2>
-    </div>
-  </div>
-  <div class="bleed">
-    <div class="rail">
-      <div class="device"><img src="screenshots/screenshot-1.png" alt="Form screenshot 1" loading="lazy" decoding="async"></div>
-      <div class="device"><img src="screenshots/screenshot-2.png" alt="Form screenshot 2" loading="lazy" decoding="async"></div>
-      <div class="device"><img src="screenshots/screenshot-3.png" alt="Form screenshot 3" loading="lazy" decoding="async"></div>
-      <div class="device"><img src="screenshots/screenshot-4.png" alt="Form screenshot 4" loading="lazy" decoding="async"></div>
-      <div class="device"><img src="screenshots/screenshot-5.png" alt="Form screenshot 5" loading="lazy" decoding="async"></div>
-    </div>
-  </div>
-  <div class="wrap"><p class="rail-hint">Swipe through them.</p></div>
 </section>
 
 <section class="section" id="donate">
@@ -191,6 +194,58 @@ document.querySelectorAll(".copy").forEach(function (b) {
     });
   });
 });
+</script>
+<script>
+(function () {
+  var rail = document.getElementById("stage");
+  if (!rail) return;
+  var slides = Array.prototype.slice.call(rail.children);
+  var N = slides.length / 3;
+  var smooth = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var dotsWrap = document.getElementById("stageDots");
+  var dots = [];
+  for (var d = 0; d < N; d++) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", "Go to screenshot " + (d + 1));
+    (function (idx) { b.addEventListener("click", function () { go(idx); }); })(d);
+    dotsWrap.appendChild(b);
+    dots.push(b);
+  }
+  function slideW() { return slides[0].getBoundingClientRect().width + 20; }
+  function centerIndex() { return Math.round(rail.scrollLeft / slideW()); }
+  function real(i) { return ((i % N) + N) % N; }
+  var ticking = false;
+  function update() {
+    ticking = false;
+    var i = Math.max(0, Math.min(slides.length - 1, centerIndex()));
+    var r = real(i);
+    slides.forEach(function (s, k) { s.classList.toggle("focused", k === i); });
+    dots.forEach(function (dot, k) { dot.classList.toggle("on", k === r); });
+    if (i < N) rail.scrollLeft += N * slideW();
+    else if (i >= 2 * N) rail.scrollLeft -= N * slideW();
+  }
+  rail.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  });
+  function go(r) {
+    var delta = ((r - real(centerIndex())) % N + N) % N;
+    rail.scrollTo({ left: (centerIndex() + delta) * slideW(), behavior: smooth ? "smooth" : "auto" });
+  }
+  document.getElementById("stagePrev").addEventListener("click", function () {
+    rail.scrollTo({ left: (centerIndex() - 1) * slideW(), behavior: smooth ? "smooth" : "auto" });
+  });
+  document.getElementById("stageNext").addEventListener("click", function () {
+    rail.scrollTo({ left: (centerIndex() + 1) * slideW(), behavior: smooth ? "smooth" : "auto" });
+  });
+  var rt;
+  window.addEventListener("resize", function () {
+    clearTimeout(rt);
+    rt = setTimeout(function () { rail.scrollLeft = (N + real(centerIndex())) * slideW(); }, 150);
+  });
+  rail.scrollLeft = N * slideW();
+  update();
+})();
 </script>
 </body>
 </html>
