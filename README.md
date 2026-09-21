@@ -8,7 +8,7 @@ An offline-first training and nutrition tracker for Android. Plan routines, log 
 - **Exercise library** — hundreds of exercises with animated demos, categories, and custom exercise support
 - **Nutrition** — meal logging with a food database, macro/calorie tracking, water intake
 - **Progress** — training history, charts, and body-metrics tracking
-- **Own your data** — everything lives in a plain-text vault (.md) in a folder you pick on your device; export/import anytime. No servers, no accounts, no tracking.
+- **Own your data** — everything lives in a plain-text vault (.md) in a folder you pick on your device; view and edit it in Obsidian or any editor, export/import anytime. No servers, no accounts, no tracking.
 
 ## Download
 
