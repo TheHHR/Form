@@ -1,6 +1,6 @@
 {
   "name": "form-training-nutrition",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "description": "Form — Training & Nutrition (Capacitor Android build)",
   "scripts": {

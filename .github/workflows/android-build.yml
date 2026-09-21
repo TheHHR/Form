@@ -70,9 +70,6 @@ jobs:
           name: Form ${{ steps.ver.outputs.version }}
           body: |
             **Form ${{ steps.ver.outputs.version }}** — signed release APK.
-
-            Each version gets its own release entry. Install the APK below — updates install over previous versions.
           make_latest: true
           overwrite_files: true
-          generate_release_notes: true
           files: Form-${{ steps.ver.outputs.version }}.apk

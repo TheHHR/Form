@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donate to Form</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0f; color: #e8e8ea; font: 15px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; padding: 48px 16px 64px; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px; }
+  .sub { color: #9a9aa2; margin-bottom: 28px; }
+  .warn { background: #241a10; border: 1px solid #4a3416; border-radius: 10px; padding: 12px 16px; color: #e8b56a; font-size: 13.5px; margin-bottom: 28px; }
+  .card { background: #17171a; border: 1px solid #26262b; border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+  .coin { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  .coin h2 { font-size: 17px; font-weight: 650; }
+  .net { font-size: 11.5px; color: #8a8a92; }
+  .addr { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
+  .addr code { flex: 1; background: #0d0d0f; border: 1px solid #26262b; border-radius: 8px; padding: 9px 12px; font: 12.5px ui-monospace, Consolas, monospace; word-break: break-all; color: #c8e6c9; user-select: all; }
+  .copy { flex: 0 0 auto; background: #26262b; color: #e8e8ea; border: none; border-radius: 8px; padding: 9px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .copy:active { background: #333338; }
+  img { display: block; margin: 0 auto; width: 176px; height: 176px; background: #fff; border-radius: 12px; padding: 10px; }
+  footer { text-align: center; color: #6a6a72; font-size: 13px; margin-top: 30px; }
+  footer a { color: #8ab4f8; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Donate to Form</h1>
+  <p class="sub">Form is free — no ads, no tracking, no accounts. If it helps your training and you'd like to support development, crypto donations are appreciated.</p>
+  <div class="warn">Send <strong>only the matching network</strong> to each address — a transaction sent on the wrong network is unrecoverable. Donations are voluntary and non-refundable.</div>
+
+  <div class="card">
+    <div class="coin"><h2>Bitcoin (BTC)</h2><span class="net">Bitcoin on-chain</span></div>
+    <div class="addr"><code>bc1pvujwgljmpdmc4897pd6ujwkmycypdfmzeedt3e9nzaw9ghmtr5aqm06hs4</code><button class="copy" data-addr="bc1pvujwgljmpdmc4897pd6ujwkmycypdfmzeedt3e9nzaw9ghmtr5aqm06hs4">Copy</button></div>
+    <img src="assets/btc-qr.png" alt="Bitcoin QR code">
+  </div>
+
+  <div class="card">
+    <div class="coin"><h2>Ethereum (ETH) &amp; ERC-20</h2><span class="net">Ethereum — ETH, USDT, USDC…</span></div>
+    <div class="addr"><code>0xEAF538dE44034c96D24F61ad7eaDc477fd7B7ac1</code><button class="copy" data-addr="0xEAF538dE44034c96D24F61ad7eaDc477fd7B7ac1">Copy</button></div>
+    <img src="assets/eth-qr.png" alt="Ethereum QR code">
+  </div>
+
+  <div class="card">
+    <div class="coin"><h2>Solana (SOL) &amp; SPL</h2><span class="net">Solana — SOL, USDT…</span></div>
+    <div class="addr"><code>F2H2YxQZQQBGbk7EGG8EKjbUtLsSjcuzA5fMRJF9W7KS</code><button class="copy" data-addr="F2H2YxQZQQBGbk7EGG8EKjbUtLsSjcuzA5fMRJF9W7KS">Copy</button></div>
+    <img src="assets/sol-qr.png" alt="Solana QR code">
+  </div>
+
+  <div class="card">
+    <div class="coin"><h2>Tron (TRX) &amp; TRC-20</h2><span class="net">TRON — TRX, USDT…</span></div>
+    <div class="addr"><code>TBitYa3rCpBfw5umL7xTD2dXoLkqDaQsTJ</code><button class="copy" data-addr="TBitYa3rCpBfw5umL7xTD2dXoLkqDaQsTJ">Copy</button></div>
+    <img src="assets/trx-qr.png" alt="Tron QR code">
+  </div>
+
+  <div class="card">
+    <div class="coin"><h2>TON</h2><span class="net">TON — TON, USDT jettons…</span></div>
+    <div class="addr"><code>UQCV0o2t6lF-wufTPJqhCxUdNhuf3dOyxlJf1N3nnVufAz0z</code><button class="copy" data-addr="UQCV0o2t6lF-wufTPJqhCxUdNhuf3dOyxlJf1N3nnVufAz0z">Copy</button></div>
+    <img src="assets/ton-qr.png" alt="TON QR code">
+  </div>
+
+  <footer>Thank you for supporting Form 💪 · <a href="https://github.com/TheHHR/Form">Back to the repository</a></footer>
+</div>
+<script>
+document.querySelectorAll(".copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    navigator.clipboard.writeText(b.dataset.addr).then(function () {
+      var t = b.textContent; b.textContent = "Copied";
+      setTimeout(function () { b.textContent = t; }, 1200);
+    });
+  });
+});
+</script>
+</body>
+</html>
