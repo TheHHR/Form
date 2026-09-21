@@ -1,0 +1,17 @@
+{
+  "appId": "com.thehhr.form",
+  "appName": "Form",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK",
+      "insetsHandling": "disable"
+    }
+  }
+}

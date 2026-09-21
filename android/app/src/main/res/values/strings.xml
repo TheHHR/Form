@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Form</string>
+    <string name="title_activity_main">Form</string>
+    <string name="package_name">com.thehhr.form</string>
+    <string name="custom_url_scheme">com.thehhr.form</string>
+</resources>
