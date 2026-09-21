@@ -32,17 +32,26 @@
   .btn-ghost:hover { background: var(--card); }
   .btn-lg { padding: 13px 26px; font-size: 16px; border-radius: 12px; }
 
-  header.hero { text-align: center; padding: 84px 0 64px; }
-  .hero-icon { width: 96px; height: 96px; border-radius: 22px; }
-  h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: -.03em; margin: 20px 0 10px; }
-  .tagline { font-size: clamp(16px, 2.5vw, 20px); color: #c9c9cf; max-width: 620px; margin: 0 auto; }
-  .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 22px 0 30px; }
+  .eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 12px; }
+  header.hero { padding: 72px 0 0; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 44px; align-items: center; }
+  h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -.03em; line-height: 1.06; margin: 0 0 18px; }
+  h1 .hl { color: var(--accent); }
+  .lead { font-size: 17px; color: #c9c9cf; max-width: 470px; }
+  .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 30px; }
   .hero-badges span { font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; }
-  .hero-cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .device { background: #000; border: 1px solid #2c2c31; border-radius: 34px; padding: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .device img { display: block; width: 100%; border-radius: 25px; }
+  .hero-stage { display: flex; justify-content: center; }
+  .hero-stage .device { width: min(260px, 68vw); }
+  .hero-fade { height: 64px; background: linear-gradient(180deg, transparent, var(--bg)); }
+  @media (max-width: 760px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } }
 
-  h2 { font-size: 26px; font-weight: 750; letter-spacing: -.02em; margin-bottom: 6px; }
+  h2 { font-size: 28px; font-weight: 750; letter-spacing: -.02em; margin-bottom: 6px; }
   .section { padding: 56px 0; border-top: 1px solid var(--border); }
   .section-sub { color: var(--muted); margin-bottom: 30px; font-size: 15px; }
+  .sec-head { margin-bottom: 30px; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
   .feature { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
@@ -50,8 +59,11 @@
   .feature h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
   .feature p { color: var(--muted); font-size: 14px; }
 
-  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  .shots img { width: 100%; border-radius: 14px; border: 1px solid var(--border); }
+  .bleed { max-width: 1060px; margin: 0 auto; }
+  .rail { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 6px 20px 26px; -webkit-overflow-scrolling: touch; }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail .device { flex: 0 0 224px; }
+  .rail-hint { color: var(--muted); font-size: 13px; text-align: center; }
 
   .donate-note { background: #241a10; border: 1px solid #4a3416; border-radius: 10px; padding: 12px 16px; color: #e8b56a; font-size: 13.5px; margin-bottom: 24px; max-width: 640px; }
   .coin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
@@ -84,21 +96,32 @@
   </div>
 </nav>
 
-<header class="hero wrap">
-  <img class="hero-icon" src="assets/icon.png" alt="Form app icon">
-  <h1>Form — Training &amp; Nutrition</h1>
-  <p class="tagline">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
-  <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span><span>Android 10+</span></div>
-  <div class="hero-cta">
-    <a class="btn btn-primary btn-lg" href="https://github.com/TheHHR/Form/releases/latest">⬇ Download APK — free</a>
-    <a class="btn btn-ghost btn-lg" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Form</p>
+      <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
+      <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
+      <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span><span>Android 10+</span></div>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="https://github.com/TheHHR/Form/releases/latest">⬇ Download APK — free</a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </div>
+    </div>
+    <div class="hero-stage">
+      <div class="device"><img src="screenshots/screenshot-1.png" alt="Form app screenshot" fetchpriority="high" decoding="async"></div>
+    </div>
   </div>
+  <div class="hero-fade"></div>
 </header>
 
 <section class="section" id="features">
   <div class="wrap">
-    <h2>Everything a gym bag app should be</h2>
-    <p class="section-sub">One app for the whole cycle: plan, train, eat, review.</p>
+    <div class="sec-head">
+      <p class="eyebrow">Features</p>
+      <h2>One app for the whole cycle.</h2>
+      <p class="section-sub">Plan the week, train with a timer that has your back, log what you ate, and watch the trend.</p>
+    </div>
     <div class="grid">
       <div class="feature"><div class="f-icon">🏋️</div><h3>Guided workouts</h3><p>Scheduled routines, a focused active-workout screen, automatic rest timers between sets, supersets and secondary exercises.</p></div>
       <div class="feature"><div class="f-icon">📚</div><h3>1,324-exercise library</h3><p>Every exercise with an animated demo, category, target muscle and equipment — plus full support for your own custom exercises.</p></div>
@@ -112,21 +135,29 @@
 
 <section class="section" id="screenshots">
   <div class="wrap">
-    <h2>Screenshots</h2>
-    <p class="section-sub">A quick look inside the app.</p>
-    <div class="shots">
-      <img src="screenshots/screenshot-1.png" alt="Form screenshot 1" loading="lazy">
-      <img src="screenshots/screenshot-2.png" alt="Form screenshot 2" loading="lazy">
-      <img src="screenshots/screenshot-3.png" alt="Form screenshot 3" loading="lazy">
-      <img src="screenshots/screenshot-4.png" alt="Form screenshot 4" loading="lazy">
+    <div class="sec-head">
+      <p class="eyebrow">Screenshots</p>
+      <h2>A quick look inside.</h2>
     </div>
   </div>
+  <div class="bleed">
+    <div class="rail">
+      <div class="device"><img src="screenshots/screenshot-1.png" alt="Form screenshot 1" loading="lazy" decoding="async"></div>
+      <div class="device"><img src="screenshots/screenshot-2.png" alt="Form screenshot 2" loading="lazy" decoding="async"></div>
+      <div class="device"><img src="screenshots/screenshot-3.png" alt="Form screenshot 3" loading="lazy" decoding="async"></div>
+      <div class="device"><img src="screenshots/screenshot-4.png" alt="Form screenshot 4" loading="lazy" decoding="async"></div>
+    </div>
+  </div>
+  <div class="wrap"><p class="rail-hint">Swipe through them.</p></div>
 </section>
 
 <section class="section" id="donate">
   <div class="wrap">
-    <h2>Donate</h2>
-    <p class="section-sub">Form is free. If it helps your training and you'd like to support development, crypto donations are appreciated.</p>
+    <div class="sec-head">
+      <p class="eyebrow">Donate</p>
+      <h2>Keep Form free.</h2>
+      <p class="section-sub">If it helps your training and you'd like to support development, crypto donations are appreciated.</p>
+    </div>
     <div class="donate-note">Send <strong>only the matching network</strong> to each address — a transaction sent on the wrong network is unrecoverable. Donations are voluntary and non-refundable.</div>
     <div class="coin-grid">
       <div class="coin"><h3>Bitcoin (BTC)</h3><span class="net">Bitcoin on-chain</span><img src="assets/btc-qr.png" alt="Bitcoin QR code"><div class="addr"><button class="copy" data-addr="bc1pvujwgljmpdmc4897pd6ujwkmycypdfmzeedt3e9nzaw9ghmtr5aqm06hs4">Copy address</button></div></div>
