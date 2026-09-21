@@ -46,7 +46,7 @@
   .hero-stage { display: flex; justify-content: center; }
   .hero-stage .device { width: min(260px, 68vw); }
   .hero-fade { height: 64px; background: linear-gradient(180deg, transparent, var(--bg)); }
-  @media (max-width: 760px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } }
+  @media (max-width: 760px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } .hero-cta { justify-content: center; } .hero-badges { justify-content: center; } }
 
   h2 { font-size: 28px; font-weight: 750; letter-spacing: -.02em; margin-bottom: 6px; }
   .section { padding: 56px 0; border-top: 1px solid var(--border); }
@@ -78,7 +78,10 @@
   footer { border-top: 1px solid var(--border); padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 13.5px; }
   footer .credits { margin-top: 10px; }
   footer a { color: #8ab4f8; }
-  @media (max-width: 640px) { .nav-links a:not(.btn) { display: none; } }
+  @media (max-width: 640px) {
+    .nav-in { flex-wrap: wrap; }
+    .nav-links { width: 100%; margin-left: 0; padding-top: 10px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px 14px; font-size: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -102,10 +105,10 @@
       <p class="eyebrow">Form</p>
       <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
       <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
-      <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span><span>Android 10+</span></div>
+      <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span></div>
       <div class="hero-cta">
-        <a class="btn btn-primary btn-lg" href="https://github.com/TheHHR/Form/releases/latest">⬇ Download APK — free</a>
-        <a class="btn btn-ghost btn-lg" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/latest">Download APK</a>
+        <a class="btn btn-ghost" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
       </div>
     </div>
     <div class="hero-stage">
@@ -155,7 +158,7 @@
   <div class="wrap">
     <div class="sec-head">
       <p class="eyebrow">Donate</p>
-      <h2>Keep Form free.</h2>
+      <h2>Support the project.</h2>
       <p class="section-sub">If it helps your training and you'd like to support development, crypto donations are appreciated.</p>
     </div>
     <div class="donate-note">Send <strong>only the matching network</strong> to each address — a transaction sent on the wrong network is unrecoverable. Donations are voluntary and non-refundable.</div>
