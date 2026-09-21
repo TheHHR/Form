@@ -1095,6 +1095,9 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .settings-row[data-mode="hidden"] .settings-row-main > span { text-decoration: line-through; }
 .settings-row[data-mode="hidden"] { opacity: .55; }
 .settings-footer { display: grid; gap: 3px; justify-items: center; margin-top: var(--space-2); padding: 0 4px; color: var(--text-faint); font-size: 11px; text-align: center; }
+.settings-github-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 4px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--divider); border-radius: 999px; font-size: 11px; font-weight: var(--weight-medium); text-decoration: none; }
+.settings-github-link .icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.settings-github-link:active { color: var(--text); background: var(--surface-container-high); }
 .progress-log-paste { padding: var(--space-3) var(--space-3) var(--space-2); border-top: 1px solid var(--divider); }
 .progress-log-paste > label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
 .progress-log-paste textarea { width: 100%; min-height: 140px; padding: 10px; color: var(--text); background: var(--surface-container-high); border: none; resize: none; user-select: text; }
