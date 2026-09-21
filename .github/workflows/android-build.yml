@@ -63,21 +63,16 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - name: Remove previous release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view latest --json assets --jq '.assets[].name' 2>/dev/null | xargs -r -n1 gh release delete-asset latest -y || true
-
-      - name: Publish to rolling latest release
+      - name: Publish version release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
+          tag_name: v${{ steps.ver.outputs.version }}
           name: Form ${{ steps.ver.outputs.version }}
           body: |
             **Form ${{ steps.ver.outputs.version }}** — signed release APK.
 
-            Every push to `main` replaces this release with the current build. Download the APK below and install it — updates install over previous versions.
+            Each version gets its own release entry. Install the APK below — updates install over previous versions.
           make_latest: true
+          overwrite_files: true
           generate_release_notes: true
           files: Form-${{ steps.ver.outputs.version }}.apk
