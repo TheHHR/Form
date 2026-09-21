@@ -16,3 +16,4 @@ android/app/src/main/assets/public/
 *.keystore
 *.jks
 !android/app/debug.keystore
+android/build-log.txt
