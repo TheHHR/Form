@@ -46,9 +46,10 @@
   .device { background: #000; border: 1px solid #2c2c31; border-radius: 26px; padding: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
   .device img { display: block; width: 100%; border-radius: 18px; }
   .stage-bleed { margin-top: 46px; }
-  .stage { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 14px 24px 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .stage { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 34px 24px 30px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .stage::-webkit-scrollbar { display: none; }
-  .slide { flex: 0 0 auto; scroll-snap-align: center; }
+  .slide { flex: 0 0 auto; scroll-snap-align: center; cursor: pointer; }
+  .slide.focused { cursor: default; }
   .stage .device { width: 235px; max-width: 64vw; opacity: .35; transform: scale(.8); filter: grayscale(1); transition: opacity .35s, transform .35s, filter .35s, border-color .35s; }
   .stage .slide.focused .device { opacity: 1; transform: scale(1.12); filter: none; border-color: var(--accent); }
   .stage-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 0 0; }
@@ -106,7 +107,7 @@
 <header class="hero">
   <div class="wrap hero-copy">
     <p class="eyebrow">Form</p>
-    <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
+    <h1>Train hard.<br>Eat right.<br><span class="hl">Let's get jacked.</span></h1>
     <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
     <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span></div>
     <div class="hero-cta">
@@ -212,38 +213,56 @@ document.querySelectorAll(".copy").forEach(function (b) {
     dotsWrap.appendChild(b);
     dots.push(b);
   }
-  function slideW() { return slides[0].getBoundingClientRect().width + 20; }
-  function centerIndex() { return Math.round(rail.scrollLeft / slideW()); }
+  function centerPos(i) {
+    return slides[i].offsetLeft - (rail.clientWidth - slides[i].offsetWidth) / 2;
+  }
+  function focusedIndex() {
+    var mid = rail.scrollLeft + rail.clientWidth / 2;
+    var best = 0, dist = Infinity;
+    for (var k = 0; k < slides.length; k++) {
+      var c = slides[k].offsetLeft + slides[k].offsetWidth / 2;
+      var dd = Math.abs(c - mid);
+      if (dd < dist) { dist = dd; best = k; }
+    }
+    return best;
+  }
   function real(i) { return ((i % N) + N) % N; }
   var ticking = false;
   function update() {
     ticking = false;
-    var i = Math.max(0, Math.min(slides.length - 1, centerIndex()));
+    var i = focusedIndex();
     var r = real(i);
     slides.forEach(function (s, k) { s.classList.toggle("focused", k === i); });
     dots.forEach(function (dot, k) { dot.classList.toggle("on", k === r); });
-    if (i < N) rail.scrollLeft += N * slideW();
-    else if (i >= 2 * N) rail.scrollLeft -= N * slideW();
+    if (i < 2) rail.scrollLeft = centerPos(i + N);
+    else if (i > slides.length - 3) rail.scrollLeft = centerPos(i - N);
   }
   rail.addEventListener("scroll", function () {
     if (!ticking) { ticking = true; requestAnimationFrame(update); }
   });
+  slides.forEach(function (s, k) {
+    s.addEventListener("click", function () {
+      if (s.classList.contains("focused")) return;
+      go(real(k));
+    });
+  });
   function go(r) {
-    var delta = ((r - real(centerIndex())) % N + N) % N;
-    rail.scrollTo({ left: (centerIndex() + delta) * slideW(), behavior: smooth ? "smooth" : "auto" });
+    var i = focusedIndex();
+    var delta = ((r - real(i)) % N + N) % N;
+    rail.scrollTo({ left: centerPos(i + delta), behavior: smooth ? "smooth" : "auto" });
   }
   document.getElementById("stagePrev").addEventListener("click", function () {
-    rail.scrollTo({ left: (centerIndex() - 1) * slideW(), behavior: smooth ? "smooth" : "auto" });
+    rail.scrollTo({ left: centerPos(focusedIndex() - 1), behavior: smooth ? "smooth" : "auto" });
   });
   document.getElementById("stageNext").addEventListener("click", function () {
-    rail.scrollTo({ left: (centerIndex() + 1) * slideW(), behavior: smooth ? "smooth" : "auto" });
+    rail.scrollTo({ left: centerPos(focusedIndex() + 1), behavior: smooth ? "smooth" : "auto" });
   });
   var rt;
   window.addEventListener("resize", function () {
     clearTimeout(rt);
-    rt = setTimeout(function () { rail.scrollLeft = (N + real(centerIndex())) * slideW(); }, 150);
+    rt = setTimeout(function () { rail.scrollLeft = centerPos(focusedIndex()); }, 150);
   });
-  rail.scrollLeft = N * slideW();
+  rail.scrollLeft = centerPos(N);
   update();
 })();
 </script>
