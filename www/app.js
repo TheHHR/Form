@@ -3888,20 +3888,7 @@ function closeProgressSettings(){
   closeCustomExercisePaste();
 }
 function formatRestDuration(value){return `${value} sec`}
-function isFreshVault(){
-  if(state.routines.length)return false;
-  if(state.progress.logs.length)return false;
-  if(Object.keys(state.fuel.history).length)return false;
-  if(state.fuel.foodDb.some(item=>item.id!=='custom'))return false;
-  const p=state.fuel.profile,defaults=loadFuelState().profile;
-  const wF=state.units.weight==='lb'?LB_PER_KG:1,hF=state.units.height==='ftin'?1/CM_PER_IN:1;
-  if(p.age!==defaults.age)return false;
-  if(Math.abs(p.heightCm-defaults.heightCm*hF)>0.05)return false;
-  if(Math.abs(p.currentWeightKg-defaults.currentWeightKg*wF)>0.05||Math.abs(p.startWeightKg-defaults.startWeightKg*wF)>0.05||Math.abs(p.goalWeightKg-defaults.goalWeightKg*wF)>0.05)return false;
-  if(p.activity!==defaults.activity||p.strategy!==defaults.strategy)return false;
-  return true;
-}
-function unitsLocked(){return !isFreshVault()}
+function unitsLocked(){return state.progress.logs.length>0}
 function renderUnitSegs(){
   document.querySelectorAll('[data-unit-seg]').forEach(group=>{
     const dim=group.dataset.unitSeg;
@@ -5532,7 +5519,7 @@ document.querySelectorAll('[data-unit-seg]').forEach(group=>{
   group.addEventListener('click',(event)=>{
     const button=event.target.closest('[data-unit-value]');
     if(!button||button.disabled)return;
-    if (unitsLocked()){toast('Units can only be changed while the vault is empty');return;}
+    if (unitsLocked()){toast('Units can only be changed while your training log is empty');return;}
     const dim=group.dataset.unitSeg;
     if(state.units[dim]===button.dataset.unitValue)return;
     if(dim==='weight'){
