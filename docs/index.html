@@ -88,6 +88,11 @@
   .coin-info .net { font-size: 11.5px; color: #8a8a92; display: block; margin: 2px 0 10px; }
   .copy { background: #26262b; color: #e8e8ea; border: none; border-radius: 8px; padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .copy:active { background: #333338; }
+  .coin-row[data-qr="hidden"] img { display: none; }
+  .coin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .qr-btn { background: transparent; color: #e8e8ea; border: 1px solid var(--border); border-radius: 8px; padding: 7px 17px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .qr-btn:hover { background: var(--card); }
+  .qr-btn:active { background: #333338; }
 
   footer { border-top: 1px solid var(--border); padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 13.5px; }
   footer a { color: var(--accent); }
@@ -175,12 +180,12 @@
     </div>
     <div class="donate-note">Send <strong>only the matching network</strong> to each address — a transaction sent on the wrong network is unrecoverable. Donations are voluntary and non-refundable.</div>
     <div class="coin-list">
-      <div class="coin-row"><img src="assets/btc-qr.png" alt="Bitcoin QR code"><div class="coin-info"><h3>Bitcoin (BTC)</h3><span class="net">Bitcoin on-chain</span><button class="copy" data-addr="bc1pvujwgljmpdmc4897pd6ujwkmycypdfmzeedt3e9nzaw9ghmtr5aqm06hs4">Copy address</button></div></div>
-      <div class="coin-row"><img src="assets/ltc-qr.png" alt="Litecoin QR code"><div class="coin-info"><h3>Litecoin (LTC)</h3><span class="net">Litecoin on-chain</span><button class="copy" data-addr="ltc1p6dufetkpc3ul6fz48vvk37882fwel50hhwwdqsks0yngn3pegzlq9dg46d">Copy address</button></div></div>
-      <div class="coin-row"><img src="assets/eth-qr.png" alt="Ethereum QR code"><div class="coin-info"><h3>Ethereum (ETH) &amp; ERC-20</h3><span class="net">Ethereum — ETH, USDT, USDC…</span><button class="copy" data-addr="0xEAF538dE44034c96D24F61ad7eaDc477fd7B7ac1">Copy address</button></div></div>
-      <div class="coin-row"><img src="assets/sol-qr.png" alt="Solana QR code"><div class="coin-info"><h3>Solana (SOL) &amp; SPL</h3><span class="net">Solana — SOL, USDT…</span><button class="copy" data-addr="F2H2YxQZQQBGbk7EGG8EKjbUtLsSjcuzA5fMRJF9W7KS">Copy address</button></div></div>
-      <div class="coin-row"><img src="assets/trx-qr.png" alt="Tron QR code"><div class="coin-info"><h3>Tron (TRX) &amp; TRC-20</h3><span class="net">TRON — TRX, USDT…</span><button class="copy" data-addr="TBitYa3rCpBfw5umL7xTD2dXoLkqDaQsTJ">Copy address</button></div></div>
-      <div class="coin-row"><img src="assets/ton-qr.png" alt="TON QR code"><div class="coin-info"><h3>TON</h3><span class="net">TON — TON, USDT jettons…</span><button class="copy" data-addr="UQCV0o2t6lF-wufTPJqhCxUdNhuf3dOyxlJf1N3nnVufAz0z">Copy address</button></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/btc-qr.png" alt="Bitcoin QR code" id="btcQr"><div class="coin-info"><h3>Bitcoin (BTC)</h3><span class="net">Bitcoin on-chain</span><div class="coin-actions"><button class="copy" data-addr="bc1pvujwgljmpdmc4897pd6ujwkmycypdfmzeedt3e9nzaw9ghmtr5aqm06hs4">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="btcQr">Show QR</button></div></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/ltc-qr.png" alt="Litecoin QR code" id="ltcQr"><div class="coin-info"><h3>Litecoin (LTC)</h3><span class="net">Litecoin on-chain</span><div class="coin-actions"><button class="copy" data-addr="ltc1p6dufetkpc3ul6fz48vvk37882fwel50hhwwdqsks0yngn3pegzlq9dg46d">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="ltcQr">Show QR</button></div></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/eth-qr.png" alt="Ethereum QR code" id="ethQr"><div class="coin-info"><h3>Ethereum (ETH) &amp; ERC-20</h3><span class="net">Ethereum — ETH, USDT, USDC…</span><div class="coin-actions"><button class="copy" data-addr="0xEAF538dE44034c96D24F61ad7eaDc477fd7B7ac1">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="ethQr">Show QR</button></div></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/sol-qr.png" alt="Solana QR code" id="solQr"><div class="coin-info"><h3>Solana (SOL) &amp; SPL</h3><span class="net">Solana — SOL, USDT…</span><div class="coin-actions"><button class="copy" data-addr="F2H2YxQZQQBGbk7EGG8EKjbUtLsSjcuzA5fMRJF9W7KS">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="solQr">Show QR</button></div></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/trx-qr.png" alt="Tron QR code" id="trxQr"><div class="coin-info"><h3>Tron (TRX) &amp; TRC-20</h3><span class="net">TRON — TRX, USDT…</span><div class="coin-actions"><button class="copy" data-addr="TBitYa3rCpBfw5umL7xTD2dXoLkqDaQsTJ">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="trxQr">Show QR</button></div></div></div>
+      <div class="coin-row" data-qr="hidden"><img src="assets/ton-qr.png" alt="TON QR code" id="tonQr"><div class="coin-info"><h3>TON</h3><span class="net">TON — TON, USDT jettons…</span><div class="coin-actions"><button class="copy" data-addr="UQCV0o2t6lF-wufTPJqhCxUdNhuf3dOyxlJf1N3nnVufAz0z">Copy address</button><button class="qr-btn" type="button" aria-expanded="false" aria-controls="tonQr">Show QR</button></div></div></div>
     </div>
   </div>
 </section>
@@ -198,6 +203,16 @@ document.querySelectorAll(".copy").forEach(function (b) {
       var t = b.textContent; b.textContent = "Copied";
       setTimeout(function () { b.textContent = t; }, 1200);
     });
+  });
+});
+document.querySelectorAll(".coin-row").forEach(function (row) {
+  var btn = row.querySelector(".qr-btn");
+  if (!btn) return;
+  btn.addEventListener("click", function () {
+    var hidden = row.getAttribute("data-qr") === "hidden";
+    row.setAttribute("data-qr", hidden ? "shown" : "hidden");
+    btn.setAttribute("aria-expanded", String(hidden));
+    btn.textContent = hidden ? "Hide QR" : "Show QR";
   });
 });
 </script>
