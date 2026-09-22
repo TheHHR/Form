@@ -23,11 +23,18 @@ const STORAGE_KEYS=Object.freeze({
   accent:'form-accent',
   customExercises:'form-custom-exercises',
   tags:'form-exercise-tags',
+  tabLabels:'form-tab-labels',
+  units:'form-units',
   fuel:'form-fuel-data',
   legacyFuel:'fuel_fdc_nutrition_db'
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
+const LB_PER_KG=2.20462, CM_PER_IN=2.54;
+function unitWeightLabel(){return state.units.weight}
+function unitDistLabel(){return state.units.distance}
+function weightStep(){return state.units.weight==='lb'?5:2.5}
+function distStep(){return state.units.distance==='mi'?0.25:0.5}
 const ACCENTS=Object.freeze({
   red:{base:'#ff453a',rgb:'255,69,58',ink:'#ffffff'},
   blue:{base:'#0a84ff',rgb:'10,132,255',ink:'#ffffff'},
@@ -46,6 +53,7 @@ function applyAccent(name){
   root.setProperty('--accent-rgb',palette.rgb);
 }
 applyAccent(activeAccent);
+function applyTabLabels(){document.body.classList.toggle('no-tab-labels',state?state.showTabLabels===false:false)}
 const BODY_WEIGHT='body weight';
 const WEIGHTLESS_EQUIPMENT=new Set(['body weight','assisted','band','bosu ball','hammer','medicine ball','resistance band','roller','rope','skierg machine','stability ball','tire','upper body ergometer','wheel roller']);
 function exerciseHasWeight(exercise){return Boolean(exercise)&&!WEIGHTLESS_EQUIPMENT.has(String(exercise.equipment||'').trim().toLowerCase())}
@@ -109,6 +117,8 @@ function updateCustomExercise(exerciseId,data){
   return exercise;
 }
 const TAG_LIMITS=Object.freeze({perExercise:12,distinct:100,maxLength:24});
+function normalizeTagId(id){const s=String(id).trim();return /^\d+$/.test(s)&&s.length<4?s.padStart(4,'0'):s}
+function compareTagIds(a,b){if(/^\d+$/.test(a)&&/^\d+$/.test(b))return Number(a)-Number(b);return String(a).localeCompare(String(b))}
 function sanitizeTagName(value){return String(value||'').replace(/[,|#]/g,' ').replace(/\s+/g,' ').trim().slice(0,TAG_LIMITS.maxLength)}
 function exerciseTagsOf(exerciseId){return state.exerciseTags[String(exerciseId)]||[]}
 function allTagNames(){
@@ -320,6 +330,80 @@ function formatProgressDateValue(value){if(!isValidProgressDate(value))return'';
 
 const DEFAULT_FOOD_DB = [
   { id: 'custom', name: 'Select a meal or add one', p100: 0, c100: 0, f100: 0, cals100: 0, defaultGrams: 100, liked: false },
+];
+const DEFAULT_FOOD_DB_ITEMS = [
+  { id: 'd-001', name: 'Chicken Breast, cooked', p100: 31, c100: 0, f100: 3.6, cals100: 165, defaultGrams: 150, liked: false },
+  { id: 'd-002', name: 'Lean Ground Beef, cooked', p100: 26, c100: 0, f100: 17, cals100: 250, defaultGrams: 150, liked: false },
+  { id: 'd-003', name: 'Salmon Fillet, baked', p100: 20, c100: 0, f100: 13, cals100: 208, defaultGrams: 150, liked: false },
+  { id: 'd-004', name: 'Tuna, canned in water', p100: 26, c100: 0, f100: 1, cals100: 116, defaultGrams: 100, liked: false },
+  { id: 'd-005', name: 'Egg, whole', p100: 12.6, c100: 0.7, f100: 9.5, cals100: 143, defaultGrams: 100, liked: false },
+  { id: 'd-006', name: 'Greek Yogurt, 0%', p100: 10, c100: 3.6, f100: 0.4, cals100: 59, defaultGrams: 170, liked: false },
+  { id: 'd-007', name: 'Cottage Cheese', p100: 11, c100: 3.4, f100: 4.3, cals100: 98, defaultGrams: 150, liked: false },
+  { id: 'd-008', name: 'Whey Protein Powder', p100: 80, c100: 8, f100: 6, cals100: 400, defaultGrams: 30, liked: false },
+  { id: 'd-009', name: 'Milk, 2%', p100: 3.3, c100: 4.8, f100: 2, cals100: 50, defaultGrams: 250, liked: false },
+  { id: 'd-010', name: 'Tofu', p100: 8, c100: 1.9, f100: 4.8, cals100: 76, defaultGrams: 150, liked: false },
+  { id: 'd-011', name: 'Pork Loin, cooked', p100: 27, c100: 0, f100: 9, cals100: 198, defaultGrams: 150, liked: false },
+  { id: 'd-012', name: 'Turkey Breast, cooked', p100: 30, c100: 0, f100: 1, cals100: 135, defaultGrams: 150, liked: false },
+  { id: 'd-013', name: 'Shrimp, cooked', p100: 24, c100: 0.2, f100: 0.3, cals100: 99, defaultGrams: 150, liked: false },
+  { id: 'd-014', name: 'Sardines, canned', p100: 25, c100: 0, f100: 11, cals100: 208, defaultGrams: 100, liked: false },
+  { id: 'd-015', name: 'Bacon', p100: 37, c100: 1.4, f100: 42, cals100: 541, defaultGrams: 30, liked: false },
+  { id: 'd-016', name: 'Ham, sliced', p100: 21, c100: 1.5, f100: 6, cals100: 145, defaultGrams: 100, liked: false },
+  { id: 'd-017', name: 'Steak, Sirloin', p100: 27, c100: 0, f100: 15, cals100: 244, defaultGrams: 150, liked: false },
+  { id: 'd-018', name: 'White Rice, cooked', p100: 2.7, c100: 28, f100: 0.3, cals100: 130, defaultGrams: 200, liked: false },
+  { id: 'd-019', name: 'Brown Rice, cooked', p100: 2.6, c100: 26, f100: 1, cals100: 123, defaultGrams: 200, liked: false },
+  { id: 'd-020', name: 'Pasta, cooked', p100: 5.8, c100: 31, f100: 0.9, cals100: 158, defaultGrams: 200, liked: false },
+  { id: 'd-021', name: 'Oats, dry', p100: 13, c100: 68, f100: 6.5, cals100: 379, defaultGrams: 80, liked: false },
+  { id: 'd-022', name: 'Bread, whole wheat', p100: 13, c100: 41, f100: 3.4, cals100: 247, defaultGrams: 60, liked: false },
+  { id: 'd-023', name: 'Potato, boiled', p100: 1.9, c100: 20, f100: 0.1, cals100: 87, defaultGrams: 200, liked: false },
+  { id: 'd-024', name: 'Sweet Potato, baked', p100: 2, c100: 21, f100: 0.1, cals100: 90, defaultGrams: 200, liked: false },
+  { id: 'd-025', name: 'Quinoa, cooked', p100: 4.4, c100: 21, f100: 1.9, cals100: 120, defaultGrams: 180, liked: false },
+  { id: 'd-026', name: 'Banana', p100: 1.1, c100: 23, f100: 0.3, cals100: 89, defaultGrams: 120, liked: false },
+  { id: 'd-027', name: 'Apple', p100: 0.3, c100: 14, f100: 0.2, cals100: 52, defaultGrams: 180, liked: false },
+  { id: 'd-028', name: 'Orange', p100: 0.9, c100: 12, f100: 0.1, cals100: 47, defaultGrams: 140, liked: false },
+  { id: 'd-029', name: 'Strawberries', p100: 0.7, c100: 7.7, f100: 0.3, cals100: 32, defaultGrams: 150, liked: false },
+  { id: 'd-030', name: 'Blueberries', p100: 0.7, c100: 14, f100: 0.3, cals100: 57, defaultGrams: 140, liked: false },
+  { id: 'd-031', name: 'Avocado', p100: 2, c100: 8.5, f100: 14.7, cals100: 160, defaultGrams: 100, liked: false },
+  { id: 'd-032', name: 'Broccoli', p100: 2.8, c100: 7, f100: 0.4, cals100: 34, defaultGrams: 150, liked: false },
+  { id: 'd-033', name: 'Spinach', p100: 2.9, c100: 3.6, f100: 0.4, cals100: 23, defaultGrams: 100, liked: false },
+  { id: 'd-034', name: 'Mixed Salad Vegetables', p100: 1.5, c100: 4, f100: 0.1, cals100: 20, defaultGrams: 150, liked: false },
+  { id: 'd-035', name: 'Tomato', p100: 0.9, c100: 3.9, f100: 0.2, cals100: 18, defaultGrams: 120, liked: false },
+  { id: 'd-036', name: 'Cucumber', p100: 0.7, c100: 3.6, f100: 0.1, cals100: 15, defaultGrams: 100, liked: false },
+  { id: 'd-037', name: 'Carrot', p100: 0.9, c100: 10, f100: 0.2, cals100: 41, defaultGrams: 120, liked: false },
+  { id: 'd-038', name: 'Lentils, cooked', p100: 9, c100: 20, f100: 0.4, cals100: 116, defaultGrams: 180, liked: false },
+  { id: 'd-039', name: 'Chickpeas, cooked', p100: 8.9, c100: 27, f100: 2.6, cals100: 164, defaultGrams: 180, liked: false },
+  { id: 'd-040', name: 'Black Beans, cooked', p100: 8.9, c100: 24, f100: 0.5, cals100: 132, defaultGrams: 180, liked: false },
+  { id: 'd-041', name: 'Edamame', p100: 11, c100: 9, f100: 5, cals100: 121, defaultGrams: 100, liked: false },
+  { id: 'd-042', name: 'Olive Oil', p100: 0, c100: 0, f100: 100, cals100: 884, defaultGrams: 15, liked: false },
+  { id: 'd-043', name: 'Peanut Butter', p100: 25, c100: 20, f100: 50, cals100: 588, defaultGrams: 30, liked: false },
+  { id: 'd-044', name: 'Almonds', p100: 21, c100: 22, f100: 50, cals100: 579, defaultGrams: 30, liked: false },
+  { id: 'd-045', name: 'Walnuts', p100: 15, c100: 14, f100: 65, cals100: 654, defaultGrams: 30, liked: false },
+  { id: 'd-046', name: 'Chia Seeds', p100: 17, c100: 42, f100: 31, cals100: 486, defaultGrams: 20, liked: false },
+  { id: 'd-047', name: 'Butter', p100: 0.9, c100: 0.1, f100: 81, cals100: 717, defaultGrams: 10, liked: false },
+  { id: 'd-048', name: 'Cheddar Cheese', p100: 25, c100: 1.3, f100: 33, cals100: 403, defaultGrams: 40, liked: false },
+  { id: 'd-049', name: 'Black Coffee', p100: 0.1, c100: 0, f100: 0, cals100: 1, defaultGrams: 240, liked: false },
+  { id: 'd-050', name: 'Honey', p100: 0.3, c100: 82, f100: 0, cals100: 304, defaultGrams: 20, liked: false }
+];
+const DEFAULT_ROUTINES = [
+  { id: 'd-r1', name: 'Full Body A', liked: false, items: [
+    { exerciseId: '0043', sets: 3, reps: 8 },
+    { exerciseId: '0025', sets: 3, reps: 8 },
+    { exerciseId: '0027', sets: 3, reps: 10 },
+    { exerciseId: '0414', sets: 3, reps: 10 },
+    { exerciseId: '0031', sets: 3, reps: 12 }
+  ] },
+  { id: 'd-r2', name: 'Push Day', liked: false, items: [
+    { exerciseId: '0025', sets: 4, reps: 8 },
+    { exerciseId: '0047', sets: 3, reps: 10 },
+    { exerciseId: '0091', sets: 3, reps: 10 },
+    { exerciseId: '0178', sets: 3, reps: 12 },
+    { exerciseId: '0241', sets: 3, reps: 12 }
+  ] },
+  { id: 'd-r3', name: 'Lower Body', liked: false, items: [
+    { exerciseId: '0043', sets: 4, reps: 8 },
+    { exerciseId: '0085', sets: 3, reps: 10 },
+    { exerciseId: '1372', sets: 4, reps: 15 },
+    { exerciseId: '0496', sets: 3, reps: 12 }
+  ] }
 ];
 
 const MEAL_SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
@@ -536,6 +620,7 @@ function normalizeProgressPreferences(value){const firstDay=Number(value?.firstD
 function normalizePillRowModes(value){const modes=['default','pin','hidden'],keys=['routine','category','target','equipment'],out={};keys.forEach(key=>{out[key]=modes.includes(value?.[key])?value[key]:'default'});out.toggles=['routine','category','target','equipment'].includes(value?.toggles)?value.toggles:'equipment';out.tagsHost=['routine','category','target','equipment'].includes(value?.tagsHost)?value.tagsHost:'equipment';return out}
 function roundRestDuration(value,fallback){const target=Math.round(Number(value)/5)*5;return Number.isFinite(target)?clamp(target,30,180):fallback}
 function normalizeRestPrefs(value){return{enabled:value?.enabled===true,betweenSets:roundRestDuration(value?.betweenSets,60),betweenExercise:roundRestDuration(value?.betweenExercise,90)}}
+function normalizeUnits(value){return{weight:['kg','lb'].includes(value?.weight)?value.weight:'kg',distance:['km','mi'].includes(value?.distance)?value.distance:'km',height:['cm','ftin'].includes(value?.height)?value.height:'cm'}}
 
 const storedSaved=readStorage(STORAGE_KEYS.saved,readStorage(STORAGE_KEYS.legacySaved,[],Array.isArray),Array.isArray).map(String).filter(id=>VALID_EXERCISE_IDS.has(id));
 const storedRoutines=readStorage(STORAGE_KEYS.routines,[],Array.isArray).map(normalizeRoutine).filter(Boolean);
@@ -566,6 +651,8 @@ const state={
   activeGifPaused:false,
   progressPreferences:storedProgressPrefs,
   showWorkoutReminder:readStorage(STORAGE_KEYS.workoutReminder,true)!==false,
+  showTabLabels:readStorage(STORAGE_KEYS.tabLabels,true)!==false,
+  units:normalizeUnits(readStorage(STORAGE_KEYS.units,null)),
   showSecondaryPills:readStorage(STORAGE_KEYS.secondaryPills,false)===true,
   restPrefs:storedRestPrefs,
   progress:{logs:[],activeExerciseId:null,draft:{sets:DEFAULTS.sets,reps:DEFAULTS.reps,setWeights:[DEFAULTS.weight,DEFAULTS.weight,DEFAULTS.weight],setReps:[DEFAULTS.reps,DEFAULTS.reps,DEFAULTS.reps],setDurations:[],setDistances:[],notes:'',mode:'reps',showWeight:false,durationUnit:'min'}},
@@ -576,9 +663,10 @@ const state={
   supersetLinking:null,
   exerciseTags:sanitizeExerciseTags(readStorage(STORAGE_KEYS.tags,{})),
   tags:'',
-  fuel:loadFuelState(),
-  fuelSelectedDate:localDateValue()
-};
+   fuel:loadFuelState(),
+   fuelSelectedDate:localDateValue()
+ };
+ applyTabLabels();
 
 /* =========================================================
    MARKDOWN VAULT SYSTEM
@@ -907,7 +995,7 @@ function parseTrainingLogsMd(text) {
         log.durUnit = 'sec';
         log.setDurations = durSecMatch[1].split(',').map(s => Math.round(vClampNum(s.trim(), 0, LIMITS.duration * 60, 0) / 60 * 100) / 100).filter(v => v > 0);
       }
-      const distMatch = dataLine.match(/([\d.,\s]+)\s*km/);
+      const distMatch = dataLine.match(/([\d.,\s]+)\s*(km|mi)/);
       if (distMatch) log.setDistances = distMatch[1].split(',').map(s => vClampNum(s.trim(), 0, LIMITS.distance, 0)).filter(v => v > 0);
     } else {
       const setsMatch = dataLine.match(/(\d+)\s*sets?/);
@@ -955,7 +1043,7 @@ function parseTrainingLogsMd(text) {
       const key = keyMatch[1].toLowerCase(), unit = (keyMatch[2] || '').trim().toLowerCase();
       if (key === 'dur') { block.durationsRaw = keyMatch[3].trim(); block.durationsUnit = unit === 'sec' ? 'sec' : 'min'; }
       else if (key === 'dist') block.distancesRaw = keyMatch[3].trim();
-      else if (key === 'weight' && unit === 'kg') block.weightsRaw = keyMatch[3].trim();
+      else if (key === 'weight' && (unit === 'kg' || unit === 'lb')) block.weightsRaw = keyMatch[3].trim();
       else if (key === 'exerciseid') block.exerciseId = keyMatch[3].trim();
       else if (key === 'id') block.id = keyMatch[3].trim();
       else if (key === 'date') block.date = keyMatch[3].trim();
@@ -1026,15 +1114,29 @@ function parseNutritionDiaryMd(text) {
 
 function parseConfigMd(text) {
   const lines = readVaultLines(text);
-  const cfg = { profile: {}, overrides: {}, schedule: {}, liked: [], prefs: {}, customExercises: [], exerciseTags: {} };
+  const cfg = { profile: {}, overrides: {}, schedule: {}, liked: [], prefs: {}, customExercises: [], exerciseTags: {}, tagsByTag: {} };
   let section = '';
-  let lastTagId = null;
+  let currentTagName = null;
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
     if (line.startsWith('-')) line = line.slice(1).trim();
     const sectionMatch = line.match(/^#{1,6}\s+(.+)$/);
-    if (sectionMatch) { section = sectionMatch[1].trim().toLowerCase(); continue; }
+    if (sectionMatch) { section = sectionMatch[1].trim().toLowerCase(); if (section !== 'exercise tags') currentTagName = null; continue; }
     if (/^key:\s*/i.test(line)) continue;
+    if (section === 'exercise tags') {
+      if (/^id\s*:/.test(line) || /^tags\s*:/.test(line)) { currentTagName = null; continue; }
+      if (/^[\d,\s]+$/.test(line) && currentTagName) {
+        for (const part of line.split(',')) {
+          const id = normalizeTagId(part);
+          if (!id) continue;
+          const list = cfg.tagsByTag[currentTagName] || (cfg.tagsByTag[currentTagName] = []);
+          if (!list.includes(id)) list.push(id);
+        }
+        continue;
+      }
+      if (line) { currentTagName = sanitizeTagName(line); if (currentTagName && !cfg.tagsByTag[currentTagName]) cfg.tagsByTag[currentTagName] = []; }
+      continue;
+    }
     const kvMatch = line.match(/^([A-Za-z][\w-]*)\s*:\s*(.*)$/);
     if (!kvMatch) continue;
     const key = kvMatch[1];
@@ -1077,16 +1179,6 @@ function parseConfigMd(text) {
         const last = cfg.customExercises[cfg.customExercises.length - 1];
         if (last) last.description = raw.replace(/ \/ /g, '\n');
       }
-    } else if (section === 'exercise tags') {
-      if (key === 'id') {
-        const cleanId = raw.replace(/^#/, '').trim();
-        if (cleanId) { cfg.exerciseTags[cleanId] = cfg.exerciseTags[cleanId] || []; lastTagId = cleanId; }
-      } else if (key === 'tags') {
-        if (lastTagId && cfg.exerciseTags[lastTagId]) for (const rawTag of raw.split(',')) {
-          const tag = sanitizeTagName(rawTag);
-          if (tag && !cfg.exerciseTags[lastTagId].some(item => item.toLowerCase() === tag.toLowerCase())) cfg.exerciseTags[lastTagId].push(tag);
-        }
-      }
     } else if (section === 'preferences') {
       if (key === 'accent') cfg.prefs.accent = ['red','blue','green','orange','purple','pink'].includes(raw) ? raw : 'red';
       else if (key === 'liked') cfg.liked = raw.split(',').map(s => s.trim().replace(/^#/, '')).filter(id => VALID_EXERCISE_IDS.has(id));
@@ -1103,6 +1195,19 @@ function parseConfigMd(text) {
       else if (key === 'pill-equipment') cfg.prefs.pillEquipment = ['default','pin','hidden'].includes(raw) ? raw : 'default';
       else if (key === 'pill-tags-host') cfg.prefs.pillTagsHost = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
       else if (key === 'pill-toggles') cfg.prefs.pillToggles = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
+      else if (key === 'tab-labels') cfg.prefs.tabLabels = /^(true|yes|1|on)/i.test(raw);
+      else if (key === 'units') {
+        const parts = raw.split(',').map(part => part.trim().toLowerCase());
+        cfg.prefs.units = normalizeUnits({ weight: parts[0], distance: parts[1], height: parts[2] });
+      }
+    }
+  }
+  for (const [tag, ids] of Object.entries(cfg.tagsByTag)) {
+    const cleanTag = sanitizeTagName(tag);
+    if (!cleanTag) continue;
+    for (const rawId of ids) {
+      const list = cfg.exerciseTags[rawId] || (cfg.exerciseTags[rawId] = []);
+      if (!list.some(item => item.toLowerCase() === cleanTag.toLowerCase())) list.push(cleanTag);
     }
   }
   return cfg;
@@ -1179,11 +1284,11 @@ function trainingLogsToMd(logs) {
         fields.push(`int: ${Number(log.intervals) || durationList.length || 1}`);
         if (durationList.length) fields.push(`dur(${durUnit}): ${durationList.join(', ')}`);
         const distanceList = (Array.isArray(log.setDistances) ? log.setDistances : []).map((value) => Math.round((Number(value) || 0) * 100) / 100).filter((value) => value > 0);
-        if (distanceList.length) fields.push(`dist(km): ${distanceList.join(', ')}`);
+        if (distanceList.length) fields.push(`dist(${unitDistLabel()}): ${distanceList.join(', ')}`);
       } else {
         fields.push(`sets: ${clamp(Math.round(Number(log.sets) || 1), 1, LIMITS.sets)}`);
         const weightList = (Array.isArray(log.setWeights) ? log.setWeights : []).map((value) => Math.round((Number(value) || 0) * 10) / 10).filter((value) => value > 0);
-        if (weightList.length) fields.push(`weight(kg): ${weightList.join(', ')}`);
+        if (weightList.length) fields.push(`weight(${unitWeightLabel()}): ${weightList.join(', ')}`);
         const repsList = (Array.isArray(log.setReps) && log.setReps.length ? log.setReps : [log.reps]).map((value) => clamp(Math.round(Number(value)) || 1, 1, LIMITS.reps));
         fields.push(`reps: ${repsList.join(', ')}`);
       }
@@ -1266,6 +1371,8 @@ function configToMd() {
   lines.push(`pill-target: ${state.pillRowModes.target}`);
   lines.push(`pill-equipment: ${state.pillRowModes.equipment}`);
   lines.push(`pill-tags-host: ${state.pillRowModes.tagsHost}`);
+  lines.push(`tab-labels: ${state.showTabLabels}`);
+  lines.push(`units: ${state.units.weight}, ${state.units.distance}, ${state.units.height}`);
   lines.push(`pill-toggles: ${state.pillRowModes.toggles}`);
   lines.push('', '## Custom Exercises');
   for (const item of CUSTOM_EXERCISES) {
@@ -1276,12 +1383,20 @@ function configToMd() {
     lines.push(`  equipment: ${item.equipment}`);
     if (item.description) lines.push(`  description: ${item.description.replace(/\n+/g, ' / ').trim()}`);
   }
-  const tagEntries = Object.entries(state.exerciseTags).sort(([a], [b]) => String(a).localeCompare(String(b)));
+  const tagNames = (() => {
+    const byName = new Map();
+    for (const [exerciseId, tags] of Object.entries(state.exerciseTags)) for (const tag of tags) {
+      const key = tag.toLowerCase();
+      if (!byName.has(key)) byName.set(key, { label: tag, ids: new Set() });
+      byName.get(key).ids.add(String(exerciseId));
+    }
+    return [...byName.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  })();
   lines.push('', '## Exercise Tags');
-  for (const [exerciseId, tags] of tagEntries) {
-    if (!Array.isArray(tags) || !tags.length) continue;
-    lines.push(`- id: ${exerciseId}`);
-    lines.push(`  tags: ${tags.join(', ')}`);
+  for (const entry of tagNames) {
+    lines.push(`- ${entry.label}`);
+    const ids = [...entry.ids].map(normalizeTagId).filter((value, index, arr) => arr.indexOf(value) === index).sort(compareTagIds);
+    if (ids.length) lines.push(`\t- ${ids.join(', ')}`);
   }
   return lines.join('\n') + '\n';
 }
@@ -1344,6 +1459,8 @@ function applyConfigToState(cfg) {
     if (cfg.prefs.pillEquipment) state.pillRowModes.equipment = cfg.prefs.pillEquipment;
     if (cfg.prefs.pillTagsHost) state.pillRowModes.tagsHost = cfg.prefs.pillTagsHost;
     if (cfg.prefs.pillToggles) state.pillRowModes.toggles = cfg.prefs.pillToggles;
+    if (cfg.prefs.tabLabels !== undefined) { state.showTabLabels = cfg.prefs.tabLabels; applyTabLabels(); }
+    if (cfg.prefs.units) state.units = cfg.prefs.units;
   }
   if (cfg.exerciseTags && Object.keys(cfg.exerciseTags).length) {
     const incoming = sanitizeExerciseTags(cfg.exerciseTags);
@@ -2259,7 +2376,7 @@ function exerciseRecord(exerciseId){
   }
   return best;
 }
-function formatPR(record){return record?`PR: ${formatWeightValue(record.weight)} kg`:''}
+function formatPR(record){return record?`PR: ${formatWeightValue(record.weight)} ${unitWeightLabel()}`:''}
 function formatRange(values,suffix=''){const min=Math.min(...values),max=Math.max(...values);return min===max?`${min}${suffix}`:`${min}-${max}${suffix}`}
 function formatWeightValue(value){return String(Math.round(value*10)/10)}
 function isTimedCardioLog(log){return log!=null&&(Number(log.intervals)>0||Array.isArray(log.setDurations)||Array.isArray(log.setDistances))}
@@ -2281,13 +2398,13 @@ function formatProgress(log){
     const parts=[];
     if(totals.intervals>0)parts.push(`${totals.intervals} ${totals.intervals===1?'interval':'intervals'}`);
     if(totals.duration>0)parts.push(`${formatWeightValue(totals.duration)} min`);
-    if(totals.distance>0)parts.push(`${formatWeightValue(totals.distance)} km`);
+    if(totals.distance>0)parts.push(`${formatWeightValue(totals.distance)} ${unitDistLabel()}`);
     return parts.join(' · ');
   }
   const setsText=`${log.sets} sets`;
   let weights=Array.isArray(log.setWeights)&&log.setWeights.length?log.setWeights.map(Number).filter(value=>value>0):[];
   if(!weights.length&&Number(log.weight)>0)weights=[Number(log.weight)];
-  const weightText=weights.length?` × ${formatRange(weights,' kg')}`:'';
+  const weightText=weights.length?` × ${formatRange(weights,` ${unitWeightLabel()}`)}`:'';
   if(Array.isArray(log.setReps)&&log.setReps.length)return`${setsText} × ${formatRange(log.setReps.map(Number), ' reps')}${weightText}`;
   return`${setsText} × ${log.reps} reps${weightText}`;
 }
@@ -2449,7 +2566,8 @@ function openOverlay(key,returnFocus=document.activeElement){
      const p=state.fuel.profile;
      $('#inAge').value=p.age||22;
      $('#inSex').value=p.sex||'m';
-     $('#inHeight').value=p.heightCm;
+     syncUnitLabels();
+     syncHeightInputs();
      $('#inCurrentWeight').value=p.currentWeightKg.toFixed(1);
      $('#inStartWeight').value=p.startWeightKg.toFixed(1);
      $('#inGoalWeight').value=p.goalWeightKg.toFixed(1);
@@ -3230,9 +3348,9 @@ function renderActiveWorkout(){
           <button class="routine-step" type="button" data-aw-action="dur-inc" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="Increase duration"${skipped?' disabled':''}>${icon('plus')}</button>
         </div>
         <div class="routine-stepper" role="group" aria-label="Distance for interval ${index+1} of ${esc(exercise.name)}">
-          <button class="routine-step" type="button" data-aw-action="dist-dec" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="-0.5" aria-label="Decrease distance"${skipped?' disabled':''}>${icon('minus')}</button>
-          <output aria-live="polite">${Math.round((Number(set.distance)||0)*10)/10} km</output>
-          <button class="routine-step" type="button" data-aw-action="dist-inc" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="0.5" aria-label="Increase distance"${skipped?' disabled':''}>${icon('plus')}</button>
+          <button class="routine-step" type="button" data-aw-action="dist-dec" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="-${distStep()}" aria-label="Decrease distance"${skipped?' disabled':''}>${icon('minus')}</button>
+          <output aria-live="polite">${Math.round((Number(set.distance)||0)*10)/10} ${unitDistLabel()}</output>
+          <button class="routine-step" type="button" data-aw-action="dist-inc" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="${distStep()}" aria-label="Increase distance"${skipped?' disabled':''}>${icon('plus')}</button>
         </div>`:`
         <div class="routine-stepper" role="group" aria-label="Reps for set ${index+1} of ${esc(exercise.name)}">
           <button class="routine-step" type="button" data-aw-action="rep-dec" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="Decrease reps"${skipped?' disabled':''}>${icon('minus')}</button>
@@ -3240,9 +3358,9 @@ function renderActiveWorkout(){
           <button class="routine-step" type="button" data-aw-action="rep-inc" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="Increase reps"${skipped?' disabled':''}>${icon('plus')}</button>
         </div>
         ${showWeight?`<div class="routine-stepper" role="group" aria-label="Weight for set ${index+1} of ${esc(exercise.name)}">
-          <button class="routine-step" type="button" data-aw-action="wt-dec" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="-2.5" aria-label="Decrease weight"${skipped?' disabled':''}>${icon('minus')}</button>
-          <output aria-live="polite">${Math.round((set.weight||0)*10)/10} kg</output>
-          <button class="routine-step" type="button" data-aw-action="wt-inc" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="2.5" aria-label="Increase weight"${skipped?' disabled':''}>${icon('plus')}</button>
+          <button class="routine-step" type="button" data-aw-action="wt-dec" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="-${weightStep()}" aria-label="Decrease weight"${skipped?' disabled':''}>${icon('minus')}</button>
+          <output aria-live="polite">${Math.round((set.weight||0)*10)/10} ${unitWeightLabel()}</output>
+          <button class="routine-step" type="button" data-aw-action="wt-inc" data-exercise="${exercise.id}" data-aw-index="${index}" data-delta="${weightStep()}" aria-label="Increase weight"${skipped?' disabled':''}>${icon('plus')}</button>
         </div>`:''}`}
         <button type="button" class="aw-check${set.done?' on':''}" data-aw-action="check" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="${timed?`Interval ${index+1}`:`Set ${index+1}`} ${set.done?'completed':'not completed'}"${skipped?' disabled':''}>${icon('check')}</button>
       </div>`).join('');
@@ -3722,11 +3840,11 @@ function progressLogToText(log){
     const durationsText=durations.map(value=>Math.round((Number(value)||0)*scale*100)/100).filter(value=>value>0).join(', ');
     const distances=Array.isArray(log.setDistances)?log.setDistances:[];
     const distancesText=distances.map(value=>Math.round((Number(value)||0)*100)/100).filter(value=>value>0).join(', ');
-    return[`exercise: ${JSON.stringify(title(exercise?.name||'Unknown exercise'))}`,`exerciseId: #${log.exerciseId}`,`date: ${log.date}`,`int: ${intervals}`,...(durationsText?[`dur(${durUnit}): ${durationsText}`]:[]),...(distancesText?[`dist(km): ${distancesText}`]:[]),...(String(log.notes||'').replace(/\s+/g,' ').trim()?[`notes: ${String(log.notes||'').replace(/\s+/g,' ').trim()}`]:[]),`id: ${exportId}`].join('\n');
+    return[`exercise: ${JSON.stringify(title(exercise?.name||'Unknown exercise'))}`,`exerciseId: #${log.exerciseId}`,`date: ${log.date}`,`int: ${intervals}`,...(durationsText?[`dur(${durUnit}): ${durationsText}`]:[]),...(distancesText?[`dist(${unitDistLabel()}): ${distancesText}`]:[]),...(String(log.notes||'').replace(/\s+/g,' ').trim()?[`notes: ${String(log.notes||'').replace(/\s+/g,' ').trim()}`]:[]),`id: ${exportId}`].join('\n');
   }
   const setWeights=(Array.isArray(log.setWeights)?log.setWeights:[]).map(value=>Math.round((Number(value)||0)*10)/10).filter(value=>value>0);
   const setReps=(Array.isArray(log.setReps)&&log.setReps.length?log.setReps:[log.reps]).map(value=>clamp(Math.round(Number(value))||1,1,LIMITS.reps));
-  return[`exercise: ${JSON.stringify(title(exercise?.name||'Unknown exercise'))}`,`exerciseId: #${log.exerciseId}`,`date: ${log.date}`,`sets: ${log.sets}`,...(setWeights.length?[`weight(kg): ${setWeights.join(', ')}`]:[]),`reps: ${setReps.join(', ')}`,...(String(log.notes||'').replace(/\s+/g,' ').trim()?[`notes: ${String(log.notes||'').replace(/\s+/g,' ').trim()}`]:[]),`id: ${exportId}`].join('\n');
+  return[`exercise: ${JSON.stringify(title(exercise?.name||'Unknown exercise'))}`,`exerciseId: #${log.exerciseId}`,`date: ${log.date}`,`sets: ${log.sets}`,...(setWeights.length?[`weight(${unitWeightLabel()}): ${setWeights.join(', ')}`]:[]),`reps: ${setReps.join(', ')}`,...(String(log.notes||'').replace(/\s+/g,' ').trim()?[`notes: ${String(log.notes||'').replace(/\s+/g,' ').trim()}`]:[]),`id: ${exportId}`].join('\n');
 }
 function progressLogsToText(logs=state.progress.logs){return logs.map(progressLogToText).join('\n\n')}
 function parseProgressLogText(text){
@@ -3749,7 +3867,7 @@ function parseProgressLogText(text){
             const key=match[1].toLowerCase(),unit=(match[2]||'').trim().toLowerCase();
             if(key==='dur'){durationsRaw=match[3].trim();durationsUnit=unit==='sec'?'sec':'min';}
             else if(key==='dist'){distancesRaw=match[3].trim();}
-            else if(key==='weight'&&unit==='kg'){weightsRaw=match[3].trim();}
+            else if(key==='weight'&&(unit==='kg'||unit==='lb')){weightsRaw=match[3].trim();}
             else fields[key]=match[3].trim();
           });
           const toList=rawValue=>rawValue?rawValue.split(',').map(entry=>entry.trim()).filter(Boolean):undefined;
@@ -3770,6 +3888,66 @@ function closeProgressSettings(){
   closeCustomExercisePaste();
 }
 function formatRestDuration(value){return `${value} sec`}
+function isFreshVault(){
+  if(state.routines.length)return false;
+  if(state.progress.logs.length)return false;
+  if(Object.keys(state.fuel.history).length)return false;
+  if(state.fuel.foodDb.some(item=>item.id!=='custom'))return false;
+  const p=state.fuel.profile,defaults=loadFuelState().profile;
+  const wF=state.units.weight==='lb'?LB_PER_KG:1,hF=state.units.height==='ftin'?1/CM_PER_IN:1;
+  if(p.age!==defaults.age)return false;
+  if(Math.abs(p.heightCm-defaults.heightCm*hF)>0.05)return false;
+  if(Math.abs(p.currentWeightKg-defaults.currentWeightKg*wF)>0.05||Math.abs(p.startWeightKg-defaults.startWeightKg*wF)>0.05||Math.abs(p.goalWeightKg-defaults.goalWeightKg*wF)>0.05)return false;
+  if(p.activity!==defaults.activity||p.strategy!==defaults.strategy)return false;
+  return true;
+}
+function unitsLocked(){return !isFreshVault()}
+function renderUnitSegs(){
+  document.querySelectorAll('[data-unit-seg]').forEach(group=>{
+    const dim=group.dataset.unitSeg;
+    group.querySelectorAll('[data-unit-value]').forEach(button=>{
+      button.setAttribute('aria-pressed',String(button.dataset.unitValue===state.units[dim]));
+    });
+  });
+  const locked=unitsLocked();
+  document.querySelectorAll('[data-unit-seg]').forEach(group=>{
+    group.setAttribute('aria-disabled',String(locked));
+    group.querySelectorAll('[data-unit-value]').forEach(button=>{button.disabled=locked});
+  });
+  const hint=$('#unitsHint');
+  if(hint)hint.hidden=!locked;
+}
+function syncUnitLabels(){
+  const w=unitWeightLabel(),d=unitDistLabel();
+  const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text};
+  set('unitHeightLabel',state.units.height==='ftin'?'(ft + in)':'(cm)');
+  set('unitWeightLabel',`(${w})`);
+  set('unitStartLabel',`(${w})`);
+  set('unitGoalLabel',`(${w})`);
+  const wStep=state.units.weight==='lb'?2:0.5;
+  document.querySelectorAll('[data-target="inCurrentWeight"],[data-target="inStartWeight"],[data-target="inGoalWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
+  document.querySelectorAll('[data-unit-delta="weight"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+weightStep());
+  document.querySelectorAll('[data-unit-delta="distance"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+distStep());
+  const ftRow=$('#heightFtRow'),inRow=$('#heightInRow'),cmRow=$('#heightCmStepper');
+  if(ftRow&&inRow&&cmRow){
+    ftRow.hidden=state.units.height!=='ftin';
+    inRow.hidden=state.units.height!=='ftin';
+    cmRow.hidden=state.units.height==='ftin';
+  }
+}
+function syncHeightInputs(){
+  const p=state.fuel.profile;
+  if(state.units.height==='ftin'){
+    const totalIn=Math.round(p.heightCm/CM_PER_IN*10)/10;
+    const ft=Math.floor(totalIn/12),inches=Math.round((totalIn-ft*12)*10)/10;
+    const ftInput=$('#inHeightFt'),inInput=$('#inHeightIn');
+    if(ftInput)ftInput.value=ft;
+    if(inInput)inInput.value=inches;
+  }else{
+    const cmInput=$('#inHeight');
+    if(cmInput)cmInput.value=p.heightCm;
+  }
+}
 function renderPrefSegs(){
   document.querySelectorAll('[data-pref-seg]').forEach(group=>{
     const key=group.dataset.prefSeg;
@@ -3798,7 +3976,12 @@ function syncSettingsControls(){
   $('#workoutReminder').setAttribute('aria-checked',String(state.showWorkoutReminder));
   $('#showSecondaryPills').setAttribute('aria-pressed',String(state.showSecondaryPills));
   $('#restEnabled').setAttribute('aria-checked',String(state.restPrefs.enabled));
+  $('#tabLabels').setAttribute('aria-checked',String(state.showTabLabels));
   renderPrefSegs();
+  renderUnitSegs();
+  syncUnitLabels();
+  syncHeightInputs();
+  updateDefaultRows();
   syncSettingsExportButtons();
 }
 function syncSettingsExportButtons(){
@@ -4148,9 +4331,9 @@ function syncProgressDraft() {
           <button class="routine-step progress-step" type="button" data-field="duration" data-set-index="${index}" data-delta="${durationStep}" aria-label="Increase duration in ${unitLabel} for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('plus')}</button>
         </div>
         <div class="routine-stepper" role="group" aria-label="Distance for interval ${index + 1}">
-          <button class="routine-step progress-step" type="button" data-field="distance" data-set-index="${index}" data-delta="-0.5" aria-label="Decrease distance for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('minus')}</button>
-          <output aria-live="polite">${formatWeightValue(draft.setDistances[index] ?? 0)} km</output>
-          <button class="routine-step progress-step" type="button" data-field="distance" data-set-index="${index}" data-delta="0.5" aria-label="Increase distance for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('plus')}</button>
+          <button class="routine-step progress-step" type="button" data-field="distance" data-set-index="${index}" data-delta="-${distStep()}" aria-label="Decrease distance for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('minus')}</button>
+          <output aria-live="polite">${formatWeightValue(draft.setDistances[index] ?? 0)} ${unitDistLabel()}</output>
+          <button class="routine-step progress-step" type="button" data-field="distance" data-set-index="${index}" data-delta="${distStep()}" aria-label="Increase distance for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('plus')}</button>
         </div>
       </div>`).join('');
     return;
@@ -4166,9 +4349,9 @@ function syncProgressDraft() {
         <button class="routine-step progress-step" type="button" data-field="reps" data-set-index="${index}" data-delta="1" aria-label="Increase reps for set ${index + 1}"${enabled ? '' : ' disabled'}>${icon('plus')}</button>
       </div>
       ${showWeight ? `<div class="routine-stepper" role="group" aria-label="Weight for set ${index + 1}">
-        <button class="routine-step progress-step" type="button" data-field="weight" data-set-index="${index}" data-delta="-2.5" aria-label="Decrease weight for set ${index + 1}">${icon('minus')}</button>
-        <output aria-live="polite">${formatWeightValue(draft.setWeights[index] ?? 0)} kg</output>
-        <button class="routine-step progress-step" type="button" data-field="weight" data-set-index="${index}" data-delta="2.5" aria-label="Increase weight for set ${index + 1}">${icon('plus')}</button>
+        <button class="routine-step progress-step" type="button" data-field="weight" data-set-index="${index}" data-delta="-${weightStep()}" aria-label="Decrease weight for set ${index + 1}">${icon('minus')}</button>
+        <output aria-live="polite">${formatWeightValue(draft.setWeights[index] ?? 0)} ${unitWeightLabel()}</output>
+        <button class="routine-step progress-step" type="button" data-field="weight" data-set-index="${index}" data-delta="${weightStep()}" aria-label="Increase weight for set ${index + 1}">${icon('plus')}</button>
       </div>` : ''}
     </div>`).join('');
 }
@@ -4327,7 +4510,7 @@ function renderDashboardAllTimeChart(logs) {
     chart.querySelectorAll('.chart-hit').forEach((item) => item.classList.remove('active'));
     if (alreadyActive) { tooltip.hidden = true; return; }
     active.classList.add('active');
-    tooltip.innerHTML = `<strong>${esc(allTimeBucketLabel(point.date))}</strong><span>${point.volume.toLocaleString()} kg volume · ${point.sets} set${point.sets === 1 ? '' : 's'} · ${point.exercises} exercise${point.exercises === 1 ? '' : 's'}</span>`;
+    tooltip.innerHTML = `<strong>${esc(allTimeBucketLabel(point.date))}</strong><span>${point.volume.toLocaleString()} ${unitWeightLabel()} volume · ${point.sets} set${point.sets === 1 ? '' : 's'} · ${point.exercises} exercise${point.exercises === 1 ? '' : 's'}</span>`;
     tooltip.style.left = `${Math.max(22, Math.min(78, (point.x / width) * 100))}%`;
     tooltip.style.top = `${Math.max(24, Math.min(76, 18 + point.y - 42))}px`;
     tooltip.hidden = false;
@@ -5344,6 +5527,41 @@ $('#showSecondaryPills').addEventListener('click',(event)=>{
   toast(state.showSecondaryPills?'2nd routines shown in filters':'2nd routines hidden from filters');
 });
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
+$('#tabLabels').addEventListener('click',(event)=>{state.showTabLabels=!state.showTabLabels;writeStorage(STORAGE_KEYS.tabLabels,state.showTabLabels);if(VAULT.loaded)saveConfigToVault();applyTabLabels();event.currentTarget.setAttribute('aria-checked',String(state.showTabLabels));toast(state.showTabLabels?'Tab labels shown':'Tab labels hidden');});
+document.querySelectorAll('[data-unit-seg]').forEach(group=>{
+  group.addEventListener('click',(event)=>{
+    const button=event.target.closest('[data-unit-value]');
+    if(!button||button.disabled)return;
+    if (unitsLocked()){toast('Units can only be changed while the vault is empty');return;}
+    const dim=group.dataset.unitSeg;
+    if(state.units[dim]===button.dataset.unitValue)return;
+    if(dim==='weight'){
+      const factor=button.dataset.unitValue==='lb'?LB_PER_KG:1/LB_PER_KG;
+      ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{state.fuel.profile[key]=Math.round(state.fuel.profile[key]*factor*10)/10});
+    }
+    if(dim==='height'){
+      const factor=button.dataset.unitValue==='ftin'?1/CM_PER_IN:CM_PER_IN;
+      state.fuel.profile.heightCm=Math.round(state.fuel.profile.heightCm*factor*10)/10;
+    }
+    state.units[dim]=button.dataset.unitValue;
+    writeStorage(STORAGE_KEYS.units,state.units);
+    if(VAULT.loaded)saveConfigToVault();
+    saveFuelState();
+    renderUnitSegs();
+    syncUnitLabels();
+    if(dim==='height')syncHeightInputs();
+    renderAll();
+    toast('Units updated');
+  });
+});
+$('#loadDefaultFoods').addEventListener('click',onLoadDefaultFoods);
+$('#removeDefaultFoods').addEventListener('click',onRemoveDefaultFoods);
+$('#loadDefaultRoutines').addEventListener('click',onLoadDefaultRoutines);
+$('#removeDefaultRoutines').addEventListener('click',onRemoveDefaultRoutines);
+$('#defaultsDialogCancel').addEventListener('click',()=>closeDefaultsDialog(null));
+$('#defaultsDialogAdd').addEventListener('click',()=>closeDefaultsDialog('add'));
+$('#defaultsDialogReplace').addEventListener('click',()=>closeDefaultsDialog('replace'));
+$('#defaultsDialogBackdrop').addEventListener('click',(event)=>{if(event.target.id==='defaultsDialogBackdrop')closeDefaultsDialog(null);});
 function syncAccentSwatches(){document.querySelectorAll('#accentRow .accent-swatch').forEach((button)=>button.setAttribute('aria-checked',String(button.dataset.accent===activeAccent)));}
 $('#accentRow').addEventListener('click',(event)=>{
   const swatch=event.target.closest('.accent-swatch');
@@ -5510,6 +5728,91 @@ function saveFuelState() {
   if (VAULT.loaded) { markDirty('meals'); markDirty('nutritionDiary'); markDirty('config'); scheduleVaultSave('meals'); scheduleVaultSave('nutritionDiary'); scheduleVaultSave('config'); }
 }
 
+/* --- Default food database & routines (Settings → Data) --- */
+const DEFAULTS_MODAL = { resolve: null };
+function hasDefaultFoods(){return state.fuel.foodDb.some(item=>/^d-/.test(String(item.id)))}
+function hasDefaultRoutines(){return state.routines.some(routine=>/^d-r/.test(routine.id))}
+function updateDefaultRows(){
+  const foodRemove=$('#removeDefaultFoods'),routineRemove=$('#removeDefaultRoutines');
+  if(foodRemove)foodRemove.hidden=!hasDefaultFoods();
+  if(routineRemove)routineRemove.hidden=!hasDefaultRoutines();
+}
+function askDefaultsMode(scope){
+  return new Promise(resolve=>{
+    DEFAULTS_MODAL.resolve=resolve;
+    $('#defaultsDialogTitle').textContent=scope==='foods'?'Load default food database':'Load default routines';
+    $('#defaultsDialogMessage').textContent=scope==='foods'
+      ?'Your food library already has items. Add the default foods alongside them, or Replace and wipe everything currently in the library?'
+      :'You already have routines. Add the default routines alongside them, or Replace and wipe all of your current routines?';
+    const backdrop=$('#defaultsDialogBackdrop');
+    backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden','false');
+    requestAnimationFrame(()=>$('#defaultsDialogCancel').focus({preventScroll:true}));
+  });
+}
+function closeDefaultsDialog(result){
+  const backdrop=$('#defaultsDialogBackdrop');
+  backdrop.classList.remove('open');
+  backdrop.setAttribute('aria-hidden','true');
+  if(DEFAULTS_MODAL.resolve){DEFAULTS_MODAL.resolve(result);DEFAULTS_MODAL.resolve=null;}
+}
+function insertDefaultFoods(mode){
+  if(mode==='replace'){
+    const placeholder=state.fuel.foodDb.filter(item=>item.id==='custom');
+    state.fuel.foodDb=[...placeholder,...JSON.parse(JSON.stringify(DEFAULT_FOOD_DB_ITEMS))];
+    saveFuelState();renderFuelDropdowns();updateDefaultRows();
+    toast('Food library replaced with defaults');return;
+  }
+  const existing=new Set(state.fuel.foodDb.map(item=>item.name.toLowerCase()));
+  const additions=DEFAULT_FOOD_DB_ITEMS.filter(item=>!existing.has(item.name.toLowerCase()));
+  if(!additions.length){toast('All default foods already in your library');return;}
+  state.fuel.foodDb=[...state.fuel.foodDb,...additions.map(item=>({...item}))];
+  saveFuelState();renderFuelDropdowns();updateDefaultRows();
+  toast(`Added ${additions.length} default foods`);
+}
+function insertDefaultRoutines(mode){
+  const defaults=JSON.parse(JSON.stringify(DEFAULT_ROUTINES)).map(routine=>normalizeRoutine(routine)).filter(Boolean);
+  if(mode==='replace'){
+    state.routines=defaults;
+    saveRoutines();renderRoutineDrawer();render();updateDefaultRows();
+    toast('Routines replaced with defaults');return;
+  }
+  const existing=new Set(state.routines.map(routine=>routine.name.toLowerCase()));
+  const additions=defaults.filter(routine=>!existing.has(routine.name.toLowerCase()));
+  if(!additions.length){toast('All default routines already exist');return;}
+  state.routines=[...state.routines,...additions];
+  saveRoutines();renderRoutineDrawer();render();updateDefaultRows();
+  toast(`Added ${additions.length} default routines`);
+}
+async function onLoadDefaultFoods(){
+  if(state.fuel.foodDb.some(item=>item.id!=='custom')){
+    const mode=await askDefaultsMode('foods');
+    if(!mode)return;
+    insertDefaultFoods(mode);
+    return;
+  }
+  insertDefaultFoods('add');
+}
+async function onLoadDefaultRoutines(){
+  if(state.routines.length){
+    const mode=await askDefaultsMode('routines');
+    if(!mode)return;
+    insertDefaultRoutines(mode);
+    return;
+  }
+  insertDefaultRoutines('add');
+}
+function onRemoveDefaultFoods(){
+  state.fuel.foodDb=state.fuel.foodDb.filter(item=>!/^d-/.test(String(item.id)));
+  saveFuelState();renderFuelDropdowns();updateDefaultRows();
+  toast('Default foods removed');
+}
+function onRemoveDefaultRoutines(){
+  state.routines=state.routines.filter(routine=>!/^d-r/.test(routine.id));
+  saveRoutines();renderRoutineDrawer();updateDefaultRows();
+  toast('Default routines removed');
+}
+
 const FUEL_TARGET_KEYS = Object.freeze(['cals', 'p', 'c', 'f', 'water']);
 const FUEL_TARGET_LIMITS = Object.freeze({
   cals: { min: 500, max: 10000, step: 10 },
@@ -5519,15 +5822,17 @@ const FUEL_TARGET_LIMITS = Object.freeze({
   water: { min: 500, max: 10000, step: 100 }
 });
 function calculatedFuelTargets(profile = state.fuel.profile) {
-  const bmr = (10 * profile.currentWeightKg) + (6.25 * profile.heightCm) - (5 * profile.age) + (profile.sex === 'm' ? 5 : -161);
+  const weightKg = state.units.weight === 'lb' ? profile.currentWeightKg / LB_PER_KG : profile.currentWeightKg;
+  const heightCm = state.units.height === 'ftin' ? profile.heightCm * CM_PER_IN : profile.heightCm;
+  const bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * profile.age) + (profile.sex === 'm' ? 5 : -161);
   const tdee = Math.round(bmr * profile.activity);
   let targetCalories = Math.max(1200, Math.round(tdee + (profile.strategy || 0)));
-  const pGrams = Math.round(profile.currentWeightKg * (profile.proteinRate || 2.0));
+  const pGrams = Math.round(weightKg * (profile.proteinRate || 2.0));
   const fGrams = Math.round((targetCalories * 0.25) / 9);
   const remainingCalsForCarbs = Math.max(0, targetCalories - ((pGrams * 4) + (fGrams * 9)));
   const cGrams = Math.round(remainingCalsForCarbs / 4);
   targetCalories = (pGrams * 4) + (cGrams * 4) + (fGrams * 9);
-  return { cals: targetCalories, p: pGrams, c: cGrams, f: fGrams, water: Math.round(Math.max(2000, profile.currentWeightKg * (profile.activity >= 1.50 ? 45 : 35))) };
+  return { cals: targetCalories, p: pGrams, c: cGrams, f: fGrams, water: Math.round(Math.max(2000, weightKg * (profile.activity >= 1.50 ? 45 : 35))) };
 }
 function fuelOverrides() {
   const overrides = state.fuel.profile.overrides;
@@ -6680,14 +6985,15 @@ function renderAll() {
 
 function renderBodySection() {
   const p = state.fuel.profile;
-  const hM = p.heightCm / 100;
-  const bmi = (p.currentWeightKg / (hM * hM)).toFixed(1);
+  const weightKg = state.units.weight === 'lb' ? p.currentWeightKg / LB_PER_KG : p.currentWeightKg;
+  const hM = state.units.height === 'ftin' ? (p.heightCm * CM_PER_IN) / 100 : p.heightCm / 100;
+  const bmi = (weightKg / (hM * hM)).toFixed(1);
 
   document.getElementById('bmiValDisplay').innerText = bmi;
-  document.getElementById('weightValDisplay').innerText = p.currentWeightKg.toFixed(1) + ' kg';
+  document.getElementById('weightValDisplay').innerText = p.currentWeightKg.toFixed(1) + ' ' + unitWeightLabel();
 
-  document.getElementById('lblStartWeight').innerText = p.startWeightKg.toFixed(1) + ' kg';
-  document.getElementById('lblGoalWeight').innerText = p.goalWeightKg.toFixed(1) + ' kg';
+  document.getElementById('lblStartWeight').innerText = p.startWeightKg.toFixed(1) + ' ' + unitWeightLabel();
+  document.getElementById('lblGoalWeight').innerText = p.goalWeightKg.toFixed(1) + ' ' + unitWeightLabel();
 
   const isWeightLoss = p.startWeightKg > p.goalWeightKg;
   const isWeightGain = p.startWeightKg < p.goalWeightKg;
@@ -6712,9 +7018,9 @@ function renderBodySection() {
   if (parseFloat(remainingDiff) === 0) {
     document.getElementById('weightDeltaDisplay').innerText = `Goal Achieved!`;
   } else if (p.currentWeightKg > p.goalWeightKg) {
-    document.getElementById('weightDeltaDisplay').innerText = `${remainingDiff} kg to lose`;
+    document.getElementById('weightDeltaDisplay').innerText = `${remainingDiff} ${unitWeightLabel()} to lose`;
   } else {
-    document.getElementById('weightDeltaDisplay').innerText = `${remainingDiff} kg to gain`;
+    document.getElementById('weightDeltaDisplay').innerText = `${remainingDiff} ${unitWeightLabel()} to gain`;
   }
 }
 
@@ -6727,10 +7033,10 @@ document.getElementById('bodyMetricsModal').addEventListener('click', (e) => {
     if (!input) return;
 
     let val = parseFloat(input.value) || 0;
-    const minVal = targetId === 'inAge' ? 10 : 30;
-    const maxVal = targetId === 'inAge' ? 110 : 300;
+    const minVal = targetId === 'inAge' ? 10 : targetId === 'inHeightFt' ? 1 : targetId === 'inHeightIn' ? 0 : 30;
+    const maxVal = targetId === 'inAge' ? 110 : targetId === 'inHeightFt' ? 8 : targetId === 'inHeightIn' ? 11 : 300;
     val = Math.max(minVal, Math.min(maxVal, val + delta));
-    input.value = targetId === 'inAge' || targetId === 'inHeight' ? Math.round(val) : val.toFixed(1);
+    input.value = targetId === 'inAge' || targetId === 'inHeight' || targetId === 'inHeightFt' || targetId === 'inHeightIn' ? Math.round(val) : val.toFixed(1);
     return;
   }
   if (e.target.id === 'bodyMetricsModal') closeOverlay('bodyMetrics');
@@ -6741,7 +7047,14 @@ function handleProfileAndTargetSubmit(e) {
 
   const age = parseInt(document.getElementById('inAge').value) || 22;
   const sex = document.getElementById('inSex').value;
-  const heightCm = parseFloat(document.getElementById('inHeight').value) || 178;
+  let heightValue;
+  if (state.units.height === 'ftin') {
+    const feet = Math.max(1, Math.min(8, parseFloat(document.getElementById('inHeightFt')?.value) || 5));
+    const inches = Math.max(0, Math.min(11.9, parseFloat(document.getElementById('inHeightIn')?.value) || 0));
+    heightValue = Math.round((feet * 12 + inches) * 10) / 10;
+  } else {
+    heightValue = Math.max(50, Math.min(300, parseFloat(document.getElementById('inHeight').value) || 178));
+  }
   const currentWeightKg = parseFloat(document.getElementById('inCurrentWeight').value) || 75.0;
   const startWeightKg = parseFloat(document.getElementById('inStartWeight').value) || currentWeightKg;
   const goalWeightKg = parseFloat(document.getElementById('inGoalWeight').value) || currentWeightKg;
@@ -6752,7 +7065,7 @@ function handleProfileAndTargetSubmit(e) {
 
   const prevSex = state.fuel.profile.sex;
   state.fuel.profile = {
-    age, sex, heightCm, currentWeightKg, startWeightKg, goalWeightKg,
+    age, sex, heightCm: heightValue, currentWeightKg, startWeightKg, goalWeightKg,
     activity, strategy, proteinRate,
     overrides: { ...fuelOverrides() }
   };

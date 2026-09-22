@@ -463,15 +463,25 @@
 
       <div class="grid-2">
         <div class="feature-field">
-          <label>Height (cm)</label>
-          <div class="routine-stepper">
+          <label>Height <span id="unitHeightLabel">(cm)</span></label>
+          <div class="routine-stepper" id="heightCmStepper">
             <button class="routine-step" type="button" data-target="inHeight" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
             <input id="inHeight" type="text" readonly tabindex="-1" value="178" aria-label="Height in centimeters">
             <button class="routine-step" type="button" data-target="inHeight" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
           </div>
+          <div class="routine-stepper" id="heightFtRow" hidden>
+            <button class="routine-step" type="button" data-target="inHeightFt" data-delta="-1" aria-label="Decrease feet"><svg class="icon"><use href="#icon-minus"/></svg></button>
+            <input id="inHeightFt" type="text" readonly tabindex="-1" value="5" aria-label="Height in feet">
+            <button class="routine-step" type="button" data-target="inHeightFt" data-delta="1" aria-label="Increase feet"><svg class="icon"><use href="#icon-plus"/></svg></button>
+          </div>
+          <div class="routine-stepper" id="heightInRow" hidden>
+            <button class="routine-step" type="button" data-target="inHeightIn" data-delta="-1" aria-label="Decrease inches"><svg class="icon"><use href="#icon-minus"/></svg></button>
+            <input id="inHeightIn" type="text" readonly tabindex="-1" value="11" aria-label="Height in inches">
+            <button class="routine-step" type="button" data-target="inHeightIn" data-delta="1" aria-label="Increase inches"><svg class="icon"><use href="#icon-plus"/></svg></button>
+          </div>
         </div>
         <div class="feature-field">
-          <label>Current Weight (kg)</label>
+          <label>Current Weight <span id="unitWeightLabel">(kg)</span></label>
           <div class="routine-stepper">
             <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="-0.5" aria-label="Decrease current weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
             <input id="inCurrentWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Current weight in kilograms">
@@ -482,7 +492,7 @@
 
       <div class="grid-2">
         <div class="feature-field">
-          <label>Start Weight (kg)</label>
+          <label>Start Weight <span id="unitStartLabel">(kg)</span></label>
           <div class="routine-stepper">
             <button class="routine-step" type="button" data-target="inStartWeight" data-delta="-0.5" aria-label="Decrease start weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
             <input id="inStartWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Start weight in kilograms">
@@ -490,7 +500,7 @@
           </div>
         </div>
         <div class="feature-field">
-          <label>Goal Target (kg)</label>
+          <label>Goal Target <span id="unitGoalLabel">(kg)</span></label>
           <div class="routine-stepper">
             <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="-0.5" aria-label="Decrease goal weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
             <input id="inGoalWeight" type="text" readonly tabindex="-1" value="78.0" aria-label="Goal weight in kilograms">
@@ -790,6 +800,38 @@
               <button type="button" class="accent-swatch" role="radio" data-accent="purple" aria-checked="false" aria-label="Purple" style="--swatch:#bf5af2"></button>
               <button type="button" class="accent-swatch" role="radio" data-accent="pink" aria-checked="false" aria-label="Pink" style="--swatch:#ff375f"></button>
             </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Tab labels</span></span>
+              <button type="button" class="settings-switch" id="tabLabels" role="switch" aria-checked="true" aria-label="Bottom bar labels"></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-group">
+          <h3 class="settings-heading">Units</h3>
+          <div class="settings-card">
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Weight</span></span>
+              <div class="seg-control" data-unit-seg="weight" role="group" aria-label="Weight unit">
+                <button type="button" data-unit-value="kg" aria-pressed="true">kg</button>
+                <button type="button" data-unit-value="lb" aria-pressed="false">lb</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-progress"/></svg><span>Distance</span></span>
+              <div class="seg-control" data-unit-seg="distance" role="group" aria-label="Distance unit">
+                <button type="button" data-unit-value="km" aria-pressed="true">km</button>
+                <button type="button" data-unit-value="mi" aria-pressed="false">mi</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Height</span></span>
+              <div class="seg-control" data-unit-seg="height" role="group" aria-label="Height unit">
+                <button type="button" data-unit-value="cm" aria-pressed="true">cm</button>
+                <button type="button" data-unit-value="ftin" aria-pressed="false">ft + in</button>
+              </div>
+            </div>
+            <p class="units-hint" id="unitsHint" hidden>Units can only be changed while your vault is empty.</p>
           </div>
         </section>
 
@@ -800,6 +842,20 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-archive"/></svg><span>Vault folder</span></span>
               <button type="button" class="vault-folder-pill" id="vaultFolderPill" aria-label="Choose vault folder"><svg class="icon"><use href="#icon-folder"/></svg><span id="vaultFolderName"></span></button>
               <button type="button" class="vault-reload-btn" id="vaultReloadBtn" aria-label="Reload vault from disk"><svg class="icon"><use href="#icon-reset"/></svg></button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Default food database</span></span>
+              <div class="settings-io-actions">
+                <button type="button" class="pill" id="removeDefaultFoods" hidden>Remove</button>
+                <button type="button" class="pill" id="loadDefaultFoods">Load</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Default routines</span></span>
+              <div class="settings-io-actions">
+                <button type="button" class="pill" id="removeDefaultRoutines" hidden>Remove</button>
+                <button type="button" class="pill" id="loadDefaultRoutines">Load</button>
+              </div>
             </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-progress"/></svg><span>Training logs</span></span>
@@ -832,7 +888,7 @@
           </div>
         </section>
 
-        <footer class="settings-footer"><span>Form · v3.0.1 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><a class="settings-github-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a></footer>
+        <footer class="settings-footer"><span>Form · v3.1.0 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><a class="settings-github-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a></footer>
       </div>
     </div>
   </section>
@@ -879,6 +935,23 @@
     <div class="clear-data-actions">
       <button type="button" class="btn-clear-cancel" id="confirmDialogCancel">Cancel</button>
       <button type="button" class="btn-clear-submit" id="confirmDialogOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEFAULTS LOAD DIALOG -->
+<div class="fuel-modal-backdrop fuel-overlay" id="defaultsDialogBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="defaultsDialogTitle" aria-describedby="defaultsDialogMessage" aria-hidden="true">
+  <div class="fuel-modal">
+    <div class="modal-header-row">
+      <div>
+        <h2 id="defaultsDialogTitle" class="modal-header-title">Load defaults</h2>
+      </div>
+    </div>
+    <p class="panel-summary" style="margin-bottom: var(--space-4);" id="defaultsDialogMessage"></p>
+    <div class="clear-data-actions">
+      <button type="button" class="btn-clear-cancel" id="defaultsDialogCancel">Cancel</button>
+      <button type="button" class="btn-clear-cancel" id="defaultsDialogAdd">Add</button>
+      <button type="button" class="btn-clear-submit" id="defaultsDialogReplace">Replace</button>
     </div>
   </div>
 </div>
