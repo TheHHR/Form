@@ -70,6 +70,7 @@
   <symbol id="icon-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
   <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
   <symbol id="icon-github" viewBox="0 0 16 16"><path fill="currentColor" stroke="none" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="icon-obsidian" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M19.355 18.538a68.967 68.959 0 0 0 1.858-2.954.81.81 0 0 0-.062-.9c-.516-.685-1.504-2.075-2.042-3.362-.553-1.321-.636-3.375-.64-4.377a1.707 1.707 0 0 0-.358-1.05l-3.198-4.064a3.744 3.744 0 0 1-.076.543c-.106.503-.307 1.004-.536 1.5-.134.29-.29.6-.446.914l-.31.626c-.516 1.068-.997 2.227-1.132 3.59-.124 1.26.046 2.73.815 4.481.128.011.257.025.386.044a6.363 6.363 0 0 1 3.326 1.505c.916.79 1.744 1.922 2.415 3.5zM8.199 22.569c.073.012.146.02.22.02.78.024 2.095.092 3.16.29.87.16 2.593.64 4.01 1.055 1.083.316 2.198-.548 2.355-1.664.114-.814.33-1.735.725-2.58l-.01.005c-.67-1.87-1.522-3.078-2.416-3.849a5.295 5.295 0 0 0-2.778-1.257c-1.54-.216-2.952.19-3.84.45.532 2.218.368 4.829-1.425 7.531zM5.533 9.938c-.023.1-.056.197-.098.29L2.82 16.059a1.602 1.602 0 0 0 .313 1.772l4.116 4.24c2.103-3.101 1.796-6.02.836-8.3-.728-1.73-1.832-3.081-2.55-3.831zM9.32 14.01c.615-.183 1.606-.465 2.745-.534-.683-1.725-.848-3.233-.716-4.577.154-1.552.7-2.847 1.235-3.95.113-.235.223-.454.328-.664.149-.297.288-.577.419-.86.217-.47.379-.885.46-1.27.08-.38.08-.72-.014-1.043-.095-.325-.297-.675-.68-1.06a1.6 1.6 0 0 0-1.475.36l-4.95 4.452a1.602 1.602 0 0 0-.513.952l-.427 2.83c.672.59 2.328 2.316 3.335 4.711.09.21.175.43.253.653z"/></symbol>
 </svg>
 
 <div class="app">
@@ -104,7 +105,6 @@
 </div>
 
 <nav class="mobile-tab-bar" aria-label="Primary navigation" role="tablist">
-  <span class="tab-indicator" aria-hidden="true"></span>
   <button class="mobile-nav-button" id="mobileProgressBtn" type="button" role="tab" aria-selected="false" aria-controls="progressBackdrop"><svg class="icon"><use href="#icon-progress"/></svg><span>Stats</span></button>
   <button class="mobile-nav-button" id="mobilePlanBtn" type="button" role="tab" aria-selected="false" aria-controls="routineDrawer"><svg class="icon"><use href="#icon-routine"/></svg><span>Plans</span></button>
   <button class="mobile-nav-button" id="mobileWorkoutBtn" type="button" role="tab" aria-selected="true" aria-controls="workoutTabPanel"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Workout</span></button>
@@ -133,7 +133,7 @@
         <div class="modal-kicker" id="modalKicker"></div>
         <h2 id="modalTitle"></h2>
         <div class="modal-badges" id="modalBadges"></div>
-        <div class="modal-progress"><span id="modalProgressSummary">No progress logged yet</span><div class="modal-progress-actions"><button class="modal-like" id="modalLikeExercise" type="button" aria-label="Save exercise" aria-pressed="false"><svg class="icon"><use href="#icon-heart"/></svg></button><button class="modal-tag-button" id="modalTagButton" type="button" aria-label="Edit tags" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#icon-hash"/></svg></button><button class="modal-icon-button" id="modalLogProgress" type="button" aria-label="Log progress"><svg class="icon"><use href="#icon-progress"/></svg></button><button class="modal-icon-button" id="modalInstructionsToggle" type="button" aria-label="How to perform" aria-expanded="false" aria-controls="modalInstructions"><svg class="icon"><use href="#icon-help"/></svg></button></div></div>
+        <div class="modal-progress"><span id="modalProgressSummary">No progress logged yet</span><div class="modal-progress-actions"><button class="modal-like" id="modalLikeExercise" type="button" aria-label="Like exercise" aria-pressed="false"><svg class="icon"><use href="#icon-heart"/></svg></button><button class="modal-tag-button" id="modalTagButton" type="button" aria-label="Edit tags" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#icon-hash"/></svg></button><button class="modal-icon-button" id="modalLogProgress" type="button" aria-label="Log progress"><svg class="icon"><use href="#icon-progress"/></svg></button><button class="modal-icon-button" id="modalInstructionsToggle" type="button" aria-label="How to perform" aria-expanded="false" aria-controls="modalInstructions"><svg class="icon"><use href="#icon-help"/></svg></button></div></div>
         <div class="modal-muscle-map" id="modalMuscleMap" hidden>
           <div class="muscle-map-frame" id="modalMuscleMapFrame">
             <div class="muscle-map-view" id="modalMuscleMapFront"></div>
@@ -147,13 +147,12 @@
   </article>
 </div>
 
-<div class="routine-backdrop panel-backdrop" id="routineBackdrop"></div>
 <aside class="routine-drawer panel-drawer" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
   <div class="routine-header panel-header"><div><h2 id="routineTitle">Your routines</h2><span class="panel-summary" id="routineHeaderSummary">Create your first routine</span></div></div>
   <button class="routine-new-toggle" id="routineNewToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add routine</span></button>
   <div class="routine-switch"><label>Routine manager</label><div class="routine-select-row"><div class="routine-editor-control"><button class="routine-selector-button custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
-  <div class="routine-data-actions" aria-label="Routine copy and import tools"><button id="copyRoutine" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Copy</span></button><button id="copyAllRoutines" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export</span></button><button id="pasteRoutineToggle" type="button" aria-expanded="false" aria-controls="routinePastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button></div>
-  <div class="routine-paste-panel" id="routinePastePanel" hidden><label for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="addRoutineText" type="button">Add routines</button><button id="importRoutineText" type="button">Replace routines</button></div></div>
+  <div class="routine-data-actions" aria-label="Routine export and import tools"><button id="copyRoutine" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Export</span></button><button id="copyAllRoutines" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button><button id="pasteRoutineToggle" type="button" aria-expanded="false" aria-controls="routinePastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button></div>
+  <div class="routine-paste-panel" id="routinePastePanel" hidden><label for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="addRoutineText" type="button">Add</button><button id="importRoutineText" type="button">Replace</button></div></div>
   <div class="routine-schedule" id="routineSchedule"></div>
   <button class="routine-add-exercises" id="routineAddExercises" type="button" hidden>Add exercise</button>
   <div class="routine-items" id="routineItems"></div>
@@ -182,7 +181,7 @@
           </div>
           <div class="muscle-breakdown" id="dashboardMuscleBreakdown"></div>
         </section>
-        <div class="dashboard-empty" id="dashboardEmpty" hidden><strong>Your stats are empty</strong><span>Open an exercise and select Log progress to start building your training history.</span></div>
+        <div class="empty-state empty-state--panel" id="dashboardEmpty" hidden><strong>Your stats are empty</strong><span>Open an exercise and select Log progress to start building your training history.</span></div>
       </section>
       <form class="progress-form" id="progressForm" hidden>
         <div class="progress-exercise-fixed feature-field-wide"><span>Exercise</span><strong id="progressExerciseName">Choose an exercise from its details page</strong><small id="progressExerciseMeta">Open an exercise and select Log progress.</small></div>
@@ -571,12 +570,12 @@
         <button id="btnManageDelete" type="button" aria-label="Delete meal" disabled>Delete</button>
       </div>
     </div>
-    <div class="routine-data-actions" aria-label="Meal library copy and import tools">
-      <button id="copyManagedMeal" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Copy</span></button>
-      <button id="copyAllMeals" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export</span></button>
+    <div class="routine-data-actions" aria-label="Meal library export and import tools">
+      <button id="copyManagedMeal" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Export</span></button>
+      <button id="copyAllMeals" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button>
       <button id="pasteMealToggle" type="button" aria-expanded="false" aria-controls="mealPastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button>
     </div>
-    <div class="routine-paste-panel" id="mealPastePanel" hidden><label for="mealPasteText">Paste meal text</label><textarea id="mealPasteText" spellcheck="false" placeholder="Chicken Breast, raw / skinless - Poultry (200g)&#10;Per100g 103cal 23.1pro 0carb 1.2fat&#10;&#10;Egg, whole raw (1 large ≈ 50g) - Dairy/Eggs (150g)&#10;Per100g 139cal 12.6pro 0.7carb 9.5fat"></textarea><div class="routine-paste-actions"><button id="cancelMealPaste" type="button">Cancel</button><button id="addMealText" type="button">Add meals</button><button id="importMealText" type="button">Replace meals</button></div></div>
+    <div class="routine-paste-panel" id="mealPastePanel" hidden><label for="mealPasteText">Paste meal text</label><textarea id="mealPasteText" spellcheck="false" placeholder="Chicken Breast, raw / skinless - Poultry (200g)&#10;Per100g 103cal 23.1pro 0carb 1.2fat&#10;&#10;Egg, whole raw (1 large ≈ 50g) - Dairy/Eggs (150g)&#10;Per100g 139cal 12.6pro 0.7carb 9.5fat"></textarea><div class="routine-paste-actions"><button id="cancelMealPaste" type="button">Cancel</button><button id="addMealText" type="button">Add</button><button id="importMealText" type="button">Replace</button></div></div>
 
     <div class="fuel-manager-scroll">
     <section class="fuel-target-editor" id="fuelTargetEditor" aria-label="Daily target overrides" hidden>
@@ -807,6 +806,10 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Tab labels</span></span>
               <button type="button" class="settings-switch" id="tabLabels" role="switch" aria-checked="true" aria-label="Bottom bar labels"></button>
             </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Haptic feedback</span></span>
+              <button type="button" class="settings-switch" id="hapticFeedback" role="switch" aria-checked="true" aria-label="Haptic feedback"></button>
+            </div>
           </div>
         </section>
 
@@ -842,7 +845,7 @@
           <h3 class="settings-heading">Data</h3>
           <div class="settings-card">
             <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-archive"/></svg><span>Vault folder</span></span>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-obsidian"/></svg><span>Vault folder</span></span>
               <button type="button" class="vault-folder-pill" id="vaultFolderPill" aria-label="Choose vault folder"><svg class="icon"><use href="#icon-folder"/></svg><span id="vaultFolderName"></span></button>
               <button type="button" class="vault-reload-btn" id="vaultReloadBtn" aria-label="Reload vault from disk"><svg class="icon"><use href="#icon-reset"/></svg></button>
             </div>
@@ -860,7 +863,7 @@
                 <button type="button" class="pill" id="progressPasteLog" aria-expanded="false" aria-controls="progressLogPaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="progressLogPaste" hidden><label for="progressLogPasteText">Progress log text</label><textarea id="progressLogPasteText" spellcheck="false" placeholder="exercise: &quot;Lever Alternating Narrow Grip Seated Row&quot;&#10;exerciseId: #0571&#10;date: 2026-08-27&#10;int: 3&#10;dur(sec): 15, 15, 15&#10;dist(km): 2, 2, 2&#10;notes:&#10;id: 1787840342296&#10;&#10;exercise: &quot;Cable Lateral Pulldown With V-Bar&quot;&#10;exerciseId: #2616&#10;date: 2026-08-27&#10;sets: 3&#10;weight(kg): 25, 25, 25&#10;reps: 12, 12, 12&#10;notes:&#10;id: 1787840342296"></textarea><div><button id="progressLogPasteCancel" type="button">Cancel</button><button id="progressLogPasteAdd" type="button">Add log</button><button id="progressLogPasteImport" type="button">Replace log</button></div></div>
+            <div class="progress-log-paste" id="progressLogPaste" hidden><label for="progressLogPasteText">Progress log text</label><textarea id="progressLogPasteText" spellcheck="false" placeholder="exercise: &quot;Lever Alternating Narrow Grip Seated Row&quot;&#10;exerciseId: #0571&#10;date: 2026-08-27&#10;int: 3&#10;dur(sec): 15, 15, 15&#10;dist(km): 2, 2, 2&#10;notes:&#10;id: 1787840342296&#10;&#10;exercise: &quot;Cable Lateral Pulldown With V-Bar&quot;&#10;exerciseId: #2616&#10;date: 2026-08-27&#10;sets: 3&#10;weight(kg): 25, 25, 25&#10;reps: 12, 12, 12&#10;notes:&#10;id: 1787840342296"></textarea><div><button id="progressLogPasteCancel" type="button">Cancel</button><button id="progressLogPasteAdd" type="button">Add</button><button id="progressLogPasteImport" type="button">Replace</button></div></div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Meal logs</span></span>
               <div class="settings-io-actions">
@@ -868,7 +871,7 @@
                 <button type="button" class="pill" id="mealPasteLog" aria-expanded="false" aria-controls="mealLogPaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="mealLogPaste" hidden><label for="mealLogPasteText">Meal log text</label><textarea id="mealLogPasteText" spellcheck="false" placeholder='date: 2026-08-11&#10;water: 1000 ml&#10;&#10;date: 2026-08-11&#10;Egg (150g) - Dinner&#10;209cal 18.9pro 1carb 14.3fat&#10;id: 1786473550906'></textarea><div><button id="mealLogPasteCancel" type="button">Cancel</button><button id="mealLogPasteAdd" type="button">Add log</button><button id="mealLogPasteImport" type="button">Replace log</button></div></div>
+            <div class="progress-log-paste" id="mealLogPaste" hidden><label for="mealLogPasteText">Meal log text</label><textarea id="mealLogPasteText" spellcheck="false" placeholder='date: 2026-08-11&#10;water: 1000 ml&#10;&#10;date: 2026-08-11&#10;Egg (150g) - Dinner&#10;209cal 18.9pro 1carb 14.3fat&#10;id: 1786473550906'></textarea><div><button id="mealLogPasteCancel" type="button">Cancel</button><button id="mealLogPasteAdd" type="button">Add</button><button id="mealLogPasteImport" type="button">Replace</button></div></div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Custom exercises</span></span>
               <div class="settings-io-actions">
@@ -876,7 +879,7 @@
                 <button type="button" class="pill" id="customExercisePasteLog" aria-expanded="false" aria-controls="customExercisePaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="customExercisePaste" hidden><label for="customExercisePasteText">Custom exercises text</label><textarea id="customExercisePasteText" spellcheck="false" placeholder='## Custom Exercises&#10;- name: Landmine press&#10;  id: c-1750000000-ab12cd&#10;  category: chest&#10;  target: pectorals&#10;  equipment: barbell&#10;  description: Press from angle'></textarea><div><button id="customExercisePasteCancel" type="button">Cancel</button><button id="customExercisePasteAdd" type="button">Add exercises</button><button id="customExercisePasteImport" type="button">Replace all</button></div></div>
+            <div class="progress-log-paste" id="customExercisePaste" hidden><label for="customExercisePasteText">Custom exercises text</label><textarea id="customExercisePasteText" spellcheck="false" placeholder='## Custom Exercises&#10;- name: Landmine press&#10;  id: c-1750000000-ab12cd&#10;  category: chest&#10;  target: pectorals&#10;  equipment: barbell&#10;  description: Press from angle'></textarea><div><button id="customExercisePasteCancel" type="button">Cancel</button><button id="customExercisePasteAdd" type="button">Add</button><button id="customExercisePasteImport" type="button">Replace</button></div></div>
             <button type="button" class="settings-row settings-row-action settings-row-danger" id="progressClearDataBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-trash"/></svg><span>Clear data…</span></span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
@@ -884,7 +887,7 @@
           </div>
         </section>
 
-        <footer class="settings-footer"><span>Form · v3.1.0 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
+        <footer class="settings-footer"><span>Form · v3.1.1 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
       </div>
     </div>
   </section>
@@ -905,7 +908,7 @@
         <div class="fuel-card-divider" style="margin: 6px 0 10px;"></div>
         <label class="check"><input type="checkbox" id="chkClearLogs"><span>Training progress logs</span></label>
         <label class="check"><input type="checkbox" id="chkClearRoutines"><span>Workout routines</span></label>
-        <label class="check"><input type="checkbox" id="chkClearSaved"><span>Saved exercises</span></label>
+        <label class="check"><input type="checkbox" id="chkClearSaved"><span>Liked exercises</span></label>
         <label class="check"><input type="checkbox" id="chkClearFuelDiary"><span>Nutrition food & hydration diary</span></label>
         <label class="check"><input type="checkbox" id="chkClearMeals"><span>Custom meal library</span></label>
         <label class="check"><input type="checkbox" id="chkClearCustomExercises"><span>Custom exercises</span></label>

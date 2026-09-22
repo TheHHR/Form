@@ -24,6 +24,7 @@ const STORAGE_KEYS=Object.freeze({
   customExercises:'form-custom-exercises',
   tags:'form-exercise-tags',
   tabLabels:'form-tab-labels',
+  haptics:'form-haptics',
   units:'form-units',
   fuel:'form-fuel-data',
   legacyFuel:'fuel_fdc_nutrition_db'
@@ -228,7 +229,7 @@ function mergeCustomExercisesImported(parsed){
 async function copyCustomExercises(){
   const text=customExercisesToText();
   if(!text)return;
-  if(await copyTextToClipboard(text)){toast('Custom exercises copied');return;}
+  if(await copyTextToClipboard(text)){toast('Custom exercises exported');return;}
   showCustomExercisePastePanel(text);
 }
 function deleteProgressLogsForExercises(exerciseIds){
@@ -500,6 +501,22 @@ function awSetKeepAwake(on){
     if(result&&typeof result.catch==='function')result.catch(()=>{});
   }catch{}
 }
+function haptic(kind){
+  if(!state.haptics)return;
+  try{
+    const cap=typeof window!=='undefined'?window.Capacitor:null;
+    if(!cap||!cap.Plugins||!cap.Plugins.Haptics)return;
+    if(typeof cap.isNativePlatform==='function'?!cap.isNativePlatform():cap.isNative!==true)return;
+    const h=cap.Plugins.Haptics;
+    let result;
+    if(kind==='success')result=h.notification({type:'SUCCESS'});
+    else if(kind==='warning')result=h.notification({type:'WARNING'});
+    else if(kind==='error')result=h.notification({type:'ERROR'});
+    else if(kind==='selection')result=h.selectionChanged();
+    else result=h.impact({style:kind==='light'?'LIGHT':kind==='heavy'?'HEAVY':'MEDIUM'});
+    if(result&&typeof result.catch==='function')result.catch(()=>{});
+  }catch{}
+}
 function loadActiveWorkout(){
   const raw=readStorage(STORAGE_KEYS.activeWorkout,null);
   let routine=raw&&typeof raw==='object'?state.routines.find(candidate=>candidate.id===raw.routineId):null;
@@ -652,6 +669,7 @@ const state={
   progressPreferences:storedProgressPrefs,
   showWorkoutReminder:readStorage(STORAGE_KEYS.workoutReminder,true)!==false,
   showTabLabels:readStorage(STORAGE_KEYS.tabLabels,true)!==false,
+  haptics:readStorage(STORAGE_KEYS.haptics,true)!==false,
   units:normalizeUnits(readStorage(STORAGE_KEYS.units,null)),
   showSecondaryPills:readStorage(STORAGE_KEYS.secondaryPills,false)===true,
   restPrefs:storedRestPrefs,
@@ -1196,6 +1214,7 @@ function parseConfigMd(text) {
       else if (key === 'pill-tags-host') cfg.prefs.pillTagsHost = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
       else if (key === 'pill-toggles') cfg.prefs.pillToggles = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
       else if (key === 'tab-labels') cfg.prefs.tabLabels = /^(true|yes|1|on)/i.test(raw);
+      else if (key === 'haptic-feedback') cfg.prefs.haptics = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'units') {
         const parts = raw.split(',').map(part => part.trim().toLowerCase());
         cfg.prefs.units = normalizeUnits({ weight: parts[0], distance: parts[1], height: parts[2] });
@@ -1372,6 +1391,7 @@ function configToMd() {
   lines.push(`pill-equipment: ${state.pillRowModes.equipment}`);
   lines.push(`pill-tags-host: ${state.pillRowModes.tagsHost}`);
   lines.push(`tab-labels: ${state.showTabLabels}`);
+  lines.push(`haptic-feedback: ${state.haptics}`);
   lines.push(`units: ${state.units.weight}, ${state.units.distance}, ${state.units.height}`);
   lines.push(`pill-toggles: ${state.pillRowModes.toggles}`);
   lines.push('', '## Custom Exercises');
@@ -1460,6 +1480,7 @@ function applyConfigToState(cfg) {
     if (cfg.prefs.pillTagsHost) state.pillRowModes.tagsHost = cfg.prefs.pillTagsHost;
     if (cfg.prefs.pillToggles) state.pillRowModes.toggles = cfg.prefs.pillToggles;
     if (cfg.prefs.tabLabels !== undefined) { state.showTabLabels = cfg.prefs.tabLabels; applyTabLabels(); }
+    if (cfg.prefs.haptics !== undefined) state.haptics = cfg.prefs.haptics;
     if (cfg.prefs.units) state.units = cfg.prefs.units;
   }
   if (cfg.exerciseTags && Object.keys(cfg.exerciseTags).length) {
@@ -1722,6 +1743,7 @@ function buildDefaultState() {
   state.pillRowModes = normalizePillRowModes({});
   state.showWorkoutReminder = true;
   state.showSecondaryPills = false;
+  state.haptics = true;
   activeAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'red'));
   applyAccent(activeAccent);
 }
@@ -1959,7 +1981,7 @@ function renderEverything() {
 /* --- vault-aware save wrappers --- */
 function saveRoutinesToVault() { markDirty('routines'); scheduleVaultSave('routines'); writeStorage(STORAGE_KEYS.routines, state.routines); }
 function saveTrainingLogsToVault() { markDirty('trainingLogs'); scheduleVaultSave('trainingLogs'); writeStorage(STORAGE_KEYS.progress, state.progress.logs); }
-function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.secondaryPills, state.showSecondaryPills); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); }
+function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.secondaryPills, state.showSecondaryPills); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); writeStorage(STORAGE_KEYS.haptics, state.haptics); }
 
 let isHandlingPopstate = false;
 
@@ -2275,7 +2297,9 @@ function initCustomSelect(select){
     }
   });
   select.addEventListener('change',()=>syncCustomSelect(select));
-  new MutationObserver(()=>syncCustomSelect(select)).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});
+  if(select._syncObserver)select._syncObserver.disconnect();
+  select._syncObserver=new MutationObserver(()=>syncCustomSelect(select));
+  select._syncObserver.observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});
   syncCustomSelect(select);
 }
 function initCustomSelects(){CUSTOM_SELECT_IDS.forEach(id=>initCustomSelect(document.getElementById(id)))}
@@ -2422,7 +2446,7 @@ function renderCard(exercise){
     subtitleText = `${formatProgress(latestLog)} · ${title(exercise.target)}`;
   }
 
-  const normalLike=cardAction(`save-button${state.saved.has(exercise.id)?' saved':''}`,'heart',`${state.saved.has(exercise.id)?'Remove from':'Add to'} saved exercises`,state.saved.has(exercise.id));
+  const normalLike=cardAction(`save-button${state.saved.has(exercise.id)?' saved':''}`,'heart',`${state.saved.has(exercise.id)?'Unlike':'Like'} exercise`,state.saved.has(exercise.id));
   const editAction=editingRoutine?(editingItem?cardAction('routine-check','check',`Remove ${exercise.name} from ${editingRoutine.name}`):cardAction('add-routine','plus',`Add ${exercise.name} to ${editingRoutine.name}`)):'';
   const progressAction=cardAction('card-progress','progress',`Log progress for ${exercise.name}`);
   const cardActions=editingRoutine?editAction:(routineItem||state.loggedOnly)?progressAction:normalLike;
@@ -2454,7 +2478,7 @@ function render(){
     $('#grid').innerHTML=renderActiveWorkout();
   }else{
     $('#grid').className='grid list-view';
-    $('#grid').innerHTML=shown.length?shown.map(renderCard).join(''):`<div class="empty">${icon('movement')}<strong>No exercises found</strong><span>Try removing a filter or searching for another movement.</span></div>`;
+    $('#grid').innerHTML=shown.length?shown.map(renderCard).join(''):`<div class="empty-state empty-state--grid">${icon('movement')}<strong>No exercises found</strong><span>Try removing a filter or searching for another movement.</span></div>`;
   }
   $('#grid').querySelectorAll('img').forEach(image=>{
     if(image.dataset.awMedia!==undefined)image.addEventListener('error',()=>awMediaFallback(image,image.dataset.awExercise));
@@ -2527,7 +2551,6 @@ function getFocusable(container){return[...container.querySelectorAll(FOCUSABLE_
 function trapFocus(event,container){const items=getFocusable(container);if(!items.length)return;const first=items[0],last=items[items.length-1];if(!container.contains(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus()}else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}
 
 function overlayContainer(key){
-  if(key==='routine') return $('#routineDrawer');
   if(key==='progress') return $('#progressBackdrop .feature-panel');
   if(key==='fuel') return $('#fuelBackdrop .feature-panel');
   if(key==='modal') return $('.modal');
@@ -2543,7 +2566,7 @@ function syncPageState(){
   document.body.style.overflow=locked?'hidden':'';
   document.documentElement.style.overflow=locked?'hidden':'';
   $('.app').inert=Boolean(active)||mobilePage;
-  document.body.toggleAttribute('data-overlay-locked',Boolean(active)&&active!=='routine');
+  document.body.toggleAttribute('data-overlay-locked',Boolean(active));
 }
 
 function openOverlay(key,returnFocus=document.activeElement){
@@ -2555,8 +2578,7 @@ function openOverlay(key,returnFocus=document.activeElement){
   state.overlay.returnFocus[key]=returnFocus;
   state.overlay.active=key;
 
-  if(key==='routine'){$('#routineDrawer').classList.add('open');$('#routineBackdrop').classList.add('open');$('#routineDrawer').setAttribute('aria-hidden','false');}
-  else if(key==='progress'){$('#progressBackdrop').classList.add('open');$('#progressBackdrop').setAttribute('aria-hidden','false');}
+  if(key==='progress'){$('#progressBackdrop').classList.add('open');$('#progressBackdrop').setAttribute('aria-hidden','false');}
   else if(key==='fuel'){$('#fuelBackdrop').classList.add('open');$('#fuelBackdrop').setAttribute('aria-hidden','false');}
   else if(key==='modal'){$('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');}
    else if(key==='logMeal'){$('#fuelLogMealModal').classList.add('open');$('#fuelLogMealModal').setAttribute('aria-hidden','false');logMealSlot=nextLogSlot();renderLogMealSlot();}
@@ -2593,8 +2615,7 @@ function closeOverlay(key,restoreFocus=true){
 
   if(state.overlay.active===key)state.overlay.active=null;
 
-  if(key==='routine'){$('#routineDrawer').classList.remove('open');$('#routineBackdrop').classList.remove('open');$('#routineDrawer').setAttribute('aria-hidden','true');}
-  else if(key==='progress'){
+  if(key==='progress'){
     closeProgressDatePicker(false);
     $('#progressBackdrop').classList.remove('open');
     $('#progressBackdrop').setAttribute('aria-hidden','true');
@@ -2664,7 +2685,7 @@ function setSavedExercise(exerciseId,saved=!state.saved.has(exerciseId)){
 function syncLikeButton(button,saved){
   button.classList.toggle('saved',saved);
   button.setAttribute('aria-pressed',String(saved));
-  button.setAttribute('aria-label',`${saved?'Remove from':'Add to'} saved exercises`);
+  button.setAttribute('aria-label',`${saved?'Unlike':'Like'} exercise`);
 }
 function syncMediaPill(paused){
   const text=document.querySelector('.modal-media-pill span'),iconUse=document.querySelector('.modal-media-pill use');
@@ -3392,7 +3413,7 @@ function renderActiveWorkout(){
   const secondaryRow=secondaryPills.length?`<div class="aw-secondary-row" role="group" aria-label="Secondary routines">${secondaryRowChunks(secondaryPills.length).map(size=>`<div class="aw-sec-row">${secondaryPills.splice(0,size).join('')}</div>`).join('')}</div>`:'';
   return `<section class="aw-inner" aria-label="Active workout">
     <div class="track aw-progress"><i style="width:${counts.total?Math.round(counts.done/counts.total*100):0}%"></i></div>
-    <div class="aw-list">${rowHtml||'<p class="aw-empty">This routine has no exercises yet.</p>'}</div>
+    <div class="aw-list">${rowHtml||'<div class="empty-state">This routine has no exercises yet.</div>'}</div>
     <footer class="aw-footer"><button type="button" class="feature-primary aw-finish" data-aw-action="finish">Finish workout</button>${secondaryRow}<div class="aw-footer-secondary"><button type="button" class="aw-secondary" data-aw-action="pause">Pause</button><button type="button" class="aw-secondary aw-cancel" data-aw-action="discard">Cancel</button></div></footer>
   </section>`;
 }
@@ -3487,7 +3508,7 @@ function ensureAwRestTicker(){if(awRestTickerId)return;awRestTickerId=setInterva
 function awRestTick(){
   if(!state.activeWorkout?.rest){stopAwRestTicker();return;}
   const left=awRestSecondsLeft();
-  if(left<=0){cancelAwRest();toast('Rest complete');return;}
+  if(left<=0){haptic('success');cancelAwRest();toast('Rest complete');return;}
   updateAwRestPill(left);
 }
 function updateAwRestPill(left){
@@ -3974,6 +3995,7 @@ function syncSettingsControls(){
   $('#showSecondaryPills').setAttribute('aria-pressed',String(state.showSecondaryPills));
   $('#restEnabled').setAttribute('aria-checked',String(state.restPrefs.enabled));
   $('#tabLabels').setAttribute('aria-checked',String(state.showTabLabels));
+  $('#hapticFeedback').setAttribute('aria-checked',String(state.haptics));
   renderPrefSegs();
   renderUnitSegs();
   syncUnitLabels();
@@ -3992,7 +4014,7 @@ function showProgressLogPaste(text=''){
 async function copyProgressLog(){
   const text=progressLogsToText();
   if(!text)return;
-  if(await copyTextToClipboard(text)){toast('Progress log copied');return;}
+  if(await copyTextToClipboard(text)){toast('Progress log exported');return;}
   showProgressLogPaste(text);
 }
 async function importProgressLog(mode='replace'){
@@ -4103,7 +4125,7 @@ function closeMealLogPaste(){
 async function copyMealLog(){
   const text=mealLogToText();
   if(!text)return;
-  if(await copyTextToClipboard(text)){toast('Meal log copied');return;}
+  if(await copyTextToClipboard(text)){toast('Meal log exported');return;}
   showMealLogPaste(text);
 }
 async function importMealLog(mode='replace'){
@@ -4121,7 +4143,7 @@ async function importMealLog(mode='replace'){
         if(day.water>target.water)target.water=day.water;
       });
       if(!addedMeals)return toast('No new entries to add');
-      saveFuelState();
+      saveFuelState('diary');
       renderFuelDay();
       closeMealLogPaste();
       toast(`${addedMeals} meal entr${addedMeals===1?'y':'ies'} added`);
@@ -4130,7 +4152,7 @@ async function importMealLog(mode='replace'){
     if(Object.keys(state.fuel.history).length&&!(await appConfirm('Replace the current nutrition diary?',{title:'Import meal log',okLabel:'Replace'})))return;
     if(VAULT.loaded)for(const date of Object.keys(state.fuel.history))for(const m of(state.fuel.history[date].meals||[]))markDeleted('nutritionDiary',m.id);
     state.fuel.history=imported;
-    saveFuelState();
+    saveFuelState('diary');
     renderFuelDay();
     closeMealLogPaste();
     const days=Object.keys(imported).length;
@@ -4191,13 +4213,13 @@ async function handleClearDataSubmit(event) {
     state.saved.clear();
     writeStorage(STORAGE_KEYS.saved, []);
     if (VAULT.loaded) saveConfigToVault();
-    cleared.push('saved exercises');
+    cleared.push('liked exercises');
   }
 
   if (clearFuelDiary) {
     if (VAULT.loaded) for (const date of Object.keys(state.fuel.history)) for (const m of (state.fuel.history[date].meals || [])) markDeleted('nutritionDiary', m.id);
     state.fuel.history = {};
-    saveFuelState();
+    saveFuelState('diary');
     renderFuelDay();
     cleared.push('nutrition diary');
   }
@@ -4209,7 +4231,7 @@ async function handleClearDataSubmit(event) {
     state.fuel.mealCreating = false;
     state.fuel.mealDraftName = '';
     state.fuel.selectedIngredientId = 'custom';
-    saveFuelState();
+    saveFuelState('meals');
     renderFuelDropdowns();
     cleared.push('custom meals');
   }
@@ -4454,7 +4476,7 @@ function allTimeBucketLabel(date, compact = false) {
 }
 function renderDashboardAllTimeChart(logs) {
   const chart = $('#dashboardAllTimeChart');
-  if (!logs.length) { chart.innerHTML = '<div class="all-time-chart-empty">No training data yet</div>'; return; }
+  if (!logs.length) { chart.innerHTML = '<div class="empty-state empty-state--fill">No training data yet</div>'; return; }
   const exactDates = logs.map((log) => parseLocalDate(log.date)).sort((left, right) => left - right);
   const exactFirst = exactDates[0], exactLast = exactDates[exactDates.length - 1];
   const buckets = new Map();
@@ -4485,7 +4507,7 @@ function renderDashboardAllTimeChart(logs) {
     const y = baseline - (item.volume / maximum) * (baseline - top);
     return { ...item, x, y };
   });
-  const bars = points.map((point, index) => `<g class="chart-hit" data-index="${index}" tabindex="0" role="button" aria-label="${esc(allTimeBucketLabel(point.date))}: ${point.volume.toLocaleString()} kilograms of volume"><rect class="chart-bar" style="fill:${point.volume ? (mapTierColor(point.volume / maximum) || `rgba(${ACCENTS[activeAccent].rgb},.10)`) : 'transparent'}" x="${(point.x - barWidth / 2).toFixed(2)}" y="${Math.min(point.y, baseline - 2).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(2, baseline - point.y).toFixed(2)}" rx="2"/><rect class="chart-hitbox" x="${(point.x - Math.max(barWidth, step || 32) / 2).toFixed(2)}" y="${top}" width="${Math.max(barWidth, step || 32).toFixed(2)}" height="${baseline - top}"/></g>`).join('');
+  const bars = points.map((point, index) => `<g class="chart-hit" data-index="${index}" tabindex="0" role="button" aria-label="${esc(allTimeBucketLabel(point.date))}: ${point.volume.toLocaleString()} ${unitWeightLabel()} of volume"><rect class="chart-bar" style="fill:${point.volume ? (mapTierColor(point.volume / maximum) || `rgba(${ACCENTS[activeAccent].rgb},.10)`) : 'transparent'}" x="${(point.x - barWidth / 2).toFixed(2)}" y="${Math.min(point.y, baseline - 2).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(2, baseline - point.y).toFixed(2)}" rx="2"/><rect class="chart-hitbox" x="${(point.x - Math.max(barWidth, step || 32) / 2).toFixed(2)}" y="${top}" width="${Math.max(barWidth, step || 32).toFixed(2)}" height="${baseline - top}"/></g>`).join('');
   const trendPoints = points.map((point, index) => {
     const values = series.slice(Math.max(0, index - 3), index + 1);
     const average = values.reduce((sum, item) => sum + item.volume, 0) / values.length;
@@ -4719,7 +4741,7 @@ function renderProgressHistory() {
       ? (() => { const d = parseLocalDate(log.date); return `<div class="progress-entry-date progress-entry-thumbnail"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${esc(d.toLocaleDateString(undefined,{month:'short'}))}</span></div>`; })()
       : `<div class="progress-entry-date progress-entry-thumbnail" aria-hidden="true">${icon('movement')}${exercise.custom?'':`<img src="${esc(exercise.image)}" alt="">`}</div>`;
     return `<article class="progress-entry" data-progress-id="${esc(log.id)}" data-exercise-id="${esc(exercise.id)}" role="button" tabindex="0" aria-label="Open ${esc(exercise.name)} details">${entryVisual}<div class="progress-entry-copy">${activeExercise ? '' : `<strong>${esc(title(exercise.name))}</strong>`}<span>${esc(formatProgress(log))}${isRecord ? ' · PR' : ''}</span>${log.notes ? `<small>${esc(log.notes)}</small>` : ''}</div><button class="entry-delete" type="button" aria-label="Delete ${esc(exercise.name)} progress entry">${icon('trash')}</button></article>`;
-  }).join('') : `<div class="feature-empty">${activeExercise ? 'No progress entries for this exercise.' : 'No workouts logged this day.'}</div>`;
+  }).join('') : `<div class="empty-state empty-state--panel">${activeExercise ? 'No progress entries for this exercise.' : 'No workouts logged this day.'}</div>`;
   $('#progressHistory').querySelectorAll('.progress-entry-thumbnail img').forEach((image) => image.addEventListener('error', () => image.classList.add('failed'), { once: true }));
   renderProgressDashboard();
 }
@@ -4856,8 +4878,6 @@ function syncMobileTabs() {
   $('#mobileSettingsTabBtn').setAttribute('aria-selected', String(tab === 'settings'));
   const tabBar=document.querySelector('.mobile-tab-bar');
   if(tabBar){
-    const tabIndex={dashboard:0,plan:1,workout:2,fuel:3,settings:4}[tab];
-    if(Number.isInteger(tabIndex))tabBar.style.setProperty('--tab-index',String(tabIndex));
     if(!tabBar.classList.contains('ready'))requestAnimationFrame(()=>tabBar.classList.add('ready'));
   }
   const planSwitch = $('#planSwitch');
@@ -5258,7 +5278,6 @@ $('#mobileWorkoutBtn').addEventListener('click', (event) => {
   else window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-$('#routineBackdrop').addEventListener('click', () => closeOverlay('routine'));
 $('#routineAddExercises')?.addEventListener('click', () => setMobileTab('workout'));
 $('#routineNewToggle').addEventListener('click', () => {
   if (state.routineCreating) cancelNewRoutine();
@@ -5322,13 +5341,13 @@ $('#deleteRoutine').addEventListener('click', async () => {
   renderRoutineDrawer();
   toast(endedSession ? 'Routine deleted · workout ended' : 'Routine deleted');
 });
-$('#copyRoutine').addEventListener('click', () => { if(currentRoutine()) copyRoutineValue(routineToText(), 'Routine copied'); });
-$('#copyAllRoutines').addEventListener('click', () => { if(state.routines.length) copyRoutineValue(routinesToText(), 'All routines copied'); });
+$('#copyRoutine').addEventListener('click', () => { if(currentRoutine()) copyRoutineValue(routineToText(), 'Routine exported'); });
+$('#copyAllRoutines').addEventListener('click', () => { if(state.routines.length) copyRoutineValue(routinesToText(), 'All routines exported'); });
 $('#pasteRoutineToggle').addEventListener('click', () => $('#routinePastePanel').hidden ? showRoutinePastePanel() : closeRoutinePastePanel());
 $('#cancelRoutinePaste').addEventListener('click', closeRoutinePastePanel);
 $('#addRoutineText').addEventListener('click', () => importRoutineText('add'));
 $('#importRoutineText').addEventListener('click', () => importRoutineText('replace'));
-$('#routineItems').addEventListener('click', (event) => {
+$('#routineItems').addEventListener('click', async (event) => {
   const row = event.target.closest('.routine-item');
   const routine = currentRoutine();
   if (!row || !routine) return;
@@ -5430,6 +5449,8 @@ $('#routineItems').addEventListener('click', (event) => {
   }
   if (event.target.closest('.routine-remove')) {
     const removed = routine.items.find((candidate) => candidate.exerciseId === row.dataset.exerciseId);
+    const removeName = getExercise(row.dataset.exerciseId)?.name || 'this exercise';
+    if (!(await appConfirm(`Remove "${removeName}" from "${routine.name}" routine?`, { title: 'Remove exercise', okLabel: 'Remove' }))) return;
     if (removed) unlinkSupersetItem(routine, removed);
     if (state.supersetLinking === row.dataset.exerciseId) state.supersetLinking = null;
     routine.items = routine.items.filter((candidate) => candidate.exerciseId !== row.dataset.exerciseId);
@@ -5525,6 +5546,7 @@ $('#showSecondaryPills').addEventListener('click',(event)=>{
 });
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
 $('#tabLabels').addEventListener('click',(event)=>{state.showTabLabels=!state.showTabLabels;writeStorage(STORAGE_KEYS.tabLabels,state.showTabLabels);if(VAULT.loaded)saveConfigToVault();applyTabLabels();event.currentTarget.setAttribute('aria-checked',String(state.showTabLabels));toast(state.showTabLabels?'Tab labels shown':'Tab labels hidden');});
+$('#hapticFeedback').addEventListener('click',(event)=>{state.haptics=!state.haptics;writeStorage(STORAGE_KEYS.haptics,state.haptics);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.haptics));if(state.haptics)haptic('selection');toast(state.haptics?'Haptic feedback on':'Haptic feedback off');});
 document.querySelectorAll('[data-unit-seg]').forEach(group=>{
   group.addEventListener('click',(event)=>{
     const button=event.target.closest('[data-unit-value]');
@@ -5537,13 +5559,14 @@ document.querySelectorAll('[data-unit-seg]').forEach(group=>{
       ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{state.fuel.profile[key]=Math.round(state.fuel.profile[key]*factor*10)/10});
     }
     if(dim==='height'){
-      const factor=button.dataset.unitValue==='ftin'?1/CM_PER_IN:CM_PER_IN;
-      state.fuel.profile.heightCm=Math.round(state.fuel.profile.heightCm*factor*10)/10;
+      const toFtIn=button.dataset.unitValue==='ftin';
+      const converted=state.fuel.profile.heightCm*(toFtIn?1/CM_PER_IN:CM_PER_IN);
+      state.fuel.profile.heightCm=toFtIn?Math.round(converted*10)/10:Math.round(converted);
     }
     state.units[dim]=button.dataset.unitValue;
     writeStorage(STORAGE_KEYS.units,state.units);
     if(VAULT.loaded)saveConfigToVault();
-    saveFuelState();
+    saveFuelState('config');
     renderUnitSegs();
     syncUnitLabels();
     if(dim==='height')syncHeightInputs();
@@ -5724,9 +5747,14 @@ function mealEditorLocked(){
   if(state.mobileTab==='plan'&&state.planSection==='meals'&&mealEditorBusy()){toast('Save your meal first');return true}
   return false
 }
-function saveFuelState() {
+function saveFuelState(scope) {
   writeStorage(STORAGE_KEYS.fuel, state.fuel);
-  if (VAULT.loaded) { markDirty('meals'); markDirty('nutritionDiary'); markDirty('config'); scheduleVaultSave('meals'); scheduleVaultSave('nutritionDiary'); scheduleVaultSave('config'); }
+  if (!VAULT.loaded) return;
+  const files = scope === 'diary' ? ['nutritionDiary']
+    : scope === 'meals' ? ['meals']
+    : scope === 'config' ? ['config']
+    : ['meals', 'nutritionDiary', 'config'];
+  for (const file of files) { markDirty(file); scheduleVaultSave(file); }
 }
 
 /* --- Default food database & routines (Settings → Data) --- */
@@ -5742,7 +5770,7 @@ function insertDefaultFoods(){
   const additions=DEFAULT_FOOD_DB_ITEMS.filter(item=>!existing.has(item.name.toLowerCase()));
   if(!additions.length){toast('All default foods already in your library');return;}
   state.fuel.foodDb=[...state.fuel.foodDb,...additions.map(item=>({...item}))];
-  saveFuelState();renderFuelDropdowns();updateDefaultRows();
+  saveFuelState('meals');renderFuelDropdowns();updateDefaultRows();
   toast(`Added ${additions.length} default foods`);
 }
 function insertDefaultRoutines(){
@@ -5762,7 +5790,7 @@ function onLoadDefaultRoutines(){
 }
 function onRemoveDefaultFoods(){
   state.fuel.foodDb=state.fuel.foodDb.filter(item=>!/^d-/.test(String(item.id)));
-  saveFuelState();renderFuelDropdowns();updateDefaultRows();
+  saveFuelState('meals');renderFuelDropdowns();updateDefaultRows();
   toast('Default foods removed');
 }
 function onRemoveDefaultRoutines(){
@@ -5816,7 +5844,7 @@ function setFuelTargetOverride(key, value) {
   if (Number.isFinite(num)) overrides[key] = Math.round(clamp(num, FUEL_TARGET_LIMITS[key].min, FUEL_TARGET_LIMITS[key].max));
   else delete overrides[key];
   state.fuel.profile.overrides = overrides;
-  saveFuelState();
+  saveFuelState('config');
   return true;
 }
 function formatFuelTargetValue(key, value) {
@@ -5984,7 +6012,7 @@ function syncCustomExerciseValidation(){
 }
 function renderCustomExerciseList(){
   const container=$('#customExerciseList');
-  container.innerHTML=CUSTOM_EXERCISES.length?CUSTOM_EXERCISES.map(exercise=>`<div class="custom-exercise-row" data-custom-id="${esc(exercise.id)}"><div class="custom-exercise-copy"><strong>${esc(exercise.name)}</strong><span>${esc(title(exercise.category))}${exercise.target&&exercise.target!==exercise.category?` · ${esc(title(exercise.target))}`:''} · ${esc(title(exercise.equipment))}</span></div><div class="custom-exercise-actions"><button type="button" class="custom-exercise-edit" aria-label="Edit ${esc(exercise.name)}">${icon('edit')}</button><button type="button" class="custom-exercise-delete" aria-label="Delete ${esc(exercise.name)}">${icon('trash')}</button></div></div>`).join(''):'<p class="custom-exercise-empty">No custom exercises yet. Fill in the form above to create one.</p>';
+  container.innerHTML=CUSTOM_EXERCISES.length?CUSTOM_EXERCISES.map(exercise=>`<div class="custom-exercise-row" data-custom-id="${esc(exercise.id)}"><div class="custom-exercise-copy"><strong>${esc(exercise.name)}</strong><span>${esc(title(exercise.category))}${exercise.target&&exercise.target!==exercise.category?` · ${esc(title(exercise.target))}`:''} · ${esc(title(exercise.equipment))}</span></div><div class="custom-exercise-actions"><button type="button" class="custom-exercise-edit" aria-label="Edit ${esc(exercise.name)}">${icon('edit')}</button><button type="button" class="custom-exercise-delete" aria-label="Delete ${esc(exercise.name)}">${icon('trash')}</button></div></div>`).join(''):'<div class="empty-state">No custom exercises yet. Fill in the form above to create one.</div>';
   syncSettingsExportButtons();
 }
 function resetCustomExerciseSheet(){
@@ -6113,7 +6141,7 @@ document.getElementById('fuelSettingsBackdrop').addEventListener('click', (e) =>
 $('#fuelTargetsReset')?.addEventListener('click', () => {
   if (!FUEL_TARGET_KEYS.some(isFuelTargetOverridden)) return;
   state.fuel.profile.overrides = {};
-  saveFuelState();
+  saveFuelState('config');
   syncFuelTargetEditor();
   renderAll();
   toast('Targets reset');
@@ -6284,13 +6312,13 @@ function saveMealEditor() {
       f100,
       cals100,
       defaultGrams,
-      liked: true
+      liked: false
     };
     state.fuel.foodDb.unshift(newMeal);
     state.fuel.selectedManageMealId = null;
     state.fuel.mealCreating = false;
     state.fuel.mealDraftName = '';
-    saveFuelState();
+    saveFuelState('meals');
     renderFuelDropdowns();
     toast(`${clean} meal created`);
   } else {
@@ -6305,7 +6333,7 @@ function saveMealEditor() {
     state.fuel.selectedManageMealId = null;
     state.fuel.mealCreating = false;
     state.fuel.mealDraftName = '';
-    saveFuelState();
+    saveFuelState('meals');
     renderFuelDropdowns();
     toast(`${clean} meal saved`);
   }
@@ -6444,7 +6472,7 @@ function toggleManageMealLike() {
   if (!meal) return;
 
   meal.liked = !meal.liked;
-  saveFuelState();
+  saveFuelState('meals');
   renderFuelDropdowns();
   toast(meal.liked ? 'Meal liked' : 'Meal unliked');
 }
@@ -6459,7 +6487,7 @@ async function deleteManagedMeal() {
   state.fuel.selectedManageMealId = null;
   state.fuel.mealCreating = false;
   state.fuel.mealDraftName = '';
-  saveFuelState();
+  saveFuelState('meals');
   renderFuelDropdowns();
   toast('Meal deleted');
 }
@@ -6603,7 +6631,7 @@ async function importMealsFromText(mode = 'replace') {
     state.fuel.selectedManageMealId = null;
     state.fuel.mealCreating = false;
     state.fuel.mealDraftName = '';
-    saveFuelState();
+    saveFuelState('meals');
     renderFuelDropdowns();
     closeMealPastePanel();
   } catch {
@@ -6613,11 +6641,11 @@ async function importMealsFromText(mode = 'replace') {
 
 $('#copyManagedMeal').addEventListener('click', () => {
   const meal = state.fuel.foodDb.find(m => String(m.id) === String(state.fuel.selectedManageMealId));
-  if (meal) copyMealValue(mealToText(meal), 'Meal copied');
+  if (meal) copyMealValue(mealToText(meal), 'Meal exported');
 });
 $('#copyAllMeals').addEventListener('click', () => {
   const meals = selectableMeals();
-  if (meals.length) copyMealValue(mealsToText(), 'All meals copied');
+  if (meals.length) copyMealValue(mealsToText(), 'All meals exported');
 });
 $('#pasteMealToggle').addEventListener('click', () => $('#mealPastePanel').hidden ? showMealPastePanel() : closeMealPastePanel());
 $('#cancelMealPaste').addEventListener('click', closeMealPastePanel);
@@ -6819,7 +6847,7 @@ function saveMealEntry() {
     category
   });
 
-  saveFuelState();
+  saveFuelState('diary');
   renderFuelDay();
   resetMealSelection();
   closeOverlay('logMeal');
@@ -6833,21 +6861,21 @@ async function deleteMeal(id) {
   if (!(await appConfirm(`Delete meal "${targetMeal?.name || 'this item'}"?`, { title: 'Delete meal', okLabel: 'Delete' }))) return;
   if (VAULT.loaded) markDeleted('nutritionDiary', id);
   state.fuel.history[state.fuelSelectedDate].meals = state.fuel.history[state.fuelSelectedDate].meals.filter(m => String(m.id) !== String(id));
-  saveFuelState();
+  saveFuelState('diary');
   renderFuelDay();
 }
 
 function addWater(amount) {
   ensureDateRecord(state.fuelSelectedDate);
   state.fuel.history[state.fuelSelectedDate].water += amount;
-  saveFuelState();
+  saveFuelState('diary');
   renderFuelDay();
 }
 
 function resetWater() {
   ensureDateRecord(state.fuelSelectedDate);
   state.fuel.history[state.fuelSelectedDate].water = 0;
-  saveFuelState();
+  saveFuelState('diary');
   renderFuelDay();
 }
 
@@ -6905,7 +6933,7 @@ function renderFuelDay() {
   const container = document.getElementById('mealsContainer');
 
   if (day.meals.length === 0) {
-    container.innerHTML = '<div class="feature-empty">No meals logged for this date.</div>';
+    container.innerHTML = '<div class="empty-state empty-state--panel">No meals logged for this date.</div>';
   } else {
     container.innerHTML = categories.map(cat => {
       const items = day.meals.filter(m => m.category === cat);
@@ -7059,7 +7087,7 @@ function handleProfileAndTargetSubmit(e) {
     overrides: { ...fuelOverrides() }
   };
 
-  saveFuelState();
+  saveFuelState('config');
   renderAll();
   if (sex !== prevSex) renderProgressHistory();
   closeOverlay('bodyMetrics');
