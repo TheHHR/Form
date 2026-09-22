@@ -469,15 +469,10 @@
             <input id="inHeight" type="text" readonly tabindex="-1" value="178" aria-label="Height in centimeters">
             <button class="routine-step" type="button" data-target="inHeight" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
           </div>
-          <div class="routine-stepper" id="heightFtRow" hidden>
-            <button class="routine-step" type="button" data-target="inHeightFt" data-delta="-1" aria-label="Decrease feet"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inHeightFt" type="text" readonly tabindex="-1" value="5" aria-label="Height in feet">
-            <button class="routine-step" type="button" data-target="inHeightFt" data-delta="1" aria-label="Increase feet"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-          <div class="routine-stepper" id="heightInRow" hidden>
-            <button class="routine-step" type="button" data-target="inHeightIn" data-delta="-1" aria-label="Decrease inches"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inHeightIn" type="text" readonly tabindex="-1" value="11" aria-label="Height in inches">
-            <button class="routine-step" type="button" data-target="inHeightIn" data-delta="1" aria-label="Increase inches"><svg class="icon"><use href="#icon-plus"/></svg></button>
+          <div class="routine-stepper" id="heightFtInStepper" hidden>
+            <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
+            <input id="inHeightFtIn" type="text" readonly tabindex="-1" value="5'10&quot;" aria-label="Height in feet and inches">
+            <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
           </div>
         </div>
         <div class="feature-field">
@@ -506,6 +501,14 @@
             <input id="inGoalWeight" type="text" readonly tabindex="-1" value="78.0" aria-label="Goal weight in kilograms">
             <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="0.5" aria-label="Increase goal weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
           </div>
+        </div>
+      </div>
+
+      <div class="feature-field">
+        <label>Calculated BMI</label>
+        <div class="bmi-stat-card modal-bmi-card">
+          <strong id="modalBmiValue" class="bmi-stat-value">23.7</strong>
+          <span id="modalBmiCategory" class="bmi-stat-meta">Normal (18.5 – 24.9)</span>
         </div>
       </div>
 
@@ -844,17 +847,10 @@
               <button type="button" class="vault-reload-btn" id="vaultReloadBtn" aria-label="Reload vault from disk"><svg class="icon"><use href="#icon-reset"/></svg></button>
             </div>
             <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Default food database</span></span>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-archive"/></svg><span>Default databases</span></span>
               <div class="settings-io-actions">
-                <button type="button" class="pill" id="removeDefaultFoods" hidden>Remove</button>
-                <button type="button" class="pill" id="loadDefaultFoods">Load</button>
-              </div>
-            </div>
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Default routines</span></span>
-              <div class="settings-io-actions">
-                <button type="button" class="pill" id="removeDefaultRoutines" hidden>Remove</button>
-                <button type="button" class="pill" id="loadDefaultRoutines">Load</button>
+                <button type="button" class="pill" id="defaultFoodsPill" aria-pressed="false">Meals</button>
+                <button type="button" class="pill" id="defaultRoutinesPill" aria-pressed="false">Routines</button>
               </div>
             </div>
             <div class="settings-row">
@@ -888,7 +884,7 @@
           </div>
         </section>
 
-        <footer class="settings-footer"><span>Form · v3.1.0 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><a class="settings-github-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a></footer>
+        <footer class="settings-footer"><span>Form · v3.1.0 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
       </div>
     </div>
   </section>
@@ -935,23 +931,6 @@
     <div class="clear-data-actions">
       <button type="button" class="btn-clear-cancel" id="confirmDialogCancel">Cancel</button>
       <button type="button" class="btn-clear-submit" id="confirmDialogOk">Confirm</button>
-    </div>
-  </div>
-</div>
-
-<!-- DEFAULTS LOAD DIALOG -->
-<div class="fuel-modal-backdrop fuel-overlay" id="defaultsDialogBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="defaultsDialogTitle" aria-describedby="defaultsDialogMessage" aria-hidden="true">
-  <div class="fuel-modal">
-    <div class="modal-header-row">
-      <div>
-        <h2 id="defaultsDialogTitle" class="modal-header-title">Load defaults</h2>
-      </div>
-    </div>
-    <p class="panel-summary" style="margin-bottom: var(--space-4);" id="defaultsDialogMessage"></p>
-    <div class="clear-data-actions">
-      <button type="button" class="btn-clear-cancel" id="defaultsDialogCancel">Cancel</button>
-      <button type="button" class="btn-clear-cancel" id="defaultsDialogAdd">Add</button>
-      <button type="button" class="btn-clear-submit" id="defaultsDialogReplace">Replace</button>
     </div>
   </div>
 </div>

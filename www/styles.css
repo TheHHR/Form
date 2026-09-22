@@ -1043,6 +1043,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .settings-row { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 8px var(--space-3); }
 .settings-io-actions { flex-shrink: 0; display: flex; gap: 6px; }
 .settings-io-actions .pill { min-height: 30px; padding: 0 14px; background: var(--surface-container-high); }
+.settings-io-actions .pill[aria-pressed="true"] { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
 .settings-switch {
   width: 52px;
   height: 32px;
@@ -1097,9 +1098,10 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .settings-row[data-mode="hidden"] .settings-row-main > span { text-decoration: line-through; }
 .settings-row[data-mode="hidden"] { opacity: .55; }
 .settings-footer { display: grid; gap: 3px; justify-items: center; margin-top: var(--space-2); padding: 0 4px; color: var(--text-faint); font-size: 11px; text-align: center; }
-.settings-github-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 4px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--divider); border-radius: 999px; font-size: 11px; font-weight: var(--weight-medium); text-decoration: none; }
-.settings-github-link .icon { width: 13px; height: 13px; flex: 0 0 auto; }
-.settings-github-link:active { color: var(--text); background: var(--surface-container-high); }
+.settings-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 5px; }
+.settings-footer-link { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--divider); border-radius: 999px; font-size: 11px; font-weight: var(--weight-medium); text-decoration: none; }
+.settings-footer-link .icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.settings-footer-link:active { color: var(--text); background: var(--surface-container-high); }
 .progress-log-paste { padding: var(--space-3) var(--space-3) var(--space-2); border-top: 1px solid var(--divider); }
 .progress-log-paste > label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
 .progress-log-paste textarea { width: 100%; min-height: 140px; padding: 10px; color: var(--text); background: var(--surface-container-high); border: none; resize: none; user-select: text; }
@@ -1302,6 +1304,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .bmi-card-actions .icon { width: 12px; height: 12px; }
 .bmi-grid { margin-bottom: 14px; }
 .bmi-stat-card { background: var(--surface); padding: 12px; border-radius: var(--radius-control); border: none; }
+.modal-bmi-card { background: var(--surface-container); }
 .bmi-stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; font-weight: var(--weight-semibold); }
 .bmi-stat-value { font-size: 20px; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .bmi-stat-meta { font-size: 10px; color: var(--text-muted); }

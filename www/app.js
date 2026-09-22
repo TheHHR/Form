@@ -2571,10 +2571,11 @@ function openOverlay(key,returnFocus=document.activeElement){
      $('#inCurrentWeight').value=p.currentWeightKg.toFixed(1);
      $('#inStartWeight').value=p.startWeightKg.toFixed(1);
      $('#inGoalWeight').value=p.goalWeightKg.toFixed(1);
-     setSelectByFloat('inActivity',p.activity||1.55);
-     setSelectByFloat('inStrategy',p.strategy!==undefined?p.strategy:250);
-     setSelectByFloat('inProteinRate',p.proteinRate||2.0);
-     syncCustomSelect($('#inSex'));
+      setSelectByFloat('inActivity',p.activity||1.55);
+      setSelectByFloat('inStrategy',p.strategy!==undefined?p.strategy:250);
+      setSelectByFloat('inProteinRate',p.proteinRate||2.0);
+      syncCustomSelect($('#inSex'));
+      updateModalBmi();
    }
   else if(key==='clearData'){$('#clearDataModal').classList.add('open');$('#clearDataModal').setAttribute('aria-hidden','false');updateSelectAllClearCheckbox();}
 
@@ -3915,21 +3916,30 @@ function syncUnitLabels(){
   document.querySelectorAll('[data-target="inCurrentWeight"],[data-target="inStartWeight"],[data-target="inGoalWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
   document.querySelectorAll('[data-unit-delta="weight"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+weightStep());
   document.querySelectorAll('[data-unit-delta="distance"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+distStep());
-  const ftRow=$('#heightFtRow'),inRow=$('#heightInRow'),cmRow=$('#heightCmStepper');
-  if(ftRow&&inRow&&cmRow){
-    ftRow.hidden=state.units.height!=='ftin';
-    inRow.hidden=state.units.height!=='ftin';
+  const ftInRow=$('#heightFtInStepper'),cmRow=$('#heightCmStepper');
+  if(ftInRow&&cmRow){
+    ftInRow.hidden=state.units.height!=='ftin';
     cmRow.hidden=state.units.height==='ftin';
   }
+}
+const FTIN_MIN=12,FTIN_MAX=96;
+function formatFtIn(totalIn){
+  const clamped=Math.max(FTIN_MIN,Math.min(FTIN_MAX,Math.round(totalIn*10)/10));
+  let ft=Math.floor(clamped/12);
+  let inches=Math.round(clamped-ft*12);
+  if(inches>=12){ft+=1;inches=0;}
+  return `${ft}'${inches}"`;
+}
+function parseFtIn(text){
+  const m=/^(\d+)'(\d+)"$/.exec(String(text??'').trim());
+  if(!m)return null;
+  return parseInt(m[1],10)*12+parseInt(m[2],10);
 }
 function syncHeightInputs(){
   const p=state.fuel.profile;
   if(state.units.height==='ftin'){
-    const totalIn=Math.round(p.heightCm/CM_PER_IN*10)/10;
-    const ft=Math.floor(totalIn/12),inches=Math.round((totalIn-ft*12)*10)/10;
-    const ftInput=$('#inHeightFt'),inInput=$('#inHeightIn');
-    if(ftInput)ftInput.value=ft;
-    if(inInput)inInput.value=inches;
+    const ftInput=$('#inHeightFtIn');
+    if(ftInput)ftInput.value=formatFtIn(p.heightCm);
   }else{
     const cmInput=$('#inHeight');
     if(cmInput)cmInput.value=p.heightCm;
@@ -5541,14 +5551,18 @@ document.querySelectorAll('[data-unit-seg]').forEach(group=>{
     toast('Units updated');
   });
 });
-$('#loadDefaultFoods').addEventListener('click',onLoadDefaultFoods);
-$('#removeDefaultFoods').addEventListener('click',onRemoveDefaultFoods);
-$('#loadDefaultRoutines').addEventListener('click',onLoadDefaultRoutines);
-$('#removeDefaultRoutines').addEventListener('click',onRemoveDefaultRoutines);
-$('#defaultsDialogCancel').addEventListener('click',()=>closeDefaultsDialog(null));
-$('#defaultsDialogAdd').addEventListener('click',()=>closeDefaultsDialog('add'));
-$('#defaultsDialogReplace').addEventListener('click',()=>closeDefaultsDialog('replace'));
-$('#defaultsDialogBackdrop').addEventListener('click',(event)=>{if(event.target.id==='defaultsDialogBackdrop')closeDefaultsDialog(null);});
+$('#defaultFoodsPill').addEventListener('click',()=>toggleDefaults('foods'));
+$('#defaultRoutinesPill').addEventListener('click',()=>toggleDefaults('routines'));
+function toggleDefaults(scope){
+  const active=scope==='foods'?hasDefaultFoods():hasDefaultRoutines();
+  if(active){
+    if(scope==='foods')onRemoveDefaultFoods();
+    else onRemoveDefaultRoutines();
+    return;
+  }
+  if(scope==='foods')onLoadDefaultFoods();
+  else onLoadDefaultRoutines();
+}
 function syncAccentSwatches(){document.querySelectorAll('#accentRow .accent-swatch').forEach((button)=>button.setAttribute('aria-checked',String(button.dataset.accent===activeAccent)));}
 $('#accentRow').addEventListener('click',(event)=>{
   const swatch=event.target.closest('.accent-swatch');
@@ -5716,40 +5730,14 @@ function saveFuelState() {
 }
 
 /* --- Default food database & routines (Settings → Data) --- */
-const DEFAULTS_MODAL = { resolve: null };
 function hasDefaultFoods(){return state.fuel.foodDb.some(item=>/^d-/.test(String(item.id)))}
 function hasDefaultRoutines(){return state.routines.some(routine=>/^d-r/.test(routine.id))}
 function updateDefaultRows(){
-  const foodRemove=$('#removeDefaultFoods'),routineRemove=$('#removeDefaultRoutines');
-  if(foodRemove)foodRemove.hidden=!hasDefaultFoods();
-  if(routineRemove)routineRemove.hidden=!hasDefaultRoutines();
+  const foodsPill=$('#defaultFoodsPill'),routinesPill=$('#defaultRoutinesPill');
+  if(foodsPill)foodsPill.setAttribute('aria-pressed',String(hasDefaultFoods()));
+  if(routinesPill)routinesPill.setAttribute('aria-pressed',String(hasDefaultRoutines()));
 }
-function askDefaultsMode(scope){
-  return new Promise(resolve=>{
-    DEFAULTS_MODAL.resolve=resolve;
-    $('#defaultsDialogTitle').textContent=scope==='foods'?'Load default food database':'Load default routines';
-    $('#defaultsDialogMessage').textContent=scope==='foods'
-      ?'Your food library already has items. Add the default foods alongside them, or Replace and wipe everything currently in the library?'
-      :'You already have routines. Add the default routines alongside them, or Replace and wipe all of your current routines?';
-    const backdrop=$('#defaultsDialogBackdrop');
-    backdrop.classList.add('open');
-    backdrop.setAttribute('aria-hidden','false');
-    requestAnimationFrame(()=>$('#defaultsDialogCancel').focus({preventScroll:true}));
-  });
-}
-function closeDefaultsDialog(result){
-  const backdrop=$('#defaultsDialogBackdrop');
-  backdrop.classList.remove('open');
-  backdrop.setAttribute('aria-hidden','true');
-  if(DEFAULTS_MODAL.resolve){DEFAULTS_MODAL.resolve(result);DEFAULTS_MODAL.resolve=null;}
-}
-function insertDefaultFoods(mode){
-  if(mode==='replace'){
-    const placeholder=state.fuel.foodDb.filter(item=>item.id==='custom');
-    state.fuel.foodDb=[...placeholder,...JSON.parse(JSON.stringify(DEFAULT_FOOD_DB_ITEMS))];
-    saveFuelState();renderFuelDropdowns();updateDefaultRows();
-    toast('Food library replaced with defaults');return;
-  }
+function insertDefaultFoods(){
   const existing=new Set(state.fuel.foodDb.map(item=>item.name.toLowerCase()));
   const additions=DEFAULT_FOOD_DB_ITEMS.filter(item=>!existing.has(item.name.toLowerCase()));
   if(!additions.length){toast('All default foods already in your library');return;}
@@ -5757,13 +5745,8 @@ function insertDefaultFoods(mode){
   saveFuelState();renderFuelDropdowns();updateDefaultRows();
   toast(`Added ${additions.length} default foods`);
 }
-function insertDefaultRoutines(mode){
+function insertDefaultRoutines(){
   const defaults=JSON.parse(JSON.stringify(DEFAULT_ROUTINES)).map(routine=>normalizeRoutine(routine)).filter(Boolean);
-  if(mode==='replace'){
-    state.routines=defaults;
-    saveRoutines();renderRoutineDrawer();render();updateDefaultRows();
-    toast('Routines replaced with defaults');return;
-  }
   const existing=new Set(state.routines.map(routine=>routine.name.toLowerCase()));
   const additions=defaults.filter(routine=>!existing.has(routine.name.toLowerCase()));
   if(!additions.length){toast('All default routines already exist');return;}
@@ -5771,23 +5754,11 @@ function insertDefaultRoutines(mode){
   saveRoutines();renderRoutineDrawer();render();updateDefaultRows();
   toast(`Added ${additions.length} default routines`);
 }
-async function onLoadDefaultFoods(){
-  if(state.fuel.foodDb.some(item=>item.id!=='custom')){
-    const mode=await askDefaultsMode('foods');
-    if(!mode)return;
-    insertDefaultFoods(mode);
-    return;
-  }
-  insertDefaultFoods('add');
+function onLoadDefaultFoods(){
+  insertDefaultFoods();
 }
-async function onLoadDefaultRoutines(){
-  if(state.routines.length){
-    const mode=await askDefaultsMode('routines');
-    if(!mode)return;
-    insertDefaultRoutines(mode);
-    return;
-  }
-  insertDefaultRoutines('add');
+function onLoadDefaultRoutines(){
+  insertDefaultRoutines();
 }
 function onRemoveDefaultFoods(){
   state.fuel.foodDb=state.fuel.foodDb.filter(item=>!/^d-/.test(String(item.id)));
@@ -7019,15 +6990,47 @@ document.getElementById('bodyMetricsModal').addEventListener('click', (e) => {
     const input = document.getElementById(targetId);
     if (!input) return;
 
-    let val = parseFloat(input.value) || 0;
-    const minVal = targetId === 'inAge' ? 10 : targetId === 'inHeightFt' ? 1 : targetId === 'inHeightIn' ? 0 : 30;
-    const maxVal = targetId === 'inAge' ? 110 : targetId === 'inHeightFt' ? 8 : targetId === 'inHeightIn' ? 11 : 300;
-    val = Math.max(minVal, Math.min(maxVal, val + delta));
-    input.value = targetId === 'inAge' || targetId === 'inHeight' || targetId === 'inHeightFt' || targetId === 'inHeightIn' ? Math.round(val) : val.toFixed(1);
+    if (targetId === 'inHeightFtIn') {
+      const total = parseFtIn(input.value) ?? state.fuel.profile.heightCm;
+      input.value = formatFtIn(total + delta);
+    } else {
+      let val = parseFloat(input.value) || 0;
+      const minVal = targetId === 'inAge' ? 10 : 30;
+      const maxVal = targetId === 'inAge' ? 110 : 300;
+      val = Math.max(minVal, Math.min(maxVal, val + delta));
+      input.value = targetId === 'inAge' || targetId === 'inHeight' ? Math.round(val) : val.toFixed(1);
+    }
+    updateModalBmi();
     return;
   }
   if (e.target.id === 'bodyMetricsModal') closeOverlay('bodyMetrics');
 });
+
+function updateModalBmi() {
+  const valEl = document.getElementById('modalBmiValue');
+  const catEl = document.getElementById('modalBmiCategory');
+  if (!valEl || !catEl) return;
+  let weightKg = parseFloat(document.getElementById('inCurrentWeight')?.value) || 0;
+  if (state.units.weight === 'lb') weightKg /= LB_PER_KG;
+  let heightM = 0;
+  if (state.units.height === 'ftin') {
+    const totalIn = parseFtIn(document.getElementById('inHeightFtIn')?.value) ?? state.fuel.profile.heightCm;
+    heightM = (totalIn * CM_PER_IN) / 100;
+  } else {
+    heightM = (parseFloat(document.getElementById('inHeight')?.value) || 0) / 100;
+  }
+  if (weightKg <= 0 || heightM <= 0) {
+    valEl.textContent = '—';
+    catEl.textContent = 'Enter height & weight';
+    return;
+  }
+  const bmi = weightKg / (heightM * heightM);
+  valEl.textContent = bmi.toFixed(1);
+  catEl.textContent = bmi < 18.5 ? 'Underweight (below 18.5)'
+    : bmi < 25 ? 'Normal (18.5 – 24.9)'
+    : bmi < 30 ? 'Overweight (25 – 29.9)'
+    : 'Obese (30+)';
+}
 
 function handleProfileAndTargetSubmit(e) {
   e.preventDefault();
@@ -7036,9 +7039,8 @@ function handleProfileAndTargetSubmit(e) {
   const sex = document.getElementById('inSex').value;
   let heightValue;
   if (state.units.height === 'ftin') {
-    const feet = Math.max(1, Math.min(8, parseFloat(document.getElementById('inHeightFt')?.value) || 5));
-    const inches = Math.max(0, Math.min(11.9, parseFloat(document.getElementById('inHeightIn')?.value) || 0));
-    heightValue = Math.round((feet * 12 + inches) * 10) / 10;
+    const totalIn = parseFtIn(document.getElementById('inHeightFtIn')?.value) ?? state.fuel.profile.heightCm;
+    heightValue = Math.max(FTIN_MIN, Math.min(FTIN_MAX, totalIn));
   } else {
     heightValue = Math.max(50, Math.min(300, parseFloat(document.getElementById('inHeight').value) || 178));
   }
