@@ -709,6 +709,13 @@
               </div>
             </div>
             <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Units</span></span>
+              <div class="seg-control" data-unit-seg="system" role="group" aria-label="Measurement system">
+                <button type="button" data-unit-value="metric" aria-pressed="true">Metric</button>
+                <button type="button" data-unit-value="imperial" aria-pressed="false">Imperial</button>
+              </div>
+            </div>
+            <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Workout reminder</span></span>
               <button type="button" class="settings-switch" id="workoutReminder" role="switch" aria-checked="true" aria-label="Workout reminder banner"></button>
             </div>
@@ -806,38 +813,6 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Tab labels</span></span>
               <button type="button" class="settings-switch" id="tabLabels" role="switch" aria-checked="true" aria-label="Bottom bar labels"></button>
             </div>
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Haptic feedback</span></span>
-              <button type="button" class="settings-switch" id="hapticFeedback" role="switch" aria-checked="true" aria-label="Haptic feedback"></button>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-group">
-          <h3 class="settings-heading">Units</h3>
-          <div class="settings-card">
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Weight</span></span>
-              <div class="seg-control" data-unit-seg="weight" role="group" aria-label="Weight unit">
-                <button type="button" data-unit-value="kg" aria-pressed="true">kg</button>
-                <button type="button" data-unit-value="lb" aria-pressed="false">lb</button>
-              </div>
-            </div>
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-progress"/></svg><span>Distance</span></span>
-              <div class="seg-control" data-unit-seg="distance" role="group" aria-label="Distance unit">
-                <button type="button" data-unit-value="km" aria-pressed="true">km</button>
-                <button type="button" data-unit-value="mi" aria-pressed="false">mi</button>
-              </div>
-            </div>
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Height</span></span>
-              <div class="seg-control" data-unit-seg="height" role="group" aria-label="Height unit">
-                <button type="button" data-unit-value="cm" aria-pressed="true">cm</button>
-                <button type="button" data-unit-value="ftin" aria-pressed="false">ft + in</button>
-              </div>
-            </div>
-            <p class="units-hint" id="unitsHint" hidden>Units can only be changed while your training log is empty.</p>
           </div>
         </section>
 
@@ -887,7 +862,7 @@
           </div>
         </section>
 
-        <footer class="settings-footer"><span>Form · v3.1.1 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
+        <footer class="settings-footer"><span>Form · v3.1.2 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
       </div>
     </div>
   </section>

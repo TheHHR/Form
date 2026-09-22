@@ -1073,8 +1073,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   .settings-switch, .settings-switch::after { transition: none; }
 }
 .settings-stepper { width: 132px; flex: 0 0 132px; }
-.seg-control[aria-disabled="true"] button { opacity: .4; pointer-events: none; }
-.units-hint { padding: 10px 16px 2px; color: var(--text-muted); font-size: 11.5px; font-style: italic; }
+.seg-control[aria-disabled="true"] button { opacity: .4; cursor: not-allowed; }
 .settings-row + .settings-row,
 .settings-row + .progress-log-paste,
 .progress-log-paste + .settings-row { border-top: 1px solid var(--divider); }

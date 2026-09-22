@@ -24,7 +24,6 @@ const STORAGE_KEYS=Object.freeze({
   customExercises:'form-custom-exercises',
   tags:'form-exercise-tags',
   tabLabels:'form-tab-labels',
-  haptics:'form-haptics',
   units:'form-units',
   fuel:'form-fuel-data',
   legacyFuel:'fuel_fdc_nutrition_db'
@@ -33,6 +32,7 @@ const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,di
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 function unitWeightLabel(){return state.units.weight}
+function formatBodyWeight(value){return state.units.weight==='lb'?String(Math.round(value)):value.toFixed(1)}
 function unitDistLabel(){return state.units.distance}
 function weightStep(){return state.units.weight==='lb'?5:2.5}
 function distStep(){return state.units.distance==='mi'?0.25:0.5}
@@ -501,22 +501,6 @@ function awSetKeepAwake(on){
     if(result&&typeof result.catch==='function')result.catch(()=>{});
   }catch{}
 }
-function haptic(kind){
-  if(!state.haptics)return;
-  try{
-    const cap=typeof window!=='undefined'?window.Capacitor:null;
-    if(!cap||!cap.Plugins||!cap.Plugins.Haptics)return;
-    if(typeof cap.isNativePlatform==='function'?!cap.isNativePlatform():cap.isNative!==true)return;
-    const h=cap.Plugins.Haptics;
-    let result;
-    if(kind==='success')result=h.notification({type:'SUCCESS'});
-    else if(kind==='warning')result=h.notification({type:'WARNING'});
-    else if(kind==='error')result=h.notification({type:'ERROR'});
-    else if(kind==='selection')result=h.selectionChanged();
-    else result=h.impact({style:kind==='light'?'LIGHT':kind==='heavy'?'HEAVY':'MEDIUM'});
-    if(result&&typeof result.catch==='function')result.catch(()=>{});
-  }catch{}
-}
 function loadActiveWorkout(){
   const raw=readStorage(STORAGE_KEYS.activeWorkout,null);
   let routine=raw&&typeof raw==='object'?state.routines.find(candidate=>candidate.id===raw.routineId):null;
@@ -669,7 +653,6 @@ const state={
   progressPreferences:storedProgressPrefs,
   showWorkoutReminder:readStorage(STORAGE_KEYS.workoutReminder,true)!==false,
   showTabLabels:readStorage(STORAGE_KEYS.tabLabels,true)!==false,
-  haptics:readStorage(STORAGE_KEYS.haptics,true)!==false,
   units:normalizeUnits(readStorage(STORAGE_KEYS.units,null)),
   showSecondaryPills:readStorage(STORAGE_KEYS.secondaryPills,false)===true,
   restPrefs:storedRestPrefs,
@@ -1214,7 +1197,6 @@ function parseConfigMd(text) {
       else if (key === 'pill-tags-host') cfg.prefs.pillTagsHost = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
       else if (key === 'pill-toggles') cfg.prefs.pillToggles = ['routine','category','target','equipment'].includes(raw) ? raw : 'equipment';
       else if (key === 'tab-labels') cfg.prefs.tabLabels = /^(true|yes|1|on)/i.test(raw);
-      else if (key === 'haptic-feedback') cfg.prefs.haptics = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'units') {
         const parts = raw.split(',').map(part => part.trim().toLowerCase());
         cfg.prefs.units = normalizeUnits({ weight: parts[0], distance: parts[1], height: parts[2] });
@@ -1391,7 +1373,6 @@ function configToMd() {
   lines.push(`pill-equipment: ${state.pillRowModes.equipment}`);
   lines.push(`pill-tags-host: ${state.pillRowModes.tagsHost}`);
   lines.push(`tab-labels: ${state.showTabLabels}`);
-  lines.push(`haptic-feedback: ${state.haptics}`);
   lines.push(`units: ${state.units.weight}, ${state.units.distance}, ${state.units.height}`);
   lines.push(`pill-toggles: ${state.pillRowModes.toggles}`);
   lines.push('', '## Custom Exercises');
@@ -1480,7 +1461,6 @@ function applyConfigToState(cfg) {
     if (cfg.prefs.pillTagsHost) state.pillRowModes.tagsHost = cfg.prefs.pillTagsHost;
     if (cfg.prefs.pillToggles) state.pillRowModes.toggles = cfg.prefs.pillToggles;
     if (cfg.prefs.tabLabels !== undefined) { state.showTabLabels = cfg.prefs.tabLabels; applyTabLabels(); }
-    if (cfg.prefs.haptics !== undefined) state.haptics = cfg.prefs.haptics;
     if (cfg.prefs.units) state.units = cfg.prefs.units;
   }
   if (cfg.exerciseTags && Object.keys(cfg.exerciseTags).length) {
@@ -1743,7 +1723,6 @@ function buildDefaultState() {
   state.pillRowModes = normalizePillRowModes({});
   state.showWorkoutReminder = true;
   state.showSecondaryPills = false;
-  state.haptics = true;
   activeAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'red'));
   applyAccent(activeAccent);
 }
@@ -1981,7 +1960,7 @@ function renderEverything() {
 /* --- vault-aware save wrappers --- */
 function saveRoutinesToVault() { markDirty('routines'); scheduleVaultSave('routines'); writeStorage(STORAGE_KEYS.routines, state.routines); }
 function saveTrainingLogsToVault() { markDirty('trainingLogs'); scheduleVaultSave('trainingLogs'); writeStorage(STORAGE_KEYS.progress, state.progress.logs); }
-function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.secondaryPills, state.showSecondaryPills); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); writeStorage(STORAGE_KEYS.haptics, state.haptics); }
+function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.secondaryPills, state.showSecondaryPills); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); }
 
 let isHandlingPopstate = false;
 
@@ -2590,9 +2569,9 @@ function openOverlay(key,returnFocus=document.activeElement){
      $('#inSex').value=p.sex||'m';
      syncUnitLabels();
      syncHeightInputs();
-     $('#inCurrentWeight').value=p.currentWeightKg.toFixed(1);
-     $('#inStartWeight').value=p.startWeightKg.toFixed(1);
-     $('#inGoalWeight').value=p.goalWeightKg.toFixed(1);
+     $('#inCurrentWeight').value=formatBodyWeight(p.currentWeightKg);
+     $('#inStartWeight').value=formatBodyWeight(p.startWeightKg);
+     $('#inGoalWeight').value=formatBodyWeight(p.goalWeightKg);
       setSelectByFloat('inActivity',p.activity||1.55);
       setSelectByFloat('inStrategy',p.strategy!==undefined?p.strategy:250);
       setSelectByFloat('inProteinRate',p.proteinRate||2.0);
@@ -3508,7 +3487,7 @@ function ensureAwRestTicker(){if(awRestTickerId)return;awRestTickerId=setInterva
 function awRestTick(){
   if(!state.activeWorkout?.rest){stopAwRestTicker();return;}
   const left=awRestSecondsLeft();
-  if(left<=0){haptic('success');cancelAwRest();toast('Rest complete');return;}
+  if(left<=0){cancelAwRest();toast('Rest complete');return;}
   updateAwRestPill(left);
 }
 function updateAwRestPill(left){
@@ -3911,20 +3890,16 @@ function closeProgressSettings(){
 }
 function formatRestDuration(value){return `${value} sec`}
 function unitsLocked(){return state.progress.logs.length>0}
+function currentUnitSystem(){return (state.units.weight==='kg'&&state.units.distance==='km'&&state.units.height==='cm')?'metric':'imperial'}
 function renderUnitSegs(){
-  document.querySelectorAll('[data-unit-seg]').forEach(group=>{
-    const dim=group.dataset.unitSeg;
+  const group=$('[data-unit-seg="system"]');
+  if(group){
+    const system=currentUnitSystem();
+    group.setAttribute('aria-disabled',String(unitsLocked()));
     group.querySelectorAll('[data-unit-value]').forEach(button=>{
-      button.setAttribute('aria-pressed',String(button.dataset.unitValue===state.units[dim]));
+      button.setAttribute('aria-pressed',String(button.dataset.unitValue===system));
     });
-  });
-  const locked=unitsLocked();
-  document.querySelectorAll('[data-unit-seg]').forEach(group=>{
-    group.setAttribute('aria-disabled',String(locked));
-    group.querySelectorAll('[data-unit-value]').forEach(button=>{button.disabled=locked});
-  });
-  const hint=$('#unitsHint');
-  if(hint)hint.hidden=!locked;
+  }
 }
 function syncUnitLabels(){
   const w=unitWeightLabel(),d=unitDistLabel();
@@ -3935,8 +3910,6 @@ function syncUnitLabels(){
   set('unitGoalLabel',`(${w})`);
   const wStep=state.units.weight==='lb'?2:0.5;
   document.querySelectorAll('[data-target="inCurrentWeight"],[data-target="inStartWeight"],[data-target="inGoalWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
-  document.querySelectorAll('[data-unit-delta="weight"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+weightStep());
-  document.querySelectorAll('[data-unit-delta="distance"]').forEach(btn=>btn.dataset.delta=(btn.dataset.dir==='+1'?'+':'-')+distStep());
   const ftInRow=$('#heightFtInStepper'),cmRow=$('#heightCmStepper');
   if(ftInRow&&cmRow){
     ftInRow.hidden=state.units.height!=='ftin';
@@ -3995,7 +3968,6 @@ function syncSettingsControls(){
   $('#showSecondaryPills').setAttribute('aria-pressed',String(state.showSecondaryPills));
   $('#restEnabled').setAttribute('aria-checked',String(state.restPrefs.enabled));
   $('#tabLabels').setAttribute('aria-checked',String(state.showTabLabels));
-  $('#hapticFeedback').setAttribute('aria-checked',String(state.haptics));
   renderPrefSegs();
   renderUnitSegs();
   syncUnitLabels();
@@ -5546,33 +5518,32 @@ $('#showSecondaryPills').addEventListener('click',(event)=>{
 });
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
 $('#tabLabels').addEventListener('click',(event)=>{state.showTabLabels=!state.showTabLabels;writeStorage(STORAGE_KEYS.tabLabels,state.showTabLabels);if(VAULT.loaded)saveConfigToVault();applyTabLabels();event.currentTarget.setAttribute('aria-checked',String(state.showTabLabels));toast(state.showTabLabels?'Tab labels shown':'Tab labels hidden');});
-$('#hapticFeedback').addEventListener('click',(event)=>{state.haptics=!state.haptics;writeStorage(STORAGE_KEYS.haptics,state.haptics);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.haptics));if(state.haptics)haptic('selection');toast(state.haptics?'Haptic feedback on':'Haptic feedback off');});
-document.querySelectorAll('[data-unit-seg]').forEach(group=>{
-  group.addEventListener('click',(event)=>{
-    const button=event.target.closest('[data-unit-value]');
-    if(!button||button.disabled)return;
-    if (unitsLocked()){toast('Units can only be changed while your training log is empty');return;}
-    const dim=group.dataset.unitSeg;
-    if(state.units[dim]===button.dataset.unitValue)return;
-    if(dim==='weight'){
-      const factor=button.dataset.unitValue==='lb'?LB_PER_KG:1/LB_PER_KG;
-      ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{state.fuel.profile[key]=Math.round(state.fuel.profile[key]*factor*10)/10});
-    }
-    if(dim==='height'){
-      const toFtIn=button.dataset.unitValue==='ftin';
-      const converted=state.fuel.profile.heightCm*(toFtIn?1/CM_PER_IN:CM_PER_IN);
-      state.fuel.profile.heightCm=toFtIn?Math.round(converted*10)/10:Math.round(converted);
-    }
-    state.units[dim]=button.dataset.unitValue;
-    writeStorage(STORAGE_KEYS.units,state.units);
-    if(VAULT.loaded)saveConfigToVault();
-    saveFuelState('config');
-    renderUnitSegs();
-    syncUnitLabels();
-    if(dim==='height')syncHeightInputs();
-    renderAll();
-    toast('Units updated');
-  });
+$('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
+  const button=event.target.closest('[data-unit-value]');
+  if(!button)return;
+  if (unitsLocked()){toast('Units can only be changed for empty training log.');return;}
+  const imperial=button.dataset.unitValue==='imperial';
+  if(currentUnitSystem()===(imperial?'imperial':'metric'))return;
+  if((state.units.weight==='lb')!==imperial){
+    const factor=imperial?LB_PER_KG:1/LB_PER_KG;
+    ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{
+      const v=state.fuel.profile[key]*factor;
+      state.fuel.profile[key]=imperial?Math.round(v):Math.round(v*10)/10;
+    });
+  }
+  if((state.units.height==='ftin')!==imperial){
+    const converted=state.fuel.profile.heightCm*(imperial?1/CM_PER_IN:CM_PER_IN);
+    state.fuel.profile.heightCm=imperial?Math.round(converted*10)/10:Math.round(converted);
+  }
+  state.units={weight:imperial?'lb':'kg',distance:imperial?'mi':'km',height:imperial?'ftin':'cm'};
+  writeStorage(STORAGE_KEYS.units,state.units);
+  if(VAULT.loaded)saveConfigToVault();
+  saveFuelState('config');
+  renderUnitSegs();
+  syncUnitLabels();
+  syncHeightInputs();
+  renderAll();
+  toast('Units updated');
 });
 $('#defaultFoodsPill').addEventListener('click',()=>toggleDefaults('foods'));
 $('#defaultRoutinesPill').addEventListener('click',()=>toggleDefaults('routines'));
@@ -6976,10 +6947,10 @@ function renderBodySection() {
   const bmi = (weightKg / (hM * hM)).toFixed(1);
 
   document.getElementById('bmiValDisplay').innerText = bmi;
-  document.getElementById('weightValDisplay').innerText = p.currentWeightKg.toFixed(1) + ' ' + unitWeightLabel();
+  document.getElementById('weightValDisplay').innerText = formatBodyWeight(p.currentWeightKg) + ' ' + unitWeightLabel();
 
-  document.getElementById('lblStartWeight').innerText = p.startWeightKg.toFixed(1) + ' ' + unitWeightLabel();
-  document.getElementById('lblGoalWeight').innerText = p.goalWeightKg.toFixed(1) + ' ' + unitWeightLabel();
+  document.getElementById('lblStartWeight').innerText = formatBodyWeight(p.startWeightKg) + ' ' + unitWeightLabel();
+  document.getElementById('lblGoalWeight').innerText = formatBodyWeight(p.goalWeightKg) + ' ' + unitWeightLabel();
 
   const isWeightLoss = p.startWeightKg > p.goalWeightKg;
   const isWeightGain = p.startWeightKg < p.goalWeightKg;
@@ -7000,7 +6971,7 @@ function renderBodySection() {
   document.getElementById('barWeightGoal').style.width = `${pct}%`;
   document.getElementById('goalPercentText').innerText = `${pct}% complete`;
 
-  const remainingDiff = Math.abs(p.goalWeightKg - p.currentWeightKg).toFixed(1);
+  const remainingDiff = formatBodyWeight(Math.abs(p.goalWeightKg - p.currentWeightKg));
   if (parseFloat(remainingDiff) === 0) {
     document.getElementById('weightDeltaDisplay').innerText = `Goal Achieved!`;
   } else if (p.currentWeightKg > p.goalWeightKg) {
@@ -7026,7 +6997,7 @@ document.getElementById('bodyMetricsModal').addEventListener('click', (e) => {
       const minVal = targetId === 'inAge' ? 10 : 30;
       const maxVal = targetId === 'inAge' ? 110 : 300;
       val = Math.max(minVal, Math.min(maxVal, val + delta));
-      input.value = targetId === 'inAge' || targetId === 'inHeight' ? Math.round(val) : val.toFixed(1);
+      input.value = targetId === 'inAge' || targetId === 'inHeight' ? Math.round(val) : formatBodyWeight(val);
     }
     updateModalBmi();
     return;
