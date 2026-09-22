@@ -46,9 +46,9 @@
   .device { background: #000; border: 1px solid #2c2c31; border-radius: 26px; padding: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
   .device img { display: block; width: 100%; border-radius: 18px; }
   .stage-bleed { margin-top: 46px; }
-  .stage { display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 34px 24px 30px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .stage { display: flex; gap: 20px; overflow-x: auto; padding: 34px 24px 30px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .stage::-webkit-scrollbar { display: none; }
-  .slide { flex: 0 0 auto; scroll-snap-align: center; cursor: pointer; }
+  .slide { flex: 0 0 auto; cursor: pointer; }
   .slide.focused { cursor: default; }
   .stage .device { width: 235px; max-width: 64vw; opacity: .35; transform: scale(.8); filter: grayscale(1); transition: opacity .35s, transform .35s, filter .35s, border-color .35s; }
   .stage .slide.focused .device { opacity: 1; transform: scale(1.12); filter: none; border-color: var(--accent); }
@@ -116,21 +116,21 @@
   </div>
   <div class="stage-bleed">
     <div class="stage" id="stage">
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" decoding="async"></div></div>
       <div class="slide"><div class="device"><img src="screenshots/screenshot-1.png" alt="Form app, week overview" fetchpriority="high" decoding="async"></div></div>
-      <div class="slide"><div class="device"><img src="screenshots/screenshot-2.png" alt="Form app screen 2" loading="lazy" decoding="async"></div></div>
-      <div class="slide"><div class="device"><img src="screenshots/screenshot-3.png" alt="Form app screen 3" loading="lazy" decoding="async"></div></div>
-      <div class="slide"><div class="device"><img src="screenshots/screenshot-4.png" alt="Form app screen 4" loading="lazy" decoding="async"></div></div>
-      <div class="slide"><div class="device"><img src="screenshots/screenshot-5.png" alt="Form app screen 5" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" loading="lazy" decoding="async"></div></div>
-      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" loading="lazy" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-2.png" alt="Form app screen 2" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-3.png" alt="Form app screen 3" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-4.png" alt="Form app screen 4" decoding="async"></div></div>
+      <div class="slide"><div class="device"><img src="screenshots/screenshot-5.png" alt="Form app screen 5" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-1.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-2.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-3.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-4.png" alt="" decoding="async"></div></div>
+      <div class="slide" aria-hidden="true"><div class="device"><img src="screenshots/screenshot-5.png" alt="" decoding="async"></div></div>
     </div>
     <div class="stage-controls">
       <button class="rnav" id="stagePrev" type="button" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
@@ -232,35 +232,54 @@ document.querySelectorAll(".copy").forEach(function (b) {
     var r = real(i);
     slides.forEach(function (s, k) { s.classList.toggle("focused", k === i); });
     dots.forEach(function (dot, k) { dot.classList.toggle("on", k === r); });
-    if (i < 2) rail.scrollLeft = centerPos(i + N);
-    else if (i > slides.length - 3) rail.scrollLeft = centerPos(i - N);
+  }
+  function teleport() {
+    var i = focusedIndex();
+    if (i < N) rail.scrollLeft = centerPos(i + N);
+    else if (i >= 2 * N) rail.scrollLeft = centerPos(i - N);
+  }
+  var settleT = null;
+  function scheduleSettle() { clearTimeout(settleT); settleT = setTimeout(settle, 140); }
+  function settle() {
+    teleport();
+    var i = focusedIndex();
+    var target = centerPos(i);
+    if (Math.abs(rail.scrollLeft - target) > 2) rail.scrollTo({ left: target, behavior: smooth ? "smooth" : "auto" });
+    update();
   }
   rail.addEventListener("scroll", function () {
     if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    scheduleSettle();
   });
-  slides.forEach(function (s, k) {
-    s.addEventListener("click", function () {
-      if (s.classList.contains("focused")) return;
-      go(real(k));
-    });
-  });
+  function glide(to) { rail.scrollTo({ left: to, behavior: smooth ? "smooth" : "auto" }); }
   function go(r) {
     var i = focusedIndex();
     var delta = ((r - real(i)) % N + N) % N;
-    rail.scrollTo({ left: centerPos(i + delta), behavior: smooth ? "smooth" : "auto" });
+    if (delta > N / 2) delta -= N;
+    clearTimeout(settleT);
+    glide(centerPos(i + delta));
   }
+  slides.forEach(function (s, k) {
+    s.addEventListener("click", function () {
+      if (s.classList.contains("focused")) return;
+      clearTimeout(settleT);
+      glide(centerPos(k));
+    });
+  });
   document.getElementById("stagePrev").addEventListener("click", function () {
-    rail.scrollTo({ left: centerPos(focusedIndex() - 1), behavior: smooth ? "smooth" : "auto" });
+    clearTimeout(settleT);
+    glide(centerPos(focusedIndex() - 1));
   });
   document.getElementById("stageNext").addEventListener("click", function () {
-    rail.scrollTo({ left: centerPos(focusedIndex() + 1), behavior: smooth ? "smooth" : "auto" });
+    clearTimeout(settleT);
+    glide(centerPos(focusedIndex() + 1));
   });
   var rt;
   window.addEventListener("resize", function () {
     clearTimeout(rt);
-    rt = setTimeout(function () { rail.scrollLeft = centerPos(focusedIndex()); }, 150);
+    rt = setTimeout(function () { teleport(); update(); }, 150);
   });
-  rail.scrollLeft = centerPos(N);
+  teleport();
   update();
 })();
 </script>
