@@ -32,7 +32,7 @@ const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,di
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 function unitWeightLabel(){return state.units.weight}
-function formatBodyWeight(value){return state.units.weight==='lb'?String(Math.round(value)):value.toFixed(1)}
+function formatBodyWeight(value){return state.units.weight==='lb'?String(Math.round(value)):String(Math.round(value*10)/10)}
 function unitDistLabel(){return state.units.distance}
 function weightStep(){return state.units.weight==='lb'?5:2.5}
 function distStep(){return state.units.distance==='mi'?0.25:0.5}
@@ -333,77 +333,65 @@ const DEFAULT_FOOD_DB = [
   { id: 'custom', name: 'Select a meal or add one', p100: 0, c100: 0, f100: 0, cals100: 0, defaultGrams: 100, liked: false },
 ];
 const DEFAULT_FOOD_DB_ITEMS = [
-  { id: 'd-001', name: 'Chicken Breast, cooked', p100: 31, c100: 0, f100: 3.6, cals100: 165, defaultGrams: 150, liked: false },
-  { id: 'd-002', name: 'Lean Ground Beef, cooked', p100: 26, c100: 0, f100: 17, cals100: 250, defaultGrams: 150, liked: false },
-  { id: 'd-003', name: 'Salmon Fillet, baked', p100: 20, c100: 0, f100: 13, cals100: 208, defaultGrams: 150, liked: false },
-  { id: 'd-004', name: 'Tuna, canned in water', p100: 26, c100: 0, f100: 1, cals100: 116, defaultGrams: 100, liked: false },
-  { id: 'd-005', name: 'Egg, whole', p100: 12.6, c100: 0.7, f100: 9.5, cals100: 143, defaultGrams: 100, liked: false },
-  { id: 'd-006', name: 'Greek Yogurt, 0%', p100: 10, c100: 3.6, f100: 0.4, cals100: 59, defaultGrams: 170, liked: false },
-  { id: 'd-007', name: 'Cottage Cheese', p100: 11, c100: 3.4, f100: 4.3, cals100: 98, defaultGrams: 150, liked: false },
-  { id: 'd-008', name: 'Whey Protein Powder', p100: 80, c100: 8, f100: 6, cals100: 400, defaultGrams: 30, liked: false },
-  { id: 'd-009', name: 'Milk, 2%', p100: 3.3, c100: 4.8, f100: 2, cals100: 50, defaultGrams: 250, liked: false },
-  { id: 'd-010', name: 'Tofu', p100: 8, c100: 1.9, f100: 4.8, cals100: 76, defaultGrams: 150, liked: false },
-  { id: 'd-011', name: 'Pork Loin, cooked', p100: 27, c100: 0, f100: 9, cals100: 198, defaultGrams: 150, liked: false },
-  { id: 'd-012', name: 'Turkey Breast, cooked', p100: 30, c100: 0, f100: 1, cals100: 135, defaultGrams: 150, liked: false },
-  { id: 'd-013', name: 'Shrimp, cooked', p100: 24, c100: 0.2, f100: 0.3, cals100: 99, defaultGrams: 150, liked: false },
-  { id: 'd-014', name: 'Sardines, canned', p100: 25, c100: 0, f100: 11, cals100: 208, defaultGrams: 100, liked: false },
-  { id: 'd-015', name: 'Bacon', p100: 37, c100: 1.4, f100: 42, cals100: 541, defaultGrams: 30, liked: false },
-  { id: 'd-016', name: 'Ham, sliced', p100: 21, c100: 1.5, f100: 6, cals100: 145, defaultGrams: 100, liked: false },
-  { id: 'd-017', name: 'Steak, Sirloin', p100: 27, c100: 0, f100: 15, cals100: 244, defaultGrams: 150, liked: false },
-  { id: 'd-018', name: 'White Rice, cooked', p100: 2.7, c100: 28, f100: 0.3, cals100: 130, defaultGrams: 200, liked: false },
-  { id: 'd-019', name: 'Brown Rice, cooked', p100: 2.6, c100: 26, f100: 1, cals100: 123, defaultGrams: 200, liked: false },
-  { id: 'd-020', name: 'Pasta, cooked', p100: 5.8, c100: 31, f100: 0.9, cals100: 158, defaultGrams: 200, liked: false },
-  { id: 'd-021', name: 'Oats, dry', p100: 13, c100: 68, f100: 6.5, cals100: 379, defaultGrams: 80, liked: false },
-  { id: 'd-022', name: 'Bread, whole wheat', p100: 13, c100: 41, f100: 3.4, cals100: 247, defaultGrams: 60, liked: false },
-  { id: 'd-023', name: 'Potato, boiled', p100: 1.9, c100: 20, f100: 0.1, cals100: 87, defaultGrams: 200, liked: false },
-  { id: 'd-024', name: 'Sweet Potato, baked', p100: 2, c100: 21, f100: 0.1, cals100: 90, defaultGrams: 200, liked: false },
-  { id: 'd-025', name: 'Quinoa, cooked', p100: 4.4, c100: 21, f100: 1.9, cals100: 120, defaultGrams: 180, liked: false },
-  { id: 'd-026', name: 'Banana', p100: 1.1, c100: 23, f100: 0.3, cals100: 89, defaultGrams: 120, liked: false },
-  { id: 'd-027', name: 'Apple', p100: 0.3, c100: 14, f100: 0.2, cals100: 52, defaultGrams: 180, liked: false },
-  { id: 'd-028', name: 'Orange', p100: 0.9, c100: 12, f100: 0.1, cals100: 47, defaultGrams: 140, liked: false },
-  { id: 'd-029', name: 'Strawberries', p100: 0.7, c100: 7.7, f100: 0.3, cals100: 32, defaultGrams: 150, liked: false },
-  { id: 'd-030', name: 'Blueberries', p100: 0.7, c100: 14, f100: 0.3, cals100: 57, defaultGrams: 140, liked: false },
-  { id: 'd-031', name: 'Avocado', p100: 2, c100: 8.5, f100: 14.7, cals100: 160, defaultGrams: 100, liked: false },
-  { id: 'd-032', name: 'Broccoli', p100: 2.8, c100: 7, f100: 0.4, cals100: 34, defaultGrams: 150, liked: false },
-  { id: 'd-033', name: 'Spinach', p100: 2.9, c100: 3.6, f100: 0.4, cals100: 23, defaultGrams: 100, liked: false },
-  { id: 'd-034', name: 'Mixed Salad Vegetables', p100: 1.5, c100: 4, f100: 0.1, cals100: 20, defaultGrams: 150, liked: false },
-  { id: 'd-035', name: 'Tomato', p100: 0.9, c100: 3.9, f100: 0.2, cals100: 18, defaultGrams: 120, liked: false },
-  { id: 'd-036', name: 'Cucumber', p100: 0.7, c100: 3.6, f100: 0.1, cals100: 15, defaultGrams: 100, liked: false },
-  { id: 'd-037', name: 'Carrot', p100: 0.9, c100: 10, f100: 0.2, cals100: 41, defaultGrams: 120, liked: false },
-  { id: 'd-038', name: 'Lentils, cooked', p100: 9, c100: 20, f100: 0.4, cals100: 116, defaultGrams: 180, liked: false },
-  { id: 'd-039', name: 'Chickpeas, cooked', p100: 8.9, c100: 27, f100: 2.6, cals100: 164, defaultGrams: 180, liked: false },
-  { id: 'd-040', name: 'Black Beans, cooked', p100: 8.9, c100: 24, f100: 0.5, cals100: 132, defaultGrams: 180, liked: false },
-  { id: 'd-041', name: 'Edamame', p100: 11, c100: 9, f100: 5, cals100: 121, defaultGrams: 100, liked: false },
-  { id: 'd-042', name: 'Olive Oil', p100: 0, c100: 0, f100: 100, cals100: 884, defaultGrams: 15, liked: false },
-  { id: 'd-043', name: 'Peanut Butter', p100: 25, c100: 20, f100: 50, cals100: 588, defaultGrams: 30, liked: false },
-  { id: 'd-044', name: 'Almonds', p100: 21, c100: 22, f100: 50, cals100: 579, defaultGrams: 30, liked: false },
-  { id: 'd-045', name: 'Walnuts', p100: 15, c100: 14, f100: 65, cals100: 654, defaultGrams: 30, liked: false },
-  { id: 'd-046', name: 'Chia Seeds', p100: 17, c100: 42, f100: 31, cals100: 486, defaultGrams: 20, liked: false },
-  { id: 'd-047', name: 'Butter', p100: 0.9, c100: 0.1, f100: 81, cals100: 717, defaultGrams: 10, liked: false },
-  { id: 'd-048', name: 'Cheddar Cheese', p100: 25, c100: 1.3, f100: 33, cals100: 403, defaultGrams: 40, liked: false },
-  { id: 'd-049', name: 'Black Coffee', p100: 0.1, c100: 0, f100: 0, cals100: 1, defaultGrams: 240, liked: false },
-  { id: 'd-050', name: 'Honey', p100: 0.3, c100: 82, f100: 0, cals100: 304, defaultGrams: 20, liked: false }
+  { id: 'd-001', name: 'Chicken Breast, Raw Skinless', p100: 22.5, c100: 0, f100: 2.6, cals100: 120, defaultGrams: 100, liked: false },
+  { id: 'd-002', name: 'Chicken Breast, Grilled', p100: 31, c100: 0, f100: 3.6, cals100: 165, defaultGrams: 100, liked: false },
+  { id: 'd-003', name: 'Chicken Thigh, Cooked Skinless', p100: 26, c100: 0, f100: 10.9, cals100: 209, defaultGrams: 100, liked: false },
+  { id: 'd-004', name: 'Ground Beef, Cooked', p100: 26, c100: 0, f100: 15, cals100: 250, defaultGrams: 100, liked: false },
+  { id: 'd-005', name: 'Tuna, Canned in Water', p100: 26, c100: 0, f100: 1, cals100: 116, defaultGrams: 100, liked: false },
+  { id: 'd-006', name: 'Salmon, Cooked', p100: 22.1, c100: 0, f100: 12.4, cals100: 206, defaultGrams: 100, liked: false },
+  { id: 'd-007', name: 'Egg, Whole Raw', p100: 12.6, c100: 0.7, f100: 9.5, cals100: 143, defaultGrams: 50, liked: false },
+  { id: 'd-008', name: 'Milk, Whole', p100: 3.2, c100: 4.8, f100: 3.3, cals100: 61, defaultGrams: 250, liked: false },
+  { id: 'd-009', name: 'Greek Yogurt, Plain', p100: 10.3, c100: 3.9, f100: 2, cals100: 73, defaultGrams: 200, liked: false },
+  { id: 'd-010', name: 'Cottage Cheese, Low Fat', p100: 11.1, c100: 3.4, f100: 2.3, cals100: 82, defaultGrams: 200, liked: false },
+  { id: 'd-011', name: 'White Rice, Cooked', p100: 2.7, c100: 28.2, f100: 0.3, cals100: 130, defaultGrams: 200, liked: false },
+  { id: 'd-012', name: 'Brown Rice, Cooked', p100: 2.7, c100: 25.6, f100: 1, cals100: 123, defaultGrams: 200, liked: false },
+  { id: 'd-013', name: 'Pasta, Cooked', p100: 5.8, c100: 30.9, f100: 0.9, cals100: 157, defaultGrams: 200, liked: false },
+  { id: 'd-014', name: 'Oats, Dry', p100: 16.9, c100: 66.3, f100: 6.9, cals100: 389, defaultGrams: 50, liked: false },
+  { id: 'd-015', name: 'Potatoes, Boiled', p100: 1.9, c100: 20.1, f100: 0.1, cals100: 87, defaultGrams: 200, liked: false },
+  { id: 'd-016', name: 'Sweet Potato, Cooked', p100: 2, c100: 20.7, f100: 0.2, cals100: 90, defaultGrams: 200, liked: false },
+  { id: 'd-017', name: 'Whole Wheat Bread, Sliced', p100: 13, c100: 41, f100: 4.2, cals100: 247, defaultGrams: 60, liked: false },
+  { id: 'd-018', name: 'Banana, Fresh Fruit', p100: 1.1, c100: 22.8, f100: 0.3, cals100: 98, defaultGrams: 118, liked: false },
+  { id: 'd-019', name: 'Apple, Fresh Fruit', p100: 0.3, c100: 13.8, f100: 0.2, cals100: 52, defaultGrams: 180, liked: false },
+  { id: 'd-020', name: 'Orange, Fresh Fruit', p100: 0.9, c100: 11.8, f100: 0.1, cals100: 47, defaultGrams: 150, liked: false },
+  { id: 'd-021', name: 'Strawberry, Fresh Fruit', p100: 0.7, c100: 7.7, f100: 0.3, cals100: 32, defaultGrams: 150, liked: false },
+  { id: 'd-022', name: 'Avocado, Fresh Fruit', p100: 2, c100: 8.5, f100: 14.7, cals100: 160, defaultGrams: 100, liked: false },
+  { id: 'd-023', name: 'Almonds, Nuts', p100: 21.2, c100: 21.6, f100: 49.9, cals100: 579, defaultGrams: 30, liked: false },
+  { id: 'd-024', name: 'Walnuts, Nuts', p100: 15.2, c100: 13.7, f100: 65.2, cals100: 654, defaultGrams: 30, liked: false },
+  { id: 'd-025', name: 'Peanuts, Nuts', p100: 26, c100: 16, f100: 49, cals100: 567, defaultGrams: 30, liked: false },
+  { id: 'd-026', name: 'Peanut Butter, Nut Spread', p100: 25, c100: 20, f100: 50, cals100: 588, defaultGrams: 32, liked: false },
+  { id: 'd-027', name: 'Olive Oil, Cooking Oil', p100: 0, c100: 0, f100: 100, cals100: 884, defaultGrams: 10, liked: false },
+  { id: 'd-028', name: 'Honey, Natural Sweetener', p100: 0.3, c100: 82.4, f100: 0, cals100: 304, defaultGrams: 21, liked: false },
+  { id: 'd-029', name: 'Lentils, Cooked', p100: 9, c100: 20.1, f100: 0.4, cals100: 116, defaultGrams: 200, liked: false },
+  { id: 'd-030', name: 'Chickpeas, Cooked', p100: 8.9, c100: 27.4, f100: 2.6, cals100: 164, defaultGrams: 200, liked: false },
+  { id: 'd-031', name: 'Black Beans, Cooked', p100: 8.9, c100: 23.7, f100: 0.5, cals100: 132, defaultGrams: 200, liked: false },
+  { id: 'd-032', name: 'Soybeans, Dry', p100: 36.5, c100: 30.2, f100: 19.9, cals100: 446, defaultGrams: 50, liked: false }
 ];
 const DEFAULT_ROUTINES = [
-  { id: 'd-r1', name: 'Full Body A', liked: false, items: [
-    { exerciseId: '0043', sets: 3, reps: 8 },
+  { id: 'd-r1', name: 'Day 1 — Push', liked: false, items: [
     { exerciseId: '0025', sets: 3, reps: 8 },
-    { exerciseId: '0027', sets: 3, reps: 10 },
-    { exerciseId: '0414', sets: 3, reps: 10 },
-    { exerciseId: '0031', sets: 3, reps: 12 }
+    { exerciseId: '0314', sets: 3, reps: 10 },
+    { exerciseId: '0227', sets: 3, reps: 13 },
+    { exerciseId: '0405', sets: 3, reps: 10 },
+    { exerciseId: '0334', sets: 3, reps: 14 },
+    { exerciseId: '0241', sets: 3, reps: 13 },
+    { exerciseId: '0194', sets: 2, reps: 13 }
   ] },
-  { id: 'd-r2', name: 'Push Day', liked: false, items: [
-    { exerciseId: '0025', sets: 4, reps: 8 },
-    { exerciseId: '0047', sets: 3, reps: 10 },
-    { exerciseId: '0091', sets: 3, reps: 10 },
-    { exerciseId: '0178', sets: 3, reps: 12 },
-    { exerciseId: '0241', sets: 3, reps: 12 }
+  { id: 'd-r2', name: 'Day 2 — Pull', liked: false, items: [
+    { exerciseId: '2330', sets: 3, reps: 10 },
+    { exerciseId: '0180', sets: 3, reps: 10 },
+    { exerciseId: '1350', sets: 3, reps: 10 },
+    { exerciseId: '3697', sets: 3, reps: 14 },
+    { exerciseId: '0383', sets: 2, reps: 14 },
+    { exerciseId: '0294', sets: 3, reps: 10 },
+    { exerciseId: '0313', sets: 2, reps: 13 }
   ] },
-  { id: 'd-r3', name: 'Lower Body', liked: false, items: [
-    { exerciseId: '0043', sets: 4, reps: 8 },
+  { id: 'd-r3', name: 'Day 3 — Legs', liked: false, items: [
+    { exerciseId: '0043', sets: 3, reps: 8 },
+    { exerciseId: '0739', sets: 3, reps: 10 },
     { exerciseId: '0085', sets: 3, reps: 10 },
-    { exerciseId: '1372', sets: 4, reps: 15 },
-    { exerciseId: '0496', sets: 3, reps: 12 }
+    { exerciseId: '0586', sets: 3, reps: 13 },
+    { exerciseId: '0585', sets: 2, reps: 13 },
+    { exerciseId: '0175', sets: 3, reps: 13 }
   ] }
 ];
 
@@ -3908,7 +3896,7 @@ function syncUnitLabels(){
   set('unitWeightLabel',`(${w})`);
   set('unitStartLabel',`(${w})`);
   set('unitGoalLabel',`(${w})`);
-  const wStep=state.units.weight==='lb'?2:0.5;
+  const wStep=state.units.weight==='lb'?1:0.5;
   document.querySelectorAll('[data-target="inCurrentWeight"],[data-target="inStartWeight"],[data-target="inGoalWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
   const ftInRow=$('#heightFtInStepper'),cmRow=$('#heightCmStepper');
   if(ftInRow&&cmRow){
@@ -5528,7 +5516,7 @@ $('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
     const factor=imperial?LB_PER_KG:1/LB_PER_KG;
     ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{
       const v=state.fuel.profile[key]*factor;
-      state.fuel.profile[key]=imperial?Math.round(v):Math.round(v*10)/10;
+      state.fuel.profile[key]=imperial?Math.round(v):Math.round(v*2)/2;
     });
   }
   if((state.units.height==='ftin')!==imperial){
@@ -5547,9 +5535,13 @@ $('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
 });
 $('#defaultFoodsPill').addEventListener('click',()=>toggleDefaults('foods'));
 $('#defaultRoutinesPill').addEventListener('click',()=>toggleDefaults('routines'));
-function toggleDefaults(scope){
+async function toggleDefaults(scope){
   const active=scope==='foods'?hasDefaultFoods():hasDefaultRoutines();
   if(active){
+    const confirmed=scope==='foods'
+      ?await appConfirm('Remove all default meals from your library?',{title:'Remove default meals',okLabel:'Remove'})
+      :await appConfirm('Remove all default routines?',{title:'Remove default routines',okLabel:'Remove'});
+    if(!confirmed)return;
     if(scope==='foods')onRemoveDefaultFoods();
     else onRemoveDefaultRoutines();
     return;
