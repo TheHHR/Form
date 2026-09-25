@@ -55,6 +55,8 @@ html[data-boot="loading"] body::after { content: ""; visibility: visible; positi
 }
 *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 ::selection { color: inherit; background: transparent; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+input::selection, textarea::selection { background: rgba(var(--accent-rgb), .4); color: inherit; }
 img, svg { -webkit-user-drag: none; }
 html { min-width: 320px; background: var(--surface); }
 body {
@@ -719,7 +721,14 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   overflow: hidden;
   text-overflow: clip;
 }
-.ingredient-select-field .menu-search-input { padding-right: 40px; }
+.ingredient-select-field .menu-search-input { padding-right: 76px; }
+.ingredient-search-control { position: relative; }
+.ingredient-search-actions { position: absolute; right: 6px; top: 50%; z-index: 3; display: flex; gap: 2px; transform: translateY(-50%); }
+.ingredient-search-action { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; color: var(--text-muted); background: transparent; border: none; border-radius: 50%; cursor: pointer; appearance: none; }
+.ingredient-search-action .icon { width: 18px; height: 18px; }
+.ingredient-search-action:disabled { opacity: .45; cursor: default; }
+.ingredient-search-action.busy { animation: ai-pulse 1.1s ease-in-out infinite; }
+.ingredient-search-actions .ai-action-btn { width: 30px; height: 30px; border-radius: 50%; }
 
 /* Custom Select Floating Unified Component */
 .progress-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
@@ -1079,8 +1088,8 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .progress-log-paste + .settings-row { border-top: 1px solid var(--divider); }
 .settings-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); color: var(--text); font-size: 13px; font-weight: var(--weight-medium); }
 .settings-row-main .icon { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
-button.settings-row { width: 100%; background: none; border: none; cursor: pointer; text-align: left; appearance: none; }
-button.settings-row:focus-visible { background: var(--surface-container-high); outline: 1px solid var(--border-strong); outline-offset: -1px; }
+button.settings-row, a.settings-row { width: 100%; background: none; border: none; cursor: pointer; text-align: left; appearance: none; text-decoration: none; }
+button.settings-row:focus-visible, a.settings-row:focus-visible { background: var(--surface-container-high); outline: 1px solid var(--border-strong); outline-offset: -1px; }
 .settings-row-danger, .settings-row-danger .settings-row-main, .settings-row-danger .settings-row-main .icon { color: var(--danger); }
 button.settings-row-danger:focus-visible { color: var(--danger); }
 .settings-row-value { color: var(--text-muted); font-size: 12px; font-weight: var(--weight-medium); white-space: nowrap; }
@@ -1094,11 +1103,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .progress-actions .pill-row .pill { flex: 1 1 0; min-height: 36px; padding: 0 8px; text-align: center; }
 .settings-row[data-mode="hidden"] .settings-row-main > span { text-decoration: line-through; }
 .settings-row[data-mode="hidden"] { opacity: .55; }
-.settings-footer { display: grid; gap: 3px; justify-items: center; margin-top: var(--space-2); padding: 0 4px; color: var(--text-faint); font-size: 11px; text-align: center; }
-.settings-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 5px; }
-.settings-footer-link { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--divider); border-radius: 999px; font-size: 11px; font-weight: var(--weight-medium); text-decoration: none; }
-.settings-footer-link .icon { width: 13px; height: 13px; flex: 0 0 auto; }
-.settings-footer-link:active { color: var(--text); background: var(--surface-container-high); }
+.settings-row-value.update-available { color: var(--accent); }
 .progress-log-paste { padding: var(--space-3) var(--space-3) var(--space-2); border-top: 1px solid var(--divider); }
 .progress-log-paste > label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
 .progress-log-paste textarea { width: 100%; min-height: 140px; padding: 10px; color: var(--text); background: var(--surface-container-high); border: none; resize: none; user-select: text; }
@@ -1429,43 +1434,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .preset-chip-add-content { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .preset-chip-add strong { color: var(--accent); font-size: 12px; font-weight: var(--weight-medium); line-height: 1; }
 .preset-chip-add .icon { color: var(--accent); width: 14px; height: 14px; }
-
-/* Ingredient select (single dynamic action button: + / ✓ / ⟳) */
-.ingredient-select-field .custom-select-button {
-  padding-right: 40px;
-}
-.btn-custom-name {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  appearance: none;
-}
-.btn-custom-name .icon { width: 18px; height: 18px; }
-.btn-custom-name:active { color: var(--text); }
-.custom-name-input {
-  min-width: 0;
-  width: 100%;
-  min-height: var(--control-size);
-  padding: 0 40px 0 12px;
-  color: var(--text);
-  background: var(--surface-container);
-  border: none;
-  border-radius: var(--radius-control);
-  -webkit-user-select: text;
-  user-select: text;
-}
 
 /* Meal history — mirrors Stats progress-history layout */
 .meal-history { display: grid; }
@@ -2301,4 +2269,43 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   .seg-control button,
   .settings-2nd,
   .pill { transition: none; }
+}
+
+/* =========================================================
+   AI (BYOK) — settings, weekly review
+   ========================================================= */
+.week-head-actions { display: flex; align-items: center; gap: 2px; justify-self: end; }
+.ai-action-btn { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; color: var(--accent); background: transparent; border: 0; border-radius: 8px; cursor: pointer; appearance: none; }
+.ai-action-btn .icon { width: 17px; height: 17px; }
+.ai-action-btn.busy { animation: ai-pulse 1.1s ease-in-out infinite; }
+.ai-action-btn:disabled { opacity: .45; cursor: default; }
+@keyframes ai-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.ai-provider-row { flex-wrap: wrap; row-gap: 8px; }
+.ai-provider-row .ai-provider-seg { flex-wrap: wrap; justify-content: flex-end; row-gap: 2px; }
+.ai-input-row .settings-row-main { flex: 1; }
+.ai-text-input { padding: 7px 14px; background: var(--surface-container-high); border: none; border-radius: 999px; color: var(--text); font-size: 12px; font-weight: var(--weight-medium); outline: none; appearance: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-text-input:focus { background: var(--surface-container); }
+.ai-text-input::placeholder { color: var(--text-muted); }
+#aiApiKey { width: 100px; flex: 0 0 auto; }
+#aiModelInput, #aiCustomBaseUrl { flex: 0 0 auto; max-width: 46%; }
+.ai-review { margin-top: var(--space-3); padding: 12px; background: var(--surface-container-high); border: 1px solid rgba(var(--accent-rgb), .22); border-radius: 12px; }
+.ai-review-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.ai-review-head .eyebrow { color: var(--accent); }
+.ai-review-meta { color: var(--text-muted); font-size: 10px; font-weight: var(--weight-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-review-body { color: var(--text); font-size: 12.5px; line-height: 1.55; }
+.ai-review-body p { margin: 0 0 6px; }
+.ai-review-body p:last-child { margin-bottom: 0; }
+.ai-review-body ul { margin: 0 0 6px; padding-left: 18px; display: grid; gap: 3px; }
+.ai-review-body li::marker { color: var(--accent); }
+.ai-review-body strong { color: var(--accent); font-weight: var(--weight-semibold); }
+.ai-review-body.streaming::after { content: '▍'; color: var(--accent); animation: ai-caret 1s steps(2, start) infinite; }
+@keyframes ai-caret { 50% { opacity: 0; } }
+.ai-review-placeholder { color: var(--text-muted); }
+.ai-review, .ai-review * { -webkit-user-select: text; user-select: text; }
+.ai-review ::selection { background: rgba(var(--accent-rgb), .4); color: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-action-btn.busy,
+  .ingredient-search-action.busy,
+  .ai-review-body.streaming::after { animation: none; }
 }

@@ -61,6 +61,7 @@
   <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></symbol>
   <symbol id="icon-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
   <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="M12 3l2 5.2L19.5 10 14 11.8 12 17l-2-5.2L4.5 10 10 8.2 12 3z"/><path d="M18.5 14.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5z"/></symbol>
   <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
   <symbol id="icon-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></symbol>
   <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
@@ -164,12 +165,16 @@
     <div class="feature-scroll">
       <section class="progress-dashboard" id="progressDashboard" aria-label="Training dashboard">
         <section class="dashboard-card dashboard-week-card">
-          <div class="dashboard-card-head dashboard-week-head"><div><span class="eyebrow" id="dashboardWeekLabel">This week</span><h3 id="dashboardWeekRange">Training sets</h3></div><div class="date-stepper" id="dashboardWeekNav" aria-label="Week navigation"><button class="date-stepper-btn date-stepper-prev" id="dashboardPreviousWeek" type="button" aria-label="Previous logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button><button class="date-stepper-btn" id="dashboardResetWeek" type="button" aria-label="Reset to current week"><svg class="icon"><use href="#icon-reset"/></svg></button><button class="date-stepper-btn date-stepper-next" id="dashboardNextWeek" type="button" aria-label="Next logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button></div><button class="dashboard-scope-toggle" id="dashboardScopeToggle" type="button" aria-pressed="false" aria-label="Show all-time chart"><svg class="icon"><use href="#icon-progress"/></svg></button></div>
+          <div class="dashboard-card-head dashboard-week-head"><div><span class="eyebrow" id="dashboardWeekLabel">This week</span><h3 id="dashboardWeekRange">Training sets</h3></div><div class="date-stepper" id="dashboardWeekNav" aria-label="Week navigation"><button class="date-stepper-btn date-stepper-prev" id="dashboardPreviousWeek" type="button" aria-label="Previous logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button><button class="date-stepper-btn" id="dashboardResetWeek" type="button" aria-label="Reset to current week"><svg class="icon"><use href="#icon-reset"/></svg></button><button class="date-stepper-btn date-stepper-next" id="dashboardNextWeek" type="button" aria-label="Next logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button></div><span class="week-head-actions"><button class="dashboard-scope-toggle ai-action-btn" id="aiInsightsBtn" data-ai-action="review" type="button" aria-label="Generate AI weekly review" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><button class="dashboard-scope-toggle" id="dashboardScopeToggle" type="button" aria-pressed="false" aria-label="Show all-time chart"><svg class="icon"><use href="#icon-progress"/></svg></button></span></div>
           <div class="dashboard-week-summary" id="dashboardWeekSummary" aria-live="polite">0 sessions · 0 sets · 0 exercises</div>
           <div class="weekly-bars" id="dashboardWeeklyBars" aria-label="Sets logged during the selected week"></div>
           <div class="month-weekdays" id="dashboardMonthWeekdays" hidden></div>
           <div class="month-grid" id="dashboardMonthGrid" hidden></div>
           <div class="all-time-chart" id="dashboardAllTimeChart" hidden></div>
+          <div class="ai-review" id="aiReview" hidden>
+            <div class="ai-review-head"><span class="eyebrow" id="aiReviewLabel">AI weekly review</span><span class="ai-review-meta" id="aiReviewMeta"></span></div>
+            <div class="ai-review-body" id="aiReviewBody"></div>
+          </div>
         </section>
         <section class="dashboard-card">
           <div class="dashboard-card-head"><div><span class="eyebrow dashboard-balance-label" id="dashboardBalanceLabel">Weekly</span><h3>Body-part balance</h3></div><span id="dashboardMuscleSummary">No data yet</span></div>
@@ -343,17 +348,18 @@
 <div class="feature-backdrop panel-backdrop" id="fuelLogMealModal" role="dialog" aria-modal="true" aria-labelledby="logMealTitle" aria-hidden="true">
   <section class="feature-panel panel-drawer">
     <div class="routine-header panel-header">
-      <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Pick a reference meal or enter custom macros.</span></div>
+      <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Search saved meals, estimate a description with AI, or enter macros manually.</span></div>
     </div>
     <div class="feature-scroll">
       <form class="progress-form" id="foodForm">
         <div class="feature-field feature-field-wide ingredient-select-field">
-          <div class="routine-editor-control">
-            <button class="custom-select-button" id="btnCustomIngredientSelect" type="button" aria-haspopup="listbox" aria-expanded="false"><span id="lblCustomIngredient">Select a meal or add one</span></button>
-            <input type="text" id="inCustomName" class="custom-name-input" maxlength="80" placeholder="Custom name" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Custom food name" hidden>
-            <button class="btn-custom-name" type="button" aria-label="Enter custom name"><svg class="icon"><use href="#icon-plus"/></svg></button>
+          <div class="routine-editor-control ingredient-search-control">
+            <input type="text" class="menu-search-input ingredient-search-input" id="ingredientSearchSwap" placeholder="Search meals or describe a meal" maxlength="500" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="ingredientMenuList" aria-expanded="false" aria-label="Search meals or describe a meal">
+            <div class="ingredient-search-actions">
+              <button class="ai-action-btn ingredient-search-action" id="mealAiActionButton" data-ai-action="meal" type="button" aria-label="Estimate macros with AI" title="Estimate macros with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button>
+              <button class="ingredient-search-action" id="btnMealManual" type="button" aria-label="Enter macros manually" title="Enter macros manually"><svg class="icon"><use href="#icon-plus"/></svg></button>
+            </div>
             <div class="routine-menu" id="menuCustomIngredient" role="listbox" hidden><div class="menu-search-list" id="ingredientMenuList"></div></div>
-            <input type="text" class="menu-search-input" id="ingredientSearchSwap" placeholder="Search meals" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search meals" hidden>
           </div>
         </div>
         <div class="feature-field feature-field-wide">
@@ -817,12 +823,44 @@
         </section>
 
         <section class="settings-group">
+          <h3 class="settings-heading">AI</h3>
+          <div class="settings-card">
+            <div class="settings-row ai-provider-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-sparkle"/></svg><span>Provider</span></span>
+              <div class="seg-control ai-provider-seg" data-ai-seg="provider" role="group" aria-label="AI provider">
+                <button type="button" data-ai-value="openrouter" aria-pressed="true">OpenRouter</button>
+                <button type="button" data-ai-value="openai" aria-pressed="false">OpenAI</button>
+                <button type="button" data-ai-value="gemini" aria-pressed="false">Gemini</button>
+                <button type="button" data-ai-value="custom" aria-pressed="false">Custom</button>
+              </div>
+            </div>
+            <div class="settings-row ai-input-row" id="aiKeyRow" hidden>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-link"/></svg><span>API key</span></span>
+              <input id="aiApiKey" class="ai-text-input" type="password" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="API key">
+            </div>
+            <div class="settings-row ai-input-row" id="aiCustomBaseUrlRow" hidden>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-link"/></svg><span>Base URL</span></span>
+              <input id="aiCustomBaseUrl" class="ai-text-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="https://host/v1" aria-label="Custom endpoint base URL">
+            </div>
+            <div class="settings-row ai-input-row" id="aiModelRow" hidden>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-movement"/></svg><span>Model</span></span>
+              <input id="aiModelInput" class="ai-text-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="e.g. deepseek/deepseek-chat-v3-0324:free" aria-label="Model ID">
+            </div>
+            <div class="settings-row" id="aiTestRow" hidden>
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-check"/></svg><span>Test connection</span></span>
+              <span class="settings-row-value" id="aiTestStatus">Not tested</span>
+              <button type="button" class="settings-2nd" id="aiTestConnection">Test</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-group">
           <h3 class="settings-heading">Data</h3>
           <div class="settings-card">
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-obsidian"/></svg><span>Vault folder</span></span>
-              <button type="button" class="vault-folder-pill" id="vaultFolderPill" aria-label="Choose vault folder"><svg class="icon"><use href="#icon-folder"/></svg><span id="vaultFolderName"></span></button>
               <button type="button" class="vault-reload-btn" id="vaultReloadBtn" aria-label="Reload vault from disk"><svg class="icon"><use href="#icon-reset"/></svg></button>
+              <button type="button" class="vault-folder-pill" id="vaultFolderPill" aria-label="Choose vault folder"><svg class="icon"><use href="#icon-folder"/></svg><span id="vaultFolderName"></span></button>
             </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-archive"/></svg><span>Default databases</span></span>
@@ -862,7 +900,26 @@
           </div>
         </section>
 
-        <footer class="settings-footer"><span>Form · v3.1.3 · <span id="settingsExerciseCount">0</span> exercises</span><span>Made by TheHHR</span><div class="settings-footer-links"><a class="settings-footer-link" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub"><svg class="icon"><use href="#icon-github"/></svg><span>GitHub</span></a><a class="settings-footer-link" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page"><svg class="icon"><use href="#icon-heart"/></svg><span>Donate</span></a></div></footer>
+        <section class="settings-group">
+          <h3 class="settings-heading">About</h3>
+          <div class="settings-card">
+            <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
+              <span class="settings-row-value" id="updateStatus">v3.2.0</span>
+              <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+            </button>
+            <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-github"/></svg><span>Source code</span></span>
+              <span class="settings-row-value">GitHub</span>
+              <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+            </a>
+            <a class="settings-row settings-row-action" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-heart"/></svg><span>Support the project</span></span>
+              <span class="settings-row-value">Donate</span>
+              <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+            </a>
+          </div>
+        </section>
       </div>
     </div>
   </section>
@@ -944,6 +1001,8 @@
   <div id="exerciseTagOptions" class="exercise-tag-options"></div>
   <div class="tag-menu-input-wrap"><input id="exerciseTagInput" type="text" maxlength="24" placeholder="New tag" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="New tag"><button type="button" class="exercise-tag-submit" id="exerciseTagSubmit" aria-label="Add tag"><svg class="icon"><use href="#icon-plus"/></svg></button></div>
 </div>
+<script src="data/exercises.js" defer></script>
+<script src="vendor/muscle-map.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>
