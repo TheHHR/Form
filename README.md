@@ -34,7 +34,7 @@ Grab the latest signed APK from [Releases](https://github.com/TheHHR/Form/releas
 
 If Form helps your training, consider supporting development:
 
-[![Donate](https://img.shields.io/badge/Donate-Crypto-f7931a?style=for-the-badge&logo=bitcoin&logoColor=white)](https://thehhr.github.io/Form/#donate)
+<a href="https://thehhr.github.io/Form/#donate"><img src="docs/badges/donate-crypto.svg" alt="Donate crypto" height="60" /></a>
 
 ## Built with
 
