@@ -73,3 +73,16 @@ jobs:
           make_latest: true
           overwrite_files: true
           files: Form-${{ steps.ver.outputs.version }}.apk
+
+      - name: Sync version into landing page
+        run: |
+          sed -i "s/v[0-9]*\.[0-9]*\.[0-9]* · Made by/v${{ steps.ver.outputs.version }} · Made by/" docs/index.html
+          sed -i "s|releases/download/v[0-9.]*/Form-[0-9.]*\.apk|releases/download/v${{ steps.ver.outputs.version }}/Form-${{ steps.ver.outputs.version }}.apk|g" docs/index.html
+
+      - name: Commit landing page version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git diff --cached --quiet || git commit -m "Site: v${{ steps.ver.outputs.version }} [skip ci]"
+          git push

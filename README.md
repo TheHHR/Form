@@ -5,9 +5,10 @@ An offline-first training and nutrition tracker for Android. Plan routines, log 
 ## Features
 
 - **Training** — scheduled routines, a guided active-workout screen with rest timers, set/rep/weight logging, supersets and secondary exercises
-- **Exercise library** — hundreds of exercises with animated demos, categories, and custom exercise support
+- **Exercise library** — 1,324 exercises with animated demos, categories, and custom exercise support
 - **Nutrition** — meal logging with a food database, macro/calorie tracking, water intake
 - **Progress** — training history, charts, and body-metrics tracking
+- **AI (bring your own key)** — weekly/daily training reviews, meal macro estimates from a description, and an AI routine builder. Works with OpenRouter, OpenAI, Gemini, or a custom endpoint; your key stays on your device and requests go straight to your provider
 - **Own your data** — everything lives in a plain-text vault (.md) in a folder you pick on your device; view and edit it in Obsidian or any editor, export/import anytime. No servers, no accounts, no tracking.
 
 ## Download
