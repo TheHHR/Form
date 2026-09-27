@@ -13,7 +13,13 @@ An offline-first training and nutrition tracker for Android. Plan routines, log 
 
 ## Download
 
-[![Download APK](https://img.shields.io/badge/Download-APK-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/TheHHR/Form/releases/latest)
+<div align="center">
+
+<a href="https://github.com/TheHHR/Form/releases/latest"><img src="docs/badges/get-it-on-github.png" alt="Get it on GitHub" height="60" /></a>
+&nbsp;
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.thehhr.form%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FTheHHR%2FForm%22%2C%22author%22%3A%22TheHHR%22%2C%22name%22%3A%22Form%22%7D"><img src="docs/badges/get-it-on-obtainium.png" alt="Get it on Obtainium" height="60" /></a>
+
+</div>
 
 Grab the latest signed APK from [Releases](https://github.com/TheHHR/Form/releases/latest) — every push to `main` rebuilds it automatically. Requires Android 10+.
 
