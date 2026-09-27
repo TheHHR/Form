@@ -737,6 +737,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 }
 .ingredient-select-field .menu-search-input { padding-right: 76px; }
 .ingredient-search-control { position: relative; }
+.ai-estimate-note { margin: -2px 2px 0; color: var(--text-muted); font-size: 11px; line-height: 1.45; }
 .ingredient-search-actions { position: absolute; right: 6px; top: 50%; z-index: 3; display: flex; gap: 2px; transform: translateY(-50%); }
 .ingredient-search-action { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; color: var(--text-muted); background: transparent; border: none; border-radius: 50%; cursor: pointer; appearance: none; }
 .ingredient-search-action .icon { width: 18px; height: 18px; }
@@ -822,6 +823,10 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-editor-control .routine-2nd:disabled { opacity: .4; }
 .routine-editor-control .routine-2nd.active { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
 .routine-editor-control input[hidden] ~ .routine-2nd { display: none; }
+#aiRoutineToggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; }
+#aiRoutineToggle .icon { width: 18px; height: 18px; }
+#aiRoutineToggle[hidden] { display: none; }
+.routine-editor-control input[hidden] ~ #aiRoutineToggle { display: none; }
 .routine-data-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-2); margin-top: var(--space-3); }
 .routine-data-actions button { min-height: var(--control-size); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; color: var(--text-soft); background: var(--surface-container); border: none; font-size: 12px; font-weight: var(--weight-semibold); }
 .routine-paste-panel { margin-top: var(--space-3); padding: var(--space-3); background: var(--surface-container); border: none; border-radius: var(--radius-surface); }
@@ -1141,7 +1146,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .vault-reload-btn:active { color: var(--text); background: var(--surface-container-high); }
 .vault-reload-btn .icon { width: 16px; height: 16px; }
 .panel-header-action { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; margin-top: 4px; padding: 0; color: var(--text-muted); background: var(--surface-container); border: none; border-radius: 50%; cursor: pointer; appearance: none; transition: color .2s ease, background-color .2s ease; }
-.panel-header-action:hover { color: var(--text); }
 .panel-header-action:active { color: var(--text); background: var(--surface-container-high); }
 .panel-header-action .icon { width: 18px; height: 18px; }
 
@@ -1323,8 +1327,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 }
 .fuel-card-head h3 { margin: 0; font-size: 16px; font-weight: var(--weight-semibold); }
 .fuel-card-divider { height: 1px; background: var(--border); margin: var(--space-4) 0 var(--space-3); }
-.energy-grid { border-radius: var(--radius-control); cursor: pointer; transition: background-color .15s ease, opacity .15s ease; }
-.energy-grid:hover { background: rgba(var(--accent-rgb), .05); }
+.energy-grid { border-radius: var(--radius-control); cursor: pointer; transition: opacity .15s ease; }
 .energy-grid:active { opacity: .75; }
 .energy-grid:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
