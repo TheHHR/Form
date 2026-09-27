@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -56,6 +56,7 @@
   <symbol id="icon-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
   <symbol id="icon-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.5 15a7 7 0 1 0 .7-7.8L4 10"/></symbol>
+  <symbol id="icon-swap" viewBox="0 0 24 24"><path d="M16 3l5 5-5 5M21 8H7M8 21l-5-5 5-5M3 16h14"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
   <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
   <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></symbol>
@@ -78,7 +79,7 @@
   <main class="shell">
     <div class="content">
       <section class="main" id="workoutTabPanel">
-        <div hidden><select id="sortBy" aria-label="Sort exercises"><option value="custom" disabled>Custom</option><option value="name">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="category">Body part</option><option value="id">Dataset order</option></select><select id="mainRoutineSelect" aria-label="Filter by routine"><option value="">All exercises</option></select></div>
+        <div hidden><select id="sortBy" aria-label="Sort exercises"><option value="custom" disabled>Custom</option><option value="name">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="category">Body part</option><option value="target">Target muscle</option><option value="equipment">Equipment</option></select><select id="mainRoutineSelect" aria-label="Filter by routine"><option value="">All exercises</option></select></div>
         <header class="mobile-phone-header">
           <div class="mobile-phone-header-top">
             <h1 class="mobile-phone-title">Exercises</h1>
@@ -106,11 +107,9 @@
 </div>
 
 <nav class="mobile-tab-bar" aria-label="Primary navigation" role="tablist">
-  <button class="mobile-nav-button" id="mobileProgressBtn" type="button" role="tab" aria-selected="false" aria-controls="progressBackdrop"><svg class="icon"><use href="#icon-progress"/></svg><span>Stats</span></button>
   <button class="mobile-nav-button" id="mobilePlanBtn" type="button" role="tab" aria-selected="false" aria-controls="routineDrawer"><svg class="icon"><use href="#icon-routine"/></svg><span>Plans</span></button>
   <button class="mobile-nav-button" id="mobileWorkoutBtn" type="button" role="tab" aria-selected="true" aria-controls="workoutTabPanel"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Workout</span></button>
-  <button class="mobile-nav-button" id="mobileFuelBtn" type="button" role="tab" aria-selected="false" aria-controls="fuelBackdrop"><svg class="icon"><use href="#icon-flame"/></svg><span>Fuel</span></button>
-  <button class="mobile-nav-button" id="mobileSettingsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="settingsBackdrop"><svg class="icon"><use href="#icon-settings"/></svg><span>Settings</span></button>
+  <button class="mobile-nav-button" id="mobileProgressBtn" type="button" role="tab" aria-selected="false" aria-controls="progressBackdrop"><svg class="icon"><use href="#icon-progress"/></svg><span>Dashboard</span></button>
 </nav>
 
 <div class="plan-switch" id="planSwitch" role="tablist" aria-label="Plan sections" hidden>
@@ -161,8 +160,82 @@
 
 <div class="feature-backdrop panel-backdrop" id="progressBackdrop" role="dialog" aria-modal="true" aria-labelledby="progressTitle" aria-hidden="true">
   <section class="feature-panel progress-panel panel-drawer">
-    <div class="routine-header panel-header"><div><h2 id="progressTitle" class="phone-title">Stats</h2><span class="panel-summary" id="progressSubtitle">Your training stats and recent activity.</span></div></div>
+    <div class="routine-header panel-header"><div><h2 id="progressTitle" class="phone-title">Dashboard</h2><span class="panel-summary" id="progressSubtitle">Daily balance, macros, hydration, and training.</span></div><button class="panel-header-action" id="dashboardSettingsBtn" type="button" aria-label="Open settings" aria-haspopup="dialog"><svg class="icon"><use href="#icon-settings"/></svg></button></div>
     <div class="feature-scroll">
+      <div class="fuel-stack" id="dashboardFuelStack">
+        <div class="fuel-card">
+          <div class="fuel-card-head">
+            <div class="fuel-daily-head">
+              <div>
+                <span class="eyebrow" id="dailyBalanceDateEyebrow">—</span>
+                <h3>Daily Balance</h3>
+              </div>
+              <div class="date-stepper" aria-label="Date navigation">
+                <button class="date-stepper-btn date-stepper-prev" type="button" id="btnPrevDay" aria-label="Previous day">
+                  <svg class="icon"><use href="#icon-chevron"/></svg>
+                </button>
+                <button class="date-stepper-btn" type="button" id="btnResetToday" aria-label="Go to today">
+                  <svg class="icon"><use href="#icon-reset"/></svg>
+                </button>
+                <button class="date-stepper-btn date-stepper-next" type="button" id="btnNextDay" aria-label="Next day">
+                  <svg class="icon"><use href="#icon-chevron"/></svg>
+                </button>
+              </div>
+              <div class="fuel-daily-head-right">
+                <span id="lblTargetCalorieGoal" class="bmi-stat-meta">Goal: 2,975 kcal</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="energy-grid" id="dailyBalanceEnergy" role="button" tabindex="0" aria-haspopup="dialog" aria-label="View meal history">
+            <div class="circle-chart">
+              <svg viewBox="0 0 100 100">
+                <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
+                <circle class="circle-meter" id="calMeter" cx="50" cy="50" r="45"></circle>
+              </svg>
+              <div class="circle-label">
+                <strong id="calsRemaining">0</strong>
+                <span id="calsRemainingSub">kcal left</span>
+              </div>
+            </div>
+            <div class="macros-stack">
+              <div class="macro-bar-row">
+                <div class="macro-meta"><span>Protein</span><b id="metaProtein">0 / 150g</b></div>
+                <div class="track"><i id="barProtein" style="background:var(--positive); width:0%"></i></div>
+              </div>
+              <div class="macro-bar-row">
+                <div class="macro-meta"><span>Carbs</span><b id="metaCarbs">0 / 411g</b></div>
+                <div class="track"><i id="barCarbs" style="background:var(--carbs); width:0%"></i></div>
+              </div>
+              <div class="macro-bar-row">
+                <div class="macro-meta"><span>Fats</span><b id="metaFats">0 / 83g</b></div>
+                <div class="track"><i id="barFats" style="background:var(--fats); width:0%"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fuel-card">
+          <div class="hydration-section">
+            <div class="water-row">
+              <div class="water-meta">
+                <span class="eyebrow">Hydration</span>
+                <strong id="waterDisplay">0 / 3,375 ml</strong>
+              </div>
+              <div class="water-actions" id="waterActions">
+                <button type="button" data-water-add="250">+250 ml</button>
+                <button type="button" data-water-add="500">+500 ml</button>
+                <button type="button" data-water-reset style="color:var(--accent)">Reset</button>
+              </div>
+            </div>
+            <div class="track" style="margin-top: 10px;">
+              <i id="waterBar" style="background:var(--accent); width:0%"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="preset-scroller" id="presetFoodContainer"></div>
+      </div>
       <section class="progress-dashboard" id="progressDashboard" aria-label="Training dashboard">
         <section class="dashboard-card dashboard-week-card">
           <div class="dashboard-card-head dashboard-week-head"><div><span class="eyebrow" id="dashboardWeekLabel">This week</span><h3 id="dashboardWeekRange">Training sets</h3></div><div class="date-stepper" id="dashboardWeekNav" aria-label="Week navigation"><button class="date-stepper-btn date-stepper-prev" id="dashboardPreviousWeek" type="button" aria-label="Previous logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button><button class="date-stepper-btn" id="dashboardResetWeek" type="button" aria-label="Reset to current week"><svg class="icon"><use href="#icon-reset"/></svg></button><button class="date-stepper-btn date-stepper-next" id="dashboardNextWeek" type="button" aria-label="Next logged week"><svg class="icon"><use href="#icon-chevron"/></svg></button></div><span class="week-head-actions"><button class="dashboard-scope-toggle ai-action-btn" id="aiInsightsBtn" data-ai-action="review" type="button" aria-label="Generate AI weekly review" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><button class="dashboard-scope-toggle" id="dashboardScopeToggle" type="button" aria-pressed="false" aria-label="Show all-time chart"><svg class="icon"><use href="#icon-progress"/></svg></button></span></div>
@@ -226,129 +299,11 @@
   </section>
 </div>
 
-<div class="feature-backdrop panel-backdrop" id="fuelBackdrop" role="dialog" aria-modal="true" aria-labelledby="fuelTitle" aria-hidden="true">
-  <section class="feature-panel panel-drawer">
-    <div class="routine-header panel-header">
-      <div><h2 id="fuelTitle">Fuel</h2><span class="panel-summary">Daily balance, macros, hydration, and meals.</span></div>
-    </div>
-    <div class="feature-scroll">
-      <div class="fuel-stack">
-        <div class="fuel-card fuel-card-clickable" id="topBmiCard" role="button" tabindex="0" aria-haspopup="dialog">
-          <div class="fuel-card-head">
-            <div>
-              <span class="eyebrow">Body Index & Targets</span>
-              <h3>BMI & Target Engine</h3>
-            </div>
-            <div class="bmi-card-actions">
-              <span class="edit-pill"><svg class="icon"><use href="#icon-edit"/></svg> Edit</span>
-            </div>
-          </div>
-          <div class="grid-2 bmi-grid">
-            <div class="bmi-stat-card">
-              <span class="bmi-stat-label">Current BMI</span>
-              <strong id="bmiValDisplay" class="bmi-stat-value">23.7</strong>
-              <span class="bmi-stat-meta">Normal: 18.5 – 24.9</span>
-            </div>
-            <div class="bmi-stat-card">
-              <span class="bmi-stat-label">Current Weight</span>
-              <strong id="weightValDisplay" class="bmi-stat-value">75.0 kg</strong>
-              <span id="weightDeltaDisplay" class="bmi-stat-meta positive">3.0 kg to gain</span>
-            </div>
-          </div>
-          <div class="macro-bar-row">
-            <div class="macro-meta">
-              <span>Start: <b id="lblStartWeight">75.0 kg</b></span>
-              <span id="goalPercentText" class="goal-percent-text">0% complete</span>
-              <span>Target: <b id="lblGoalWeight">78.0 kg</b></span>
-            </div>
-            <div class="track bmi-progress-track"><i id="barWeightGoal" style="background:var(--accent); width:0%"></i></div>
-          </div>
-        </div>
-
-        <div class="fuel-card">
-          <div class="fuel-card-head">
-            <div class="fuel-daily-head">
-              <div>
-                <span class="eyebrow" id="dailyBalanceDateEyebrow">—</span>
-                <h3>Daily Balance</h3>
-              </div>
-              <div class="date-stepper" aria-label="Date navigation">
-                <button class="date-stepper-btn date-stepper-prev" type="button" id="btnPrevDay" aria-label="Previous day">
-                  <svg class="icon"><use href="#icon-chevron"/></svg>
-                </button>
-                <button class="date-stepper-btn" type="button" id="btnResetToday" aria-label="Go to today">
-                  <svg class="icon"><use href="#icon-reset"/></svg>
-                </button>
-                <button class="date-stepper-btn date-stepper-next" type="button" id="btnNextDay" aria-label="Next day">
-                  <svg class="icon"><use href="#icon-chevron"/></svg>
-                </button>
-              </div>
-              <div class="fuel-daily-head-right">
-                <span id="lblTargetCalorieGoal" class="bmi-stat-meta">Goal: 2,975 kcal</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="energy-grid">
-            <div class="circle-chart">
-              <svg viewBox="0 0 100 100">
-                <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
-                <circle class="circle-meter" id="calMeter" cx="50" cy="50" r="45"></circle>
-              </svg>
-              <div class="circle-label">
-                <strong id="calsRemaining">0</strong>
-                <span id="calsRemainingSub">kcal left</span>
-              </div>
-            </div>
-            <div class="macros-stack">
-              <div class="macro-bar-row">
-                <div class="macro-meta"><span>Protein</span><b id="metaProtein">0 / 150g</b></div>
-                <div class="track"><i id="barProtein" style="background:var(--positive); width:0%"></i></div>
-              </div>
-              <div class="macro-bar-row">
-                <div class="macro-meta"><span>Carbs</span><b id="metaCarbs">0 / 411g</b></div>
-                <div class="track"><i id="barCarbs" style="background:var(--carbs); width:0%"></i></div>
-              </div>
-              <div class="macro-bar-row">
-                <div class="macro-meta"><span>Fats</span><b id="metaFats">0 / 83g</b></div>
-                <div class="track"><i id="barFats" style="background:var(--fats); width:0%"></i></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fuel-card">
-          <div class="hydration-section">
-            <div class="water-row">
-              <div class="water-meta">
-                <span class="eyebrow">Hydration</span>
-                <strong id="waterDisplay">0 / 3,375 ml</strong>
-              </div>
-              <div class="water-actions" id="waterActions">
-                <button type="button" data-water-add="250">+250 ml</button>
-                <button type="button" data-water-add="500">+500 ml</button>
-                <button type="button" data-water-reset style="color:var(--accent)">Reset</button>
-              </div>
-            </div>
-            <div class="track" style="margin-top: 10px;">
-              <i id="waterBar" style="background:var(--accent); width:0%"></i>
-            </div>
-          </div>
-        </div>
-
-        <div class="preset-scroller" id="presetFoodContainer"></div>
-
-        <div class="meal-history" id="mealsContainer"></div>
-      </div>
-    </div>
-  </section>
-</div>
-
 <!-- FUEL: LOG MEAL PANEL -->
 <div class="feature-backdrop panel-backdrop" id="fuelLogMealModal" role="dialog" aria-modal="true" aria-labelledby="logMealTitle" aria-hidden="true">
   <section class="feature-panel panel-drawer">
     <div class="routine-header panel-header">
-      <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Search saved meals, estimate a description with AI, or enter macros manually.</span></div>
+      <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Search saved meals, describe or enter macros manually.</span></div>
     </div>
     <div class="feature-scroll">
       <form class="progress-form" id="foodForm">
@@ -415,6 +370,18 @@
   </section>
 </div>
 
+<!-- DASHBOARD: MEAL HISTORY DRAWER -->
+<div class="feature-backdrop panel-backdrop" id="mealHistoryBackdrop" role="dialog" aria-modal="true" aria-labelledby="mealHistoryTitle" aria-hidden="true">
+  <section class="feature-panel panel-drawer">
+    <div class="routine-header panel-header">
+      <div><h2 id="mealHistoryTitle">Meal history</h2><span class="panel-summary" id="mealHistoryDate">—</span></div>
+    </div>
+    <div class="feature-scroll">
+      <div class="meal-history" id="mealsContainer"></div>
+    </div>
+  </section>
+</div>
+
 <!-- CUSTOM EXERCISES PANEL -->
 <div class="feature-backdrop panel-backdrop" id="customExerciseModal" role="dialog" aria-modal="true" aria-labelledby="customExerciseTitle" aria-hidden="true">
   <section class="feature-panel panel-drawer">
@@ -436,124 +403,6 @@
       <section class="custom-exercise-list" id="customExerciseList" aria-label="Saved custom exercises"></section>
     </div>
   </section>
-</div>
-
-<!-- FUEL: BODY METRICS & TDEE MODAL -->
-<div class="fuel-modal-backdrop fuel-overlay" id="bodyMetricsModal" role="dialog" aria-modal="true" aria-labelledby="metricsModalTitle" aria-hidden="true">
-  <div class="fuel-modal">
-    <div class="modal-header-row">
-      <div>
-        <h2 id="metricsModalTitle" class="modal-header-title">Body Metrics & Targets</h2>
-      </div>
-    </div>
-
-    <form id="bodyMetricsForm">
-      <div class="grid-2">
-        <div class="feature-field">
-          <label>Age (Years)</label>
-          <div class="routine-stepper">
-            <button class="routine-step" type="button" data-target="inAge" data-delta="-1" aria-label="Decrease age"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inAge" type="text" readonly tabindex="-1" value="22" aria-label="Age">
-            <button class="routine-step" type="button" data-target="inAge" data-delta="1" aria-label="Increase age"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-        </div>
-        <div class="feature-field">
-          <label for="inSex">Biological Sex</label>
-          <select id="inSex" aria-label="Biological Sex">
-            <option value="m" selected>Male (+5 BMR)</option>
-            <option value="f">Female (-161 BMR)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="feature-field">
-          <label>Height <span id="unitHeightLabel">(cm)</span></label>
-          <div class="routine-stepper" id="heightCmStepper">
-            <button class="routine-step" type="button" data-target="inHeight" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inHeight" type="text" readonly tabindex="-1" value="178" aria-label="Height in centimeters">
-            <button class="routine-step" type="button" data-target="inHeight" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-          <div class="routine-stepper" id="heightFtInStepper" hidden>
-            <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inHeightFtIn" type="text" readonly tabindex="-1" value="5'10&quot;" aria-label="Height in feet and inches">
-            <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-        </div>
-        <div class="feature-field">
-          <label>Current Weight <span id="unitWeightLabel">(kg)</span></label>
-          <div class="routine-stepper">
-            <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="-0.5" aria-label="Decrease current weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inCurrentWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Current weight in kilograms">
-            <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="0.5" aria-label="Increase current weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="feature-field">
-          <label>Start Weight <span id="unitStartLabel">(kg)</span></label>
-          <div class="routine-stepper">
-            <button class="routine-step" type="button" data-target="inStartWeight" data-delta="-0.5" aria-label="Decrease start weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inStartWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Start weight in kilograms">
-            <button class="routine-step" type="button" data-target="inStartWeight" data-delta="0.5" aria-label="Increase start weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-        </div>
-        <div class="feature-field">
-          <label>Goal Target <span id="unitGoalLabel">(kg)</span></label>
-          <div class="routine-stepper">
-            <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="-0.5" aria-label="Decrease goal weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
-            <input id="inGoalWeight" type="text" readonly tabindex="-1" value="78.0" aria-label="Goal weight in kilograms">
-            <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="0.5" aria-label="Increase goal weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="feature-field">
-        <label>Calculated BMI</label>
-        <div class="bmi-stat-card modal-bmi-card">
-          <strong id="modalBmiValue" class="bmi-stat-value">23.7</strong>
-          <span id="modalBmiCategory" class="bmi-stat-meta">Normal (18.5 – 24.9)</span>
-        </div>
-      </div>
-
-      <div class="feature-field">
-        <label for="inActivity">Daily Activity Level</label>
-        <select id="inActivity" aria-label="Daily Activity Level">
-          <option value="1.2">Sedentary (Desk job, no workouts, &lt;5,000 steps/day)</option>
-          <option value="1.375">Light Activity (Desk job + gym 1–3 days/wk or ~7,000 steps)</option>
-          <option value="1.55" selected>Moderate Activity (Desk job + gym 3–5 days/wk or ~10,000 steps)</option>
-          <option value="1.725">Heavy Activity (Active job + gym 5–6 days/wk or ~13,000 steps)</option>
-          <option value="1.9">Athlete / Extreme (Physical job + hard daily training)</option>
-        </select>
-      </div>
-
-      <div class="feature-field">
-        <label for="inStrategy">Calorie Goal Strategy</label>
-        <select id="inStrategy" aria-label="Calorie Goal Strategy">
-          <option value="-500">Cut (-500 kcal · ~0.5 kg loss/wk)</option>
-          <option value="-250">Mild Cut (-250 kcal · ~0.25 kg loss/wk)</option>
-          <option value="0">Maintain (0 kcal · Weight maintenance)</option>
-          <option value="250" selected>Lean Bulk (+250 kcal · Clean muscle gain)</option>
-          <option value="500">Aggressive Bulk (+500 kcal · Maximum growth)</option>
-        </select>
-      </div>
-
-      <div class="feature-field">
-        <label for="inProteinRate">Protein Target</label>
-        <select id="inProteinRate" aria-label="Protein Target">
-          <option value="2.0" selected>2.0 g/kg · Muscle Growth (Optimal Hypertrophy)</option>
-          <option value="2.2">2.2 g/kg · Fat Loss / Cut (Preserves Muscle in Deficit)</option>
-          <option value="1.8">1.8 g/kg · Maintenance (Balanced Fitness)</option>
-          <option value="1.6">1.6 g/kg · Baseline / Endurance (General Health)</option>
-        </select>
-      </div>
-
-      <button type="submit" class="feature-primary modal-submit-btn">
-        Save Metrics & Compute Targets
-      </button>
-    </form>
-  </div>
 </div>
 
 <!-- FUEL: SETTINGS & MEAL LIBRARY DRAWER -->
@@ -695,6 +544,87 @@
     </div>
     <div class="feature-scroll">
       <div class="settings-stack">
+        <section class="settings-group" id="bodyTargetsSection">
+          <h3 class="settings-heading">Body & targets</h3>
+          <div class="settings-card">
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-progress"/></svg><span>Current BMI</span></span>
+              <span class="settings-row-value body-bmi-value"><b id="bmiValDisplay">23.7</b><small id="bmiCategory">Normal (18.5 – 24.9)</small></span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-movement"/></svg><span>Biological sex</span></span>
+              <div class="seg-control" data-sex-seg role="group" aria-label="Biological sex">
+                <button type="button" data-sex-value="m" aria-pressed="true">Male</button>
+                <button type="button" data-sex-value="f" aria-pressed="false">Female</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-calendar"/></svg><span>Age</span></span>
+              <div class="routine-stepper settings-stepper" role="group" aria-label="Age">
+                <button class="routine-step" type="button" data-target="inAge" data-delta="-1" aria-label="Decrease age"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inAge" type="text" readonly tabindex="-1" value="22" aria-label="Age">
+                <button class="routine-step" type="button" data-target="inAge" data-delta="1" aria-label="Increase age"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Current weight <span id="unitWeightLabel">(kg)</span></span></span>
+              <div class="routine-stepper settings-stepper" role="group" aria-label="Current weight">
+                <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="-0.5" aria-label="Decrease current weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inCurrentWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Current weight in kilograms">
+                <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="0.5" aria-label="Increase current weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-movement"/></svg><span>Height <span id="unitHeightLabel">(cm)</span></span></span>
+              <div class="routine-stepper settings-stepper" id="heightCmStepper" role="group" aria-label="Height in centimeters">
+                <button class="routine-step" type="button" data-target="inHeight" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inHeight" type="text" readonly tabindex="-1" value="178" aria-label="Height in centimeters">
+                <button class="routine-step" type="button" data-target="inHeight" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+              <div class="routine-stepper settings-stepper" id="heightFtInStepper" role="group" aria-label="Height in feet and inches" hidden>
+                <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="-1" aria-label="Decrease height"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inHeightFtIn" type="text" readonly tabindex="-1" value="5'10&quot;" aria-label="Height in feet and inches">
+                <button class="routine-step" type="button" data-target="inHeightFtIn" data-delta="1" aria-label="Increase height"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Activity level</span></span>
+              <div class="settings-select-host">
+                <select id="inActivity" aria-label="Daily Activity Level">
+                  <option value="1.2" data-short="Sedentary">Sedentary (Desk job, no workouts, &lt;5,000 steps/day)</option>
+                  <option value="1.375" data-short="Light">Light (Desk job + gym 1–3 days/wk or ~7,000 steps)</option>
+                  <option value="1.55" selected data-short="Moderate">Moderate (Desk job + gym 3–5 days/wk or ~10,000 steps)</option>
+                  <option value="1.725" data-short="Heavy">Heavy (Active job + gym 5–6 days/wk or ~13,000 steps)</option>
+                  <option value="1.9" data-short="Athlete">Athlete / Extreme (Physical job + hard daily training)</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Calorie strategy</span></span>
+              <div class="settings-select-host">
+                <select id="inStrategy" aria-label="Calorie Goal Strategy">
+                  <option value="-500" data-short="Cut −500">Cut (−500 kcal · ~0.5 kg loss/wk)</option>
+                  <option value="-250" data-short="Mild Cut −250">Mild Cut (−250 kcal · ~0.25 kg loss/wk)</option>
+                  <option value="0" data-short="Maintain">Maintain (0 kcal · Weight maintenance)</option>
+                  <option value="250" selected data-short="Lean Bulk +250">Lean Bulk (+250 kcal · Clean muscle gain)</option>
+                  <option value="500" data-short="Bulk +500">Aggressive Bulk (+500 kcal · Maximum growth)</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-sparkle"/></svg><span>Protein target</span></span>
+              <div class="settings-select-host">
+                <select id="inProteinRate" aria-label="Protein Target">
+                  <option value="2.0" selected data-short="2.0 g/kg">2.0 g/kg · Muscle Growth (Optimal Hypertrophy)</option>
+                  <option value="2.2" data-short="2.2 g/kg">2.2 g/kg · Fat Loss / Cut (Preserves Muscle in Deficit)</option>
+                  <option value="1.8" data-short="1.8 g/kg">1.8 g/kg · Maintenance (Balanced Fitness)</option>
+                  <option value="1.6" data-short="1.6 g/kg">1.6 g/kg · Baseline / Endurance (General Health)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="settings-group">
           <h3 class="settings-heading">Training</h3>
           <div class="settings-card">
@@ -844,7 +774,7 @@
             </div>
             <div class="settings-row ai-input-row" id="aiModelRow" hidden>
               <span class="settings-row-main"><svg class="icon"><use href="#icon-movement"/></svg><span>Model</span></span>
-              <input id="aiModelInput" class="ai-text-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="e.g. deepseek/deepseek-chat-v3-0324:free" aria-label="Model ID">
+              <input id="aiModelInput" class="ai-text-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="model/free" aria-label="Model ID">
             </div>
             <div class="settings-row" id="aiTestRow" hidden>
               <span class="settings-row-main"><svg class="icon"><use href="#icon-check"/></svg><span>Test connection</span></span>
@@ -905,7 +835,7 @@
           <div class="settings-card">
             <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.2.0</span>
+              <span class="settings-row-value" id="updateStatus">v3.3.0</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
             <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
