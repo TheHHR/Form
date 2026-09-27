@@ -188,17 +188,17 @@ async function aiStreamChat({system,prompt,onToken,signal,maxTokens=1400}){
   }
   return text;
 }
-async function aiStreamChatWithRetry(runner,initialTokens,onRetry){
+async function aiStreamChatWithRetry(runner,initialTokens,onRetry,retryTokens=12000){
   try{
     return await runner(initialTokens);
   }catch(error){
     if(!/token limit before returning text/.test(String(error&&error.message)))throw error;
     if(onRetry)onRetry();
-    return await runner(12000);
+    return await runner(retryTokens);
   }
 }
 async function aiTestConnection(){
-  return aiStreamChat({system:'You are a connection test.',prompt:'Reply with OK.',onToken:()=>{},maxTokens:8,signal:AbortSignal.timeout(20000)});
+  return aiStreamChatWithRetry(maxTokens=>aiStreamChat({system:'You are a connection test.',prompt:'Reply with OK.',onToken:()=>{},maxTokens,signal:AbortSignal.timeout(30000)}),200,null,1000);
 }
 
 const MEAL_AI_LIMITS=Object.freeze({descriptionChars:500,nameChars:40,portionMin:1,portionMax:5000,cals100Max:950,macro100Max:100,listItems:4,textMax:240,timeoutMs:30000});
