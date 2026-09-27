@@ -7359,14 +7359,14 @@ async function checkForUpdates(){
     const response=await fetch(RELEASE_API_URL,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const release=await response.json();
-    const latest=String(release.tag_name||'').trim();
+    const latest=String(release.tag_name||'').trim().replace(/^v/i,'');
     if(!latest)throw new Error('empty release tag');
     if(isNewerVersion(latest,APP_VERSION)){
-      status.textContent=`${latest} available`;
+      status.textContent=`v${latest} available`;
       status.classList.add('update-available');
       const asset=(release.assets||[]).find(entry=>String(entry.name||'').toLowerCase().endsWith('.apk'));
       const downloadUrl=asset?.browser_download_url||release.html_url;
-      const download=await appConfirm(`v${APP_VERSION} → v${latest}`,{title:'Update available',okLabel:'Download',danger:false});
+      const download=await appConfirm(`Version v${APP_VERSION} to v${latest}`,{title:'Update available',okLabel:'Download',danger:false});
       if(download)openExternalUrl(downloadUrl);
     }else{
       status.textContent='Up to date';
