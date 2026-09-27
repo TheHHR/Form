@@ -1555,6 +1555,11 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   background: color-mix(in srgb, var(--danger) 20%, transparent);
   border: none;
 }
+.btn-confirm-ok {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+}
 
 /* Settings / library drawer */
 .fuel-drawer-backdrop { display: none; justify-content: flex-start; }

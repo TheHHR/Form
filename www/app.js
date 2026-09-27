@@ -30,7 +30,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.0';
+const APP_VERSION='3.3.1';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 function unitWeightLabel(){return state.units.weight}
@@ -2487,11 +2487,14 @@ function resetFilters(){
 function toast(message){const element=$('#toast');element.textContent=message;element.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.classList.remove('show'),3000)}
 
 let confirmDialogState=null;
-function appConfirm(message,{title='Please confirm',okLabel='Confirm'}={}){
-  if(confirmDialogState)return confirmDialogState.promise.then(()=>appConfirm(message,{title,okLabel}));
+function appConfirm(message,{title='Please confirm',okLabel='Confirm',danger=true}={}){
+  if(confirmDialogState)return confirmDialogState.promise.then(()=>appConfirm(message,{title,okLabel,danger}));
   $('#confirmDialogTitle').textContent=title;
   $('#confirmDialogMessage').textContent=message;
-  $('#confirmDialogOk').textContent=okLabel;
+  const okButton=$('#confirmDialogOk');
+  okButton.textContent=okLabel;
+  okButton.classList.toggle('btn-clear-submit',danger);
+  okButton.classList.toggle('btn-confirm-ok',!danger);
   const previousFocus=document.activeElement,prevBodyOverflow=document.body.style.overflow,prevHtmlOverflow=document.documentElement.style.overflow;
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
@@ -7338,8 +7341,10 @@ async function checkForUpdates(){
     if(isNewerVersion(latest,APP_VERSION)){
       status.textContent=`${latest} available`;
       status.classList.add('update-available');
-      const download=await appConfirm(`Form ${latest} is available (you have v${APP_VERSION}). Open GitHub to download the update?`,{title:'Update available',okLabel:'Download'});
-      if(download)openExternalUrl(release.html_url||'https://github.com/TheHHR/Form/releases/latest');
+      const asset=(release.assets||[]).find(entry=>String(entry.name||'').toLowerCase().endsWith('.apk'));
+      const downloadUrl=asset?.browser_download_url||release.html_url;
+      const download=await appConfirm(`v${APP_VERSION} → v${latest}`,{title:'Update available',okLabel:'Download',danger:false});
+      if(download)openExternalUrl(downloadUrl);
     }else{
       status.textContent='Up to date';
     }
