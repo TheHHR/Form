@@ -117,6 +117,21 @@
   <button type="button" class="plan-switch-btn" data-plan-section="meals" role="tab" aria-selected="false"><svg class="icon"><use href="#icon-flame"/></svg><span>Meals</span></button>
 </div>
 
+<div class="welcome-backdrop" id="welcomeBackdrop" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" hidden>
+  <section class="welcome-card">
+    <div class="welcome-mark" aria-hidden="true"><svg class="icon"><use href="#icon-dumbbell"/></svg></div>
+    <h1 id="welcomeTitle">Welcome to Form</h1>
+    <p class="welcome-lede">Your routines, training logs, and meals are stored as plain markdown files you own — private, offline, no account.</p>
+    <ul class="welcome-points">
+      <li><svg class="icon"><use href="#icon-folder"/></svg><span><strong id="welcomePointOne">Pick a folder</strong><small id="welcomePointOneSub">Your data vault lives in a folder you choose on your device</small></span></li>
+      <li><svg class="icon"><use href="#icon-clipboard"/></svg><span><strong>Human-readable files</strong><small>Five simple .md files you can back up, edit, or move anywhere</small></span></li>
+      <li><svg class="icon"><use href="#icon-heart"/></svg><span><strong>Always yours</strong><small>Nothing leaves your device and nothing is locked in</small></span></li>
+    </ul>
+    <button type="button" class="feature-primary welcome-action" id="welcomeActionBtn">Get started</button>
+    <small class="welcome-hint" id="welcomeHint" hidden>Storage permission dialog may appear — pick any folder you'll keep.</small>
+  </section>
+</div>
+
 <div class="modal-backdrop panel-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
   <article class="modal panel-drawer">
     <div class="modal-sheet-handle" aria-hidden="true"></div>

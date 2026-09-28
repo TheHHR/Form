@@ -26,11 +26,12 @@ const STORAGE_KEYS=Object.freeze({
   fuel:'form-fuel-data',
   legacyFuel:'fuel_fdc_nutrition_db',
   ai:'form-ai-config',
-  aiInsights:'form-ai-insights'
+  aiInsights:'form-ai-insights',
+  welcomeSeen:'form-welcome-seen'
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.4';
+const APP_VERSION='3.3.5';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -1883,9 +1884,9 @@ async function copyVaultFilesBetween(fromBackend, toBackend) {
 }
 
 async function pickSafVaultFolder() {
-  if (mealEditorLocked() || VAULT.switching) return;
+  if (mealEditorLocked() || VAULT.switching) return false;
   const picked = await FS_ADAPTER.pickFolder();
-  if (!picked) return;
+  if (!picked) return false;
   await flushPendingVaultSaves();
   const wasSaf = FS_ADAPTER.saf.available;
   const oldUri = FS_ADAPTER.saf.uri;
@@ -1900,6 +1901,7 @@ async function pickSafVaultFolder() {
     else FS_ADAPTER.setSaf(null);
     updateVaultUI();
   }
+  return switched;
 }
 
 /* ===================== VAULT UI ===================== */
@@ -1959,6 +1961,7 @@ let lastBackExitAttempt = 0;
 
 if (window.Capacitor?.isNativePlatform?.()) {
   window.Capacitor?.Plugins?.App?.addListener('backButton', () => {
+    if (welcomeIsOpen()) return;
     if (confirmDialogState) { settleAppConfirm(false); return; }
     if (awRestIsOpen()) { setAwRestMaximized(false); return; }
     const datePicker = $('#progressDatePicker');
@@ -7320,14 +7323,66 @@ function flushDirtyVaultFiles(){
 window.addEventListener('pagehide',flushDirtyVaultFiles);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushDirtyVaultFiles()});
 
+/* =========================================================
+   WELCOME OVERLAY (first launch)
+   - Native: mandatory vault folder pick before the app unlocks
+   - Browser: one-time info card; storage needs no folder
+   ========================================================= */
+const WELCOME = { open: false, mode: null };
+function welcomeIsOpen(){ return WELCOME.open; }
+function welcomeBackdrop(){ return document.getElementById('welcomeBackdrop'); }
+function showWelcomeVault(mode){
+  const backdrop = welcomeBackdrop();
+  if (!backdrop || WELCOME.open) return;
+  WELCOME.open = true;
+  WELCOME.mode = mode;
+  finishBootGate();
+  renderEverything();
+  const button = document.getElementById('welcomeActionBtn');
+  if (button) button.textContent = mode === 'pick' ? 'Choose folder' : 'Get started';
+  const hint = document.getElementById('welcomeHint');
+  if (hint) hint.hidden = mode !== 'pick';
+  backdrop.hidden = false;
+  requestAnimationFrame(() => backdrop.classList.add('open'));
+  document.documentElement.classList.add('welcome-open');
+  document.body.setAttribute('data-welcome-open', 'true');
+  syncPageState();
+}
+function hideWelcomeVault(){
+  const backdrop = welcomeBackdrop();
+  if (!backdrop || !WELCOME.open) return;
+  WELCOME.open = false;
+  WELCOME.mode = null;
+  writeStorage(STORAGE_KEYS.welcomeSeen, true);
+  backdrop.classList.remove('open');
+  document.documentElement.classList.remove('welcome-open');
+  document.body.removeAttribute('data-welcome-open');
+  setTimeout(() => { if (!WELCOME.open) backdrop.hidden = true; }, 220);
+  syncPageState();
+}
+(function initWelcomeUI(){
+  const backdrop = welcomeBackdrop();
+  if (!backdrop) return;
+  document.getElementById('welcomeActionBtn')?.addEventListener('click', async () => {
+    if (WELCOME.mode === 'pick') {
+      const picked = await pickSafVaultFolder();
+      if (picked) hideWelcomeVault();
+    } else {
+      hideWelcomeVault();
+    }
+  });
+})();
+
 (async function initVaultBoot() {
   const saf = await FS_ADAPTER.initSaf();
   if (FS_ADAPTER.isNative && !saf.available) {
     /* SAF is the only native backend: no picked folder (or a lost grant)
-       means the vault cannot load — prompt for it once per launch. */
-    finishBootGate();
-    setTimeout(() => pickSafVaultFolder(), 600);
+       means the vault cannot load — welcome screen forces the pick. */
+    showWelcomeVault('pick');
     return;
+  }
+  if (!FS_ADAPTER.isNative && !readStorage(STORAGE_KEYS.welcomeSeen, false)) {
+    showWelcomeVault('info');
   }
   await loadVault(VAULT.folder, { silent: true });
 })();
