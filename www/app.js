@@ -31,7 +31,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.5';
+const APP_VERSION='3.3.6';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -1979,7 +1979,7 @@ if (window.Capacitor?.isNativePlatform?.()) {
 }
 
 function uniqueValues(key){return[...new Set(EXERCISES.map(exercise=>exercise[key]).filter(Boolean))].sort()}
-  const CUSTOM_SELECT_IDS=['inActivity','inStrategy','inProteinRate'];
+  const CUSTOM_SELECT_IDS=['inActivity','inStrategy','inProteinRate','aiProvider'];
 function customSelectLabel(select){return select.getAttribute('aria-label')||select.closest('label')?.querySelector('span')?.textContent?.trim()||select.closest('.feature-field')?.querySelector('label')?.textContent?.trim()||select.closest('.feature-field')?.querySelector('span')?.textContent?.trim()||'Choose an option'}
 function syncCustomSelect(select){
   if(!select?.dataset.customSelectReady)return;
@@ -2108,7 +2108,7 @@ function positionCustomSelectMenu(wrapper){
     const neededWidth=scheduleMenuNeededWidth(wrapper);
     if(neededWidth>normalWidth+1)options={minWidth:neededWidth};
   }else if(wrapper.closest('.settings-select-host')){
-    const widths={inActivity:340,inStrategy:340,inProteinRate:340};
+    const widths={inActivity:340,inStrategy:340,inProteinRate:340,aiProvider:340};
     options={minWidth:widths[wrapper.querySelector('select')?.id]||370,alignRight:true};
   }
   positionMenuBetween(menu,button,options);

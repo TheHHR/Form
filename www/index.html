@@ -771,13 +771,20 @@
         <section class="settings-group">
           <h3 class="settings-heading">AI</h3>
           <div class="settings-card">
-            <div class="settings-row ai-provider-row">
+            <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-sparkle"/></svg><span>Provider</span></span>
-              <div class="seg-control ai-provider-seg" data-ai-seg="provider" role="group" aria-label="AI provider">
-                <button type="button" data-ai-value="openrouter" aria-pressed="true">OpenRouter</button>
-                <button type="button" data-ai-value="openai" aria-pressed="false">OpenAI</button>
-                <button type="button" data-ai-value="gemini" aria-pressed="false">Gemini</button>
-                <button type="button" data-ai-value="custom" aria-pressed="false">Custom</button>
+              <div class="settings-select-host">
+                <select id="aiProvider" aria-label="AI provider">
+                  <option value="">Off</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="xai">xAI</option>
+                  <option value="opencode">OpenCode</option>
+                  <option value="custom">Custom</option>
+                </select>
               </div>
             </div>
             <div class="settings-row ai-input-row" id="aiKeyRow" hidden>

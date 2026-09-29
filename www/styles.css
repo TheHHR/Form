@@ -2360,8 +2360,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .ai-action-btn.busy { animation: ai-pulse 1.1s ease-in-out infinite; }
 .ai-action-btn:disabled { opacity: .45; cursor: default; }
 @keyframes ai-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-.ai-provider-row { flex-wrap: wrap; row-gap: 8px; }
-.ai-provider-row .ai-provider-seg { flex-wrap: wrap; justify-content: flex-end; row-gap: 2px; }
 .ai-input-row .settings-row-main { flex: 1; }
 .ai-text-input { padding: 7px 14px; background: var(--surface-container-high); border: none; border-radius: 999px; color: var(--text); font-size: 12px; font-weight: var(--weight-medium); outline: none; appearance: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-text-input:focus { background: var(--surface-container); }

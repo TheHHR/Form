@@ -9,6 +9,10 @@ const AI_PROVIDERS=Object.freeze({
   openrouter:{label:'OpenRouter',endpoint:'https://openrouter.ai/api/v1/chat/completions'},
   openai:{label:'OpenAI',endpoint:'https://api.openai.com/v1/chat/completions'},
   gemini:{label:'Gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta/models'},
+  deepseek:{label:'DeepSeek',endpoint:'https://api.deepseek.com/chat/completions'},
+  mistral:{label:'Mistral',endpoint:'https://api.mistral.ai/v1/chat/completions'},
+  xai:{label:'xAI',endpoint:'https://api.x.ai/v1/chat/completions'},
+  opencode:{label:'OpenCode',endpoint:'https://opencode.ai/zen/v1/chat/completions'},
   custom:{label:'Custom',endpoint:''}
 });
 const AI_PROVIDER_IDS=Object.freeze(Object.keys(AI_PROVIDERS));
@@ -16,16 +20,21 @@ function normalizeAiConfig(value){
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const keys={};
   for(const id of AI_PROVIDER_IDS)keys[id]=String(source.keys&&source.keys[id]||'');
+  const models={};
+  for(const id of AI_PROVIDER_IDS)models[id]=String(source.models&&source.models[id]||'').trim();
+  const legacyModel=String(source.customModel||'').trim();
+  if(legacyModel&&!Object.values(models).some(Boolean)&&AI_PROVIDER_IDS.includes(source.provider))models[source.provider]=legacyModel;
   return{
     provider:AI_PROVIDER_IDS.includes(source.provider)?source.provider:'',
     keys,
+    models,
     customBaseUrl:String(source.customBaseUrl||'').trim(),
-    customModel:String(source.customModel||'').trim()
+    customModel:legacyModel
   };
 }
 let aiConfig=normalizeAiConfig(readStorage(STORAGE_KEYS.ai,null));
 function persistAiConfig(){writeStorage(STORAGE_KEYS.ai,aiConfig)}
-function aiModelFor(){return aiConfig.customModel.trim()}
+function aiModelFor(provider=aiConfig.provider){return (aiConfig.models[provider]||'').trim()||aiConfig.customModel.trim()}
 function aiConfigured(provider=aiConfig.provider){
   if(!provider)return false;
   const model=aiModelFor();
@@ -79,7 +88,7 @@ function aiRequestUrl(provider){
 function aiRequestHeaders(provider){
   const headers={'Content-Type':'application/json'};
   if(provider==='gemini')headers['x-goog-api-key']=aiConfig.keys.gemini.trim();
-  if(provider==='openai'||provider==='openrouter')headers.Authorization=`Bearer ${aiConfig.keys[provider].trim()}`;
+  if(provider==='openai'||provider==='openrouter'||provider==='deepseek'||provider==='mistral'||provider==='xai'||provider==='opencode')headers.Authorization=`Bearer ${aiConfig.keys[provider].trim()}`;
   if(provider==='custom'){const key=aiConfig.keys.custom.trim();if(key)headers.Authorization=`Bearer ${key}`;}
   return headers;
 }
@@ -333,8 +342,8 @@ function aiSyncPillWidth(input){
   input.style.width=`${Math.max(100,Math.ceil(aiPillMeasure.measureText(text).width)+28)}px`;
 }
 function renderAiSettings(){
-  const providerSeg=document.querySelector('[data-ai-seg="provider"]');
-  if(providerSeg)providerSeg.querySelectorAll('[data-ai-value]').forEach((button)=>button.setAttribute('aria-pressed',String(button.dataset.aiValue===aiConfig.provider)));
+  const providerSelect=document.getElementById('aiProvider');
+  if(providerSelect){providerSelect.value=aiConfig.provider;if(typeof syncCustomSelect==='function')syncCustomSelect(providerSelect);}
   const hasProvider=Boolean(aiConfig.provider);
   const keyRow=$('#aiKeyRow');
   const modelRow=$('#aiModelRow');
@@ -345,13 +354,17 @@ function renderAiSettings(){
     const keyInput=$('#aiApiKey');
     if(keyInput){
       keyInput.value=aiConfig.keys[aiConfig.provider]||'';
-      keyInput.placeholder=aiConfig.provider==='gemini'?'AIza…':'sk-…';
+      keyInput.placeholder=aiConfig.provider==='gemini'?'AIza…':aiConfig.provider==='xai'?'xai-…':'sk-…';
     }
   }
   if(modelRow){
     modelRow.hidden=!hasProvider;
     const modelInput=$('#aiModelInput');
-    if(modelInput){modelInput.value=aiConfig.customModel;aiSyncPillWidth(modelInput);}
+    if(modelInput){
+      modelInput.value=aiConfig.models[aiConfig.provider]||'';
+      modelInput.placeholder='model-id';
+      aiSyncPillWidth(modelInput);
+    }
   }
   if(baseRow){
     baseRow.hidden=aiConfig.provider!=='custom';
@@ -366,10 +379,8 @@ function renderAiSettings(){
   }
   syncAiActionButtonsVisibility();
 }
-$('[data-ai-seg="provider"]').addEventListener('click',(event)=>{
-  const button=event.target.closest('[data-ai-value]');
-  if(!button)return;
-  aiConfig.provider=button.dataset.aiValue===aiConfig.provider?'':button.dataset.aiValue;
+$('#aiProvider').addEventListener('change',(event)=>{
+  aiConfig.provider=event.target.value;
   aiTestState.message='Not tested';
   persistAiConfig();
   renderAiSettings();
@@ -379,7 +390,7 @@ $('#aiApiKey').addEventListener('input',(event)=>{
   persistAiConfig();
 });
 $('#aiModelInput').addEventListener('input',(event)=>{
-  aiConfig.customModel=event.target.value.trim();
+  aiConfig.models[aiConfig.provider]=event.target.value.trim();
   aiSyncPillWidth(event.target);
   persistAiConfig();
 });
