@@ -200,6 +200,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .progress-log-paste button,
 .routine-paste-actions button,
 .water-actions button,
+.aw-secondary,
 .btn-clear-cancel,
 .btn-clear-submit,
 .progress-date-button,
@@ -327,7 +328,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-secondary-pill[aria-pressed="true"]:disabled { opacity: 1; cursor: default; }
 .aw-finish { min-height: 44px; }
 .aw-footer-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-.aw-secondary { min-height: 40px; padding: 0 12px; color: var(--text-muted); background: var(--surface-container); border: none; border-radius: var(--radius-control); font-size: 12px; font-weight: var(--weight-semibold); cursor: pointer; }
+.aw-secondary { min-height: 40px; padding: 0 12px; color: var(--text-muted); background: var(--surface-container); border: none; font-size: 12px; font-weight: var(--weight-semibold); cursor: pointer; }
 .aw-cancel { color: var(--danger); }
 
 /* Rest timer pill */
@@ -814,7 +815,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 /* Custom Select Floating Unified Component */
 .progress-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .progress-actions .mode-switch button { min-height: 36px; }
-.progress-cancel { flex: 1 1 0; min-height: var(--control-size); padding: 0 15px; color: var(--text-soft); background: var(--surface-container-high); border: none; border-radius: var(--radius-control); font-weight: var(--weight-semibold); cursor: pointer; }
+.progress-cancel { flex: 1 1 0; min-height: var(--control-size); padding: 0 15px; color: var(--text-soft); background: var(--surface-container-high); border: none; font-weight: var(--weight-semibold); cursor: pointer; }
 .progress-cancel:active { opacity: .7; }
 .progress-actions #progressSave,
 .progress-actions #customExerciseSave { flex: 1 1 0; min-height: var(--control-size); padding: 0 15px; }
@@ -1252,7 +1253,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   color: var(--text);
   background: var(--surface-container-high);
   border: none;
-  border-radius: var(--radius-control);
   font-size: 13px;
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -1471,7 +1471,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   color: var(--text-soft);
   background: var(--surface);
   border: none;
-  border-radius: var(--radius-control);
 }
 
 /* Quick preset scroller */
@@ -1611,7 +1610,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-control);
   font-size: 12px;
   font-weight: var(--weight-semibold);
 }
