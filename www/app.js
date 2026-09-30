@@ -7,7 +7,6 @@ const title=value=>value?String(value).replace(/\b\w/g,c=>c.toUpperCase()):'';
 const esc=value=>String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const STORAGE_KEYS=Object.freeze({
   saved:'form-saved-exercises',
-  legacySaved:'form-favorites',
   routines:'form-routines',
   schedule:'form-routine-schedule',
   progress:'form-progress-log',
@@ -24,14 +23,13 @@ const STORAGE_KEYS=Object.freeze({
   tabLabels:'form-tab-labels',
   units:'form-units',
   fuel:'form-fuel-data',
-  legacyFuel:'fuel_fdc_nutrition_db',
   ai:'form-ai-config',
   aiInsights:'form-ai-insights',
   welcomeSeen:'form-welcome-seen'
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.6';
+const APP_VERSION='3.3.7';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -306,7 +304,7 @@ const VALID_EXERCISE_IDS=new Set(EXERCISES.map(exercise=>String(exercise.id)));
 const getExercise=id=>EXERCISE_BY_ID.get(String(id))||null;
 
 function safeParse(raw,fallback,check){try{const value=JSON.parse(raw);return check&&!check(value)?fallback:value??fallback}catch{return fallback}}
-const VAULT_DATA_KEYS=Object.freeze(new Set([STORAGE_KEYS.saved,STORAGE_KEYS.legacySaved,STORAGE_KEYS.routines,STORAGE_KEYS.schedule,STORAGE_KEYS.progress,STORAGE_KEYS.progressPreferences,STORAGE_KEYS.workoutReminder,STORAGE_KEYS.secondaryPills,STORAGE_KEYS.restPrefs,STORAGE_KEYS.pillRowModes,STORAGE_KEYS.customExercises,STORAGE_KEYS.tags,STORAGE_KEYS.fuel,STORAGE_KEYS.legacyFuel]));
+const VAULT_DATA_KEYS=Object.freeze(new Set([STORAGE_KEYS.saved,STORAGE_KEYS.routines,STORAGE_KEYS.schedule,STORAGE_KEYS.progress,STORAGE_KEYS.progressPreferences,STORAGE_KEYS.workoutReminder,STORAGE_KEYS.secondaryPills,STORAGE_KEYS.restPrefs,STORAGE_KEYS.pillRowModes,STORAGE_KEYS.customExercises,STORAGE_KEYS.tags,STORAGE_KEYS.fuel]));
 function readStorage(key,fallback,check){try{return safeParse(localStorage.getItem(key),fallback,check)}catch{return fallback}}
 function writeStorage(key,value){
   if(VAULT_DATA_KEYS.has(key)&&VAULT.loaded)return;
@@ -338,16 +336,16 @@ const DEFAULT_FOOD_DB = [
 ];
 const DEFAULT_FOOD_DB_ITEMS = [
   { id: 'd-001', name: 'Chicken Breast, Raw Skinless', p100: 22.5, c100: 0, f100: 2.6, cals100: 120, defaultGrams: 100, liked: false },
-  { id: 'd-002', name: 'Chicken Breast, Grilled', p100: 31, c100: 0, f100: 3.6, cals100: 165, defaultGrams: 100, liked: false },
+  { id: 'd-002', name: 'Chicken Breast, Grilled', p100: 31, c100: 0, f100: 3.6, cals100: 165, defaultGrams: 100, liked: true },
   { id: 'd-003', name: 'Chicken Thigh, Cooked Skinless', p100: 26, c100: 0, f100: 10.9, cals100: 209, defaultGrams: 100, liked: false },
   { id: 'd-004', name: 'Ground Beef, Cooked', p100: 26, c100: 0, f100: 15, cals100: 250, defaultGrams: 100, liked: false },
   { id: 'd-005', name: 'Tuna, Canned in Water', p100: 26, c100: 0, f100: 1, cals100: 116, defaultGrams: 100, liked: false },
   { id: 'd-006', name: 'Salmon, Cooked', p100: 22.1, c100: 0, f100: 12.4, cals100: 206, defaultGrams: 100, liked: false },
-  { id: 'd-007', name: 'Egg, Whole Raw', p100: 12.6, c100: 0.7, f100: 9.5, cals100: 143, defaultGrams: 50, liked: false },
+  { id: 'd-007', name: 'Egg, Whole Raw', p100: 12.6, c100: 0.7, f100: 9.5, cals100: 143, defaultGrams: 50, liked: true },
   { id: 'd-008', name: 'Milk, Whole', p100: 3.2, c100: 4.8, f100: 3.3, cals100: 61, defaultGrams: 250, liked: false },
   { id: 'd-009', name: 'Greek Yogurt, Plain', p100: 10.3, c100: 3.9, f100: 2, cals100: 73, defaultGrams: 200, liked: false },
   { id: 'd-010', name: 'Cottage Cheese, Low Fat', p100: 11.1, c100: 3.4, f100: 2.3, cals100: 82, defaultGrams: 200, liked: false },
-  { id: 'd-011', name: 'White Rice, Cooked', p100: 2.7, c100: 28.2, f100: 0.3, cals100: 130, defaultGrams: 200, liked: false },
+  { id: 'd-011', name: 'White Rice, Cooked', p100: 2.7, c100: 28.2, f100: 0.3, cals100: 130, defaultGrams: 200, liked: true },
   { id: 'd-012', name: 'Brown Rice, Cooked', p100: 2.7, c100: 25.6, f100: 1, cals100: 123, defaultGrams: 200, liked: false },
   { id: 'd-013', name: 'Pasta, Cooked', p100: 5.8, c100: 30.9, f100: 0.9, cals100: 157, defaultGrams: 200, liked: false },
   { id: 'd-014', name: 'Oats, Dry', p100: 16.9, c100: 66.3, f100: 6.9, cals100: 389, defaultGrams: 50, liked: false },
@@ -417,7 +415,7 @@ function kcalFromMacros(p, c, f) { return Math.round((p * 4) + (c * 4) + (f * 9)
 function loadFuelState() {
   const fallback = {
     profile: {
-      age: 22, sex: 'm', heightCm: 178, currentWeightKg: 75.0, startWeightKg: 75.0, goalWeightKg: 78.0,
+      age: 22, sex: 'm', heightCm: 178, currentWeightKg: 75.0,
       activity: 1.55, strategy: 250, proteinRate: 2.0,
       overrides: {}
     },
@@ -428,7 +426,7 @@ function loadFuelState() {
     mealDraftName: '',
     history: {}
   };
-  const data = readStorage(STORAGE_KEYS.fuel, readStorage(STORAGE_KEYS.legacyFuel, fallback));
+  const data = readStorage(STORAGE_KEYS.fuel, fallback);
   if (!data || typeof data !== 'object' || Array.isArray(data)) return fallback;
   if (Array.isArray(data.foodDb)) {
     data.foodDb = data.foodDb.map(item => {
@@ -451,8 +449,6 @@ function loadFuelState() {
     sex: /^[mf]/i.test(String(rawProfile.sex || '')) ? String(rawProfile.sex).trim().toLowerCase()[0] : 'm',
     heightCm: vClampNum(rawProfile.heightCm, 50, 300, 178),
     currentWeightKg: vClampNum(rawProfile.currentWeightKg, 20, 500, 75),
-    startWeightKg: vClampNum(rawProfile.startWeightKg, 20, 500, 75),
-    goalWeightKg: vClampNum(rawProfile.goalWeightKg, 20, 500, 78),
     activity: vClampNum(rawProfile.activity, 1, 3, 1.55),
     strategy: vClampNum(rawProfile.strategy, -1000, 1000, 250),
     proteinRate: vClampNum(rawProfile.proteinRate, 0.5, 5, 2),
@@ -502,7 +498,11 @@ function loadActiveWorkout(){
     return null;
   }
   const secondaryIds=Array.isArray(raw.secondaryIds)?[...new Set(raw.secondaryIds.map(String))].filter(id=>state.routines.some(candidate=>candidate.id===id&&candidate.items.length)):[];
-  const combined=awSessionItems({secondaryIds},routine);
+  const extras=Array.isArray(raw.extras)?raw.extras.filter(extra=>extra&&VALID_EXERCISE_IDS.has(String(extra.exerciseId))).map(extra=>({exerciseId:String(extra.exerciseId),sets:clamp(Number(extra.sets)||DEFAULTS.sets,1,LIMITS.sets),reps:clamp(Number.isFinite(Number(extra.reps))?Number(extra.reps):DEFAULTS.reps,0,LIMITS.reps)})):[];
+  const replacements=raw.replacements&&typeof raw.replacements==='object'
+    ?Object.fromEntries(Object.entries(raw.replacements).filter(([from,to])=>VALID_EXERCISE_IDS.has(String(from))&&VALID_EXERCISE_IDS.has(String(to))).map(([from,to])=>[String(from),String(to)]))
+    :{};
+  const combined=awSessionItems({secondaryIds,extras,replacements},routine);
   const sets={};
   if(raw.sets&&typeof raw.sets==='object'){
     for(const[key,value]of Object.entries(raw.sets)){
@@ -530,6 +530,9 @@ function loadActiveWorkout(){
     sets,
     skipped:raw.skipped&&typeof raw.skipped==='object'?Object.fromEntries(Object.entries(raw.skipped).filter(([,value])=>value===true)):{},
     secondaryIds,
+    extras,
+    replacements,
+    jumpTo:raw.jumpTo!=null?String(raw.jumpTo):null,
     rest,
     restMaximized:raw.restMaximized===true,
     restOpen:Boolean(rest)&&raw.restOpen===true&&rest.type!=='exercise',
@@ -588,35 +591,13 @@ function normalizeTimedFields(log){
   const distList=(distances&&distances.length?distances:(flatDistance?[flatDistance]:[])).slice(0,intervals);
   return{intervals,...(durUnit?{durUnit}:{}),...(durList.some(value=>value>0)?{setDurations:durList}:{}),...(distList.some(value=>value>0)?{setDistances:distList}:{})};
 }
-function loadProgressLogs(){
-  const logs=readStorage(STORAGE_KEYS.progress,[],Array.isArray)
-    .filter(log=>log&&VALID_EXERCISE_IDS.has(String(log.exerciseId))&&isValidProgressDate(log.date))
-    .map(log=>{
-      const timed=normalizeTimedFields(log);
-      if(timed){
-        return{id:String(log.id||`progress-${Date.now()}-${Math.random()}`),exerciseId:String(log.exerciseId),date:String(log.date),...timed,weight:null,notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:Number(log.createdAt)||Date.now()};
-      }
-      const setWeights=sanitizeSetWeights(log.setWeights);
-      const setCount=setWeights?setWeights.length:clamp(log.sets,1,LIMITS.sets);
-      const setReps=sanitizeSetReps(log.setReps,setCount)||setRepsFromUniform(log.reps,setCount);
-      return{id:String(log.id||`progress-${Date.now()}-${Math.random()}`),exerciseId:String(log.exerciseId),date:String(log.date),sets:clamp(log.sets,1,LIMITS.sets),reps:clamp(log.reps,1,LIMITS.reps),weight:log.weight===''||log.weight==null?null:Math.min(LIMITS.weight,Math.max(0,Number(log.weight)||0)),...(setWeights?{setWeights}:{}),...(setReps?{setReps}:{}),notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:Number(log.createdAt)||Date.now()};
-    });
-  const firstSeen=new Set(),taken=new Set(logs.map(log=>log.id));
-  return logs.map(log=>{
-    if(!firstSeen.has(log.id)){firstSeen.add(log.id);return log}
-    let n=1,id;
-    do{id=`${log.id}-${n++}`}while(taken.has(id));
-    taken.add(id);
-    return{...log,id};
-  });
-}
 function normalizeProgressPreferences(value){const firstDay=Number(value?.firstDay);const defaultView=['week','month','all'].includes(value?.defaultView)?value.defaultView:'week';return{firstDay:[0,1,6].includes(firstDay)?firstDay:1,defaultView}}
-function normalizePillRowModes(value){const modes=['default','pin','hidden'],keys=['routine','category','target','equipment'],out={};keys.forEach(key=>{out[key]=modes.includes(value?.[key])?value[key]:'default'});out.toggles=['routine','category','target','equipment'].includes(value?.toggles)?value.toggles:'equipment';out.tagsHost=['routine','category','target','equipment'].includes(value?.tagsHost)?value.tagsHost:'equipment';return out}
+function normalizePillRowModes(value){const modes=['default','pin','hidden'],keys=['routine','category','target','equipment'],out={};keys.forEach(key=>{out[key]=modes.includes(value?.[key])?value[key]:(key==='routine'?'pin':'default')});out.toggles=['routine','category','target','equipment'].includes(value?.toggles)?value.toggles:'equipment';out.tagsHost=['routine','category','target','equipment'].includes(value?.tagsHost)?value.tagsHost:'equipment';return out}
 function roundRestDuration(value,fallback){const target=Math.round(Number(value)/5)*5;return Number.isFinite(target)?clamp(target,30,180):fallback}
 function normalizeRestPrefs(value){return{enabled:value?.enabled===true,betweenSets:roundRestDuration(value?.betweenSets,60),betweenExercise:roundRestDuration(value?.betweenExercise,90)}}
 function normalizeUnits(value){return{weight:['kg','lb'].includes(value?.weight)?value.weight:'kg',distance:['km','mi'].includes(value?.distance)?value.distance:'km',height:['cm','ftin'].includes(value?.height)?value.height:'cm'}}
 
-const storedSaved=readStorage(STORAGE_KEYS.saved,readStorage(STORAGE_KEYS.legacySaved,[],Array.isArray),Array.isArray).map(String).filter(id=>VALID_EXERCISE_IDS.has(id));
+const storedSaved=readStorage(STORAGE_KEYS.saved,[],Array.isArray).map(String).filter(id=>VALID_EXERCISE_IDS.has(id));
 const storedRoutines=readStorage(STORAGE_KEYS.routines,[],Array.isArray).map(normalizeRoutine).filter(Boolean);
 const storedProgressPrefs=normalizeProgressPreferences(readStorage(STORAGE_KEYS.progressPreferences,{firstDay:1}));
 const storedPillRowModes=normalizePillRowModes(readStorage(STORAGE_KEYS.pillRowModes,{}));
@@ -650,7 +631,7 @@ const state={
   units:normalizeUnits(readStorage(STORAGE_KEYS.units,null)),
   showSecondaryPills:readStorage(STORAGE_KEYS.secondaryPills,false)===true,
   restPrefs:storedRestPrefs,
-  progress:{logs:[],activeExerciseId:null,draft:{sets:DEFAULTS.sets,reps:DEFAULTS.reps,setWeights:[DEFAULTS.weight,DEFAULTS.weight,DEFAULTS.weight],setReps:[DEFAULTS.reps,DEFAULTS.reps,DEFAULTS.reps],setDurations:[],setDistances:[],notes:'',mode:'reps',showWeight:false,durationUnit:'min'}},
+  progress:{logs:[],activeExerciseId:null,draft:{sets:DEFAULTS.sets,setWeights:[DEFAULTS.weight,DEFAULTS.weight,DEFAULTS.weight],setReps:[DEFAULTS.reps,DEFAULTS.reps,DEFAULTS.reps],setDurations:[],setDistances:[],notes:'',mode:'reps',showWeight:false,durationUnit:'min'}},
   dashboard:{weekOffset:0,monthOffset:0,selectedDate:null,scope:storedProgressPrefs.defaultView},
   overlay:{active:null,returnFocus:{}},
   mobileTab:'workout',
@@ -844,6 +825,9 @@ function readVaultLines(text) {
 
 /* --- shared value clamps (reuses global clamp/LIMITS) --- */
 function vClampNum(v, min, max, fallback) { if (v === '' || v == null) return fallback; const n = Number(v); if (!Number.isFinite(n)) return fallback; return Math.min(max, Math.max(min, n)); }
+/* Names go into markdown headings/lines, so they must never start with '#'
+   or contain line breaks — both would break vault file parsing. */
+function sanitizeVaultName(value) { return String(value ?? '').replace(/\s+/g, ' ').replace(/^#+\s*/, '').trim(); }
 
 /* ===================== PARSERS ===================== */
 
@@ -859,7 +843,7 @@ function parseRoutinesMd(text) {
     if (headingMatch) {
       const nameText = headingMatch[2].trim();
       if (headingMatch[1].length === 1 && /^routines$/i.test(nameText)) { routine = null; continue; }
-      routine = { id: `r-${stamp}-${routines.length}`, name: nameText.slice(0, LIMITS.routineName) || `Routine ${routines.length + 1}`, liked: false, items: [] };
+      routine = { id: `r-${stamp}-${routines.length}`, name: (sanitizeVaultName(nameText).slice(0, LIMITS.routineName) || `Routine ${routines.length + 1}`), liked: false, items: [] };
       routines.push(routine);
       seen = new Set();
       continue;
@@ -913,7 +897,7 @@ function parseMealsMd(text) {
     }
     const headerMatch = line.match(/^(.+)\s*\(\s*(\d+(?:\.\d+)?)\s*g\s*\)$/i);
     if (headerMatch) {
-      meal = { id: `m-${stamp}-${meals.length}`, name: headerMatch[1].trim().slice(0, LIMITS.routineName), defaultGrams: vClampNum(headerMatch[2], 1, 5000, 100), p100: 0, c100: 0, f100: 0, cals100: 0, liked: false };
+      meal = { id: `m-${stamp}-${meals.length}`, name: (sanitizeVaultName(headerMatch[1]).slice(0, LIMITS.routineName) || 'Meal'), defaultGrams: vClampNum(headerMatch[2], 1, 5000, 100), p100: 0, c100: 0, f100: 0, cals100: 0, liked: false };
       meals.push(meal);
       continue;
     }
@@ -1096,12 +1080,12 @@ function parseNutritionDiaryMd(text) {
     }
     const boldMatch = line.match(/^(.*?)\s+(\d+)\s+kcal\s+·\s+\*\*([\d.]+)p\s+·\s+([\d.]+)c\s+·\s+([\d.]+)f\*\*\s*$/i);
     if (boldMatch) {
-      pushMeal({ id: null, name: boldMatch[1].trim().slice(0, LIMITS.routineName), cals: boldMatch[2], p: boldMatch[3], c: boldMatch[4], f: boldMatch[5] });
+      pushMeal({ id: null, name: (sanitizeVaultName(boldMatch[1]).slice(0, LIMITS.routineName) || 'Meal'), cals: boldMatch[2], p: boldMatch[3], c: boldMatch[4], f: boldMatch[5] });
       continue;
     }
     const mealMatch = line.match(/^(.*?)\s*\|\s*(\d+)\s*kcal\s*\|\s*([\d.]+)\s*p\s*·\s*([\d.]+)\s*c\s*·\s*([\d.]+)\s*f(?:\s*\|\s*id:\s*(\S+))?$/i);
     if (mealMatch) {
-      pushMeal({ id: mealMatch[6] ? String(mealMatch[6]) : null, name: mealMatch[1].trim().slice(0, LIMITS.routineName), cals: mealMatch[2], p: mealMatch[3], c: mealMatch[4], f: mealMatch[5] });
+      pushMeal({ id: mealMatch[6] ? String(mealMatch[6]) : null, name: (sanitizeVaultName(mealMatch[1]).slice(0, LIMITS.routineName) || 'Meal'), cals: mealMatch[2], p: mealMatch[3], c: mealMatch[4], f: mealMatch[5] });
     }
   }
   return history;
@@ -1141,8 +1125,6 @@ function parseConfigMd(text) {
       else if (key === 'sex') cfg.profile.sex = /^[mf]/i.test(raw) ? 'm' : 'f';
       else if (key === 'height') cfg.profile.heightCm = vClampNum(raw, 50, 300, 178);
       else if (key === 'current-weight') cfg.profile.currentWeightKg = vClampNum(raw, 20, 500, 75);
-      else if (key === 'start-weight') cfg.profile.startWeightKg = vClampNum(raw, 20, 500, 75);
-      else if (key === 'goal-weight') cfg.profile.goalWeightKg = vClampNum(raw, 20, 500, 78);
       else if (key === 'activity') cfg.profile.activity = vClampNum(raw, 1, 3, 1.55);
       else if (key === 'strategy') cfg.profile.strategy = vClampNum(raw, -1000, 1000, 250);
       else if (key === 'protein-rate') cfg.profile.proteinRate = vClampNum(raw, 0.5, 5, 2.0);
@@ -1229,7 +1211,7 @@ function routinesToMd(routines) {
   const lines = ['# Routines', ''];
   for (const r of routines) {
     const labels = supersetExportLabels(r);
-    lines.push(`## ${r.name}`);
+    lines.push(`## ${sanitizeVaultName(r.name)}`);
     if (r.id) lines.push(`- id: ${r.id}`);
     if (r.liked) lines.push('- liked');
     if (r.secondary) lines.push('- secondary');
@@ -1245,7 +1227,7 @@ function mealsToMd(foodDb) {
   const lines = ['# Meal Library', ''];
   for (const meal of foodDb) {
     if (meal.id === 'custom') continue;
-    lines.push(`${meal.name} (${meal.defaultGrams || 100}g)`);
+    lines.push(`${sanitizeVaultName(meal.name)} (${meal.defaultGrams || 100}g)`);
     lines.push(`Per100g ${meal.cals100}cal ${meal.p100}pro ${meal.c100}carb ${meal.f100}fat`);
     if (meal.id) lines.push(`- id: ${meal.id}`);
     if (meal.liked) lines.push('- liked');
@@ -1314,7 +1296,7 @@ function nutritionDiaryToMd(history) {
       if (!catMeals.length) continue;
       lines.push(`### ${cat}`);
       for (const m of catMeals) {
-        const name = String(m.name || '').replace(/\s+/g, ' ').trim();
+        const name = sanitizeVaultName(m.name);
         lines.push(`- ${name} ${Math.round(Number(m.cals) || 0)} kcal · **${Math.round((Number(m.p) || 0) * 10) / 10}p · ${Math.round((Number(m.c) || 0) * 10) / 10}c · ${Math.round((Number(m.f) || 0) * 10) / 10}f**`);
         lines.push(`\t- id: ${m.id}`);
       }
@@ -1332,8 +1314,6 @@ function configToMd() {
   lines.push(`sex: ${p.sex || 'm'}`);
   lines.push(`height: ${p.heightCm}`);
   lines.push(`current-weight: ${p.currentWeightKg}`);
-  lines.push(`start-weight: ${p.startWeightKg}`);
-  lines.push(`goal-weight: ${p.goalWeightKg}`);
   lines.push(`activity: ${p.activity}`);
   lines.push(`strategy: ${p.strategy}`);
   lines.push(`protein-rate: ${p.proteinRate}`);
@@ -1423,8 +1403,6 @@ function applyConfigToState(cfg) {
     if (cfg.profile.sex) fp.sex = cfg.profile.sex;
     if (cfg.profile.heightCm !== undefined) fp.heightCm = cfg.profile.heightCm;
     if (cfg.profile.currentWeightKg !== undefined) fp.currentWeightKg = cfg.profile.currentWeightKg;
-    if (cfg.profile.startWeightKg !== undefined) fp.startWeightKg = cfg.profile.startWeightKg;
-    if (cfg.profile.goalWeightKg !== undefined) fp.goalWeightKg = cfg.profile.goalWeightKg;
     if (cfg.profile.activity !== undefined) fp.activity = cfg.profile.activity;
     if (cfg.profile.strategy !== undefined) fp.strategy = cfg.profile.strategy;
     if (cfg.profile.proteinRate !== undefined) fp.proteinRate = cfg.profile.proteinRate;
@@ -1608,12 +1586,11 @@ function mergeNutritionDiaryFromVault(fileText) {
 
 const vaultSaveTimers = {};
 const vaultSaving = {};
+const vaultSavePromises = {};
 
-function scheduleVaultSave(fileKey, silent) {
+function scheduleVaultSave(fileKey) {
   clearTimeout(vaultSaveTimers[fileKey]);
-  const folder = VAULT.folder;
-  vaultSaveTimers[fileKey] = setTimeout(() => { writeVaultFile(fileKey, folder).catch(err => {
-    if (silent) return;
+  vaultSaveTimers[fileKey] = setTimeout(() => { delete vaultSaveTimers[fileKey]; writeVaultFile(fileKey).catch(err => {
     console.warn('Vault save failed:', VAULT_FILES[fileKey], err);
     if (FS_ADAPTER.isSafLostError(err)) {
       FS_ADAPTER.saf.lost = true;
@@ -1638,8 +1615,9 @@ function getSerializer(fileKey) {
 
 async function writeVaultFile(fileKey, folder = VAULT.folder) {
   if (!VAULT.loaded || VAULT.switching) return;
-  if (vaultSaving[fileKey]) { scheduleVaultSave(fileKey, true); return; }
+  if (vaultSaving[fileKey]) { return vaultSavePromises[fileKey] || scheduleVaultSave(fileKey); }
   vaultSaving[fileKey] = true;
+  const writeDone = (async () => {
   try {
     const fileName = VAULT_FILES[fileKey];
     const newContent = getSerializer(fileKey);
@@ -1671,6 +1649,10 @@ async function writeVaultFile(fileKey, folder = VAULT.folder) {
   } finally {
     vaultSaving[fileKey] = false;
   }
+  })();
+  vaultSavePromises[fileKey] = writeDone;
+  writeDone.finally(() => { if (vaultSavePromises[fileKey] === writeDone) delete vaultSavePromises[fileKey]; });
+  return writeDone;
 }
 
 function vaultResetDirtyFile(fileKey) {
@@ -1705,7 +1687,7 @@ function buildDefaultState() {
   state.routines = [];
   state.schedule = { 0: '', 1: '', 2: '', 3: '', 4: '', 5: '', 6: '' };
   state.exerciseTags = sanitizeExerciseTags(readStorage(STORAGE_KEYS.tags, {}));
-  state.progress = { logs: [], activeExerciseId: null, draft: { sets: DEFAULTS.sets, reps: DEFAULTS.reps, setWeights: [DEFAULTS.weight, DEFAULTS.weight, DEFAULTS.weight], setReps: [DEFAULTS.reps, DEFAULTS.reps, DEFAULTS.reps], setDurations: [], setDistances: [], notes: '' } };
+  state.progress = { logs: [], activeExerciseId: null, draft: { sets: DEFAULTS.sets, setWeights: [DEFAULTS.weight, DEFAULTS.weight, DEFAULTS.weight], setReps: [DEFAULTS.reps, DEFAULTS.reps, DEFAULTS.reps], setDurations: [], setDistances: [], notes: '' } };
   state.dashboard = { weekOffset: 0, monthOffset: 0, selectedDate: null, scope: state.progressPreferences.defaultView };
   state.activeRoutineId = null;
   state.routineCreating = false;
@@ -1730,40 +1712,6 @@ function applyVaultData(data) {
   syncScheduleState();
 }
 
-function migrateLegacyData() {
-  const legacyRoutines = readStorage(STORAGE_KEYS.routines, [], Array.isArray).map(normalizeRoutine).filter(Boolean);
-  const legacyLogs = loadProgressLogs();
-  const legacyFuel = readStorage(STORAGE_KEYS.fuel, readStorage(STORAGE_KEYS.legacyFuel, null));
-  const legacySaved = readStorage(STORAGE_KEYS.saved, readStorage(STORAGE_KEYS.legacySaved, [], Array.isArray), Array.isArray).map(String).filter(id => VALID_EXERCISE_IDS.has(id));
-  const legacySchedule = loadScheduleState();
-  const legacyProgressPrefs = normalizeProgressPreferences(readStorage(STORAGE_KEYS.progressPreferences, { firstDay: 1 }));
-  const legacyPillRowModes = normalizePillRowModes(readStorage(STORAGE_KEYS.pillRowModes, {}));
-  const legacyRestPrefs = normalizeRestPrefs(readStorage(STORAGE_KEYS.restPrefs, { enabled: false, betweenSets: 60, betweenExercise: 90 }));
-  const legacyReminder = readStorage(STORAGE_KEYS.workoutReminder, true) !== false;
-  const legacyAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'red'));
-  const hasLegacy = legacyRoutines.length || legacyLogs.length || legacySaved.length || CUSTOM_EXERCISES.length || (legacyFuel && legacyFuel.history && Object.keys(legacyFuel.history).length) || (legacyFuel && legacyFuel.foodDb && legacyFuel.foodDb.length > 1);
-  if (!hasLegacy) return null;
-  const routines = legacyRoutines;
-  const logs = legacyLogs;
-  const foodDb = (legacyFuel && Array.isArray(legacyFuel.foodDb)) ? legacyFuel.foodDb.map(item => ({ ...item, cals100: item.cals100 || kcalFromMacros(item.p100, item.c100, item.f100) })) : JSON.parse(JSON.stringify(DEFAULT_FOOD_DB));
-  const history = (legacyFuel && legacyFuel.history && typeof legacyFuel.history === 'object') ? legacyFuel.history : {};
-  const profile = (legacyFuel && legacyFuel.profile) ? legacyFuel.profile : state.fuel.profile;
-  const schedule = legacySchedule;
-  const config = {
-    profile: { age: profile.age, sex: profile.sex, heightCm: profile.heightCm, currentWeightKg: profile.currentWeightKg, startWeightKg: profile.startWeightKg, goalWeightKg: profile.goalWeightKg, activity: profile.activity, strategy: profile.strategy, proteinRate: profile.proteinRate },
-    overrides: (profile.overrides && typeof profile.overrides === 'object') ? profile.overrides : {},
-    schedule: {},
-    liked: legacySaved,
-    exerciseTags: sanitizeExerciseTags(readStorage(STORAGE_KEYS.tags, {})),
-    prefs: { accent: legacyAccent, weekStart: legacyProgressPrefs.firstDay, defaultView: legacyProgressPrefs.defaultView, workoutReminder: legacyReminder, restEnabled: legacyRestPrefs.enabled, restBetweenSets: legacyRestPrefs.betweenSets, restBetweenExercises: legacyRestPrefs.betweenExercise, pillRoutine: legacyPillRowModes.routine, pillCategory: legacyPillRowModes.category, pillTarget: legacyPillRowModes.target, pillEquipment: legacyPillRowModes.equipment, pillTagsHost: legacyPillRowModes.tagsHost, pillToggles: legacyPillRowModes.toggles }
-  };
-  for (let i = 0; i < 7; i++) {
-    if (schedule[i] && routines.find(r => r.id === schedule[i])) config.schedule[i] = routines.find(r => r.id === schedule[i]).name;
-  }
-  if (CUSTOM_EXERCISES.length) config.customExercises = CUSTOM_EXERCISES.map(({ name, id, category, target, equipment, description }) => ({ name, id, category, target, equipment, description }));
-  return { routines, logs, foodDb, history, config };
-}
-
 async function loadVault(folder, options) {
   const opts = options || {};
   const silent = opts.silent !== false;
@@ -1781,13 +1729,8 @@ async function loadVault(folder, options) {
     const allMissing = !routinesText && !mealsText && !logsText && !diaryText && !configText;
     let data;
     if (allMissing) {
-      const migrated = migrateLegacyData();
-      if (migrated) {
-        data = migrated;
-      } else {
-        buildDefaultState();
-        data = { routines: [], logs: [], foodDb: JSON.parse(JSON.stringify(DEFAULT_FOOD_DB)), history: {}, config: { profile: {}, overrides: {}, schedule: {}, liked: [], prefs: {} } };
-      }
+      buildDefaultState();
+      data = { routines: JSON.parse(JSON.stringify(DEFAULT_ROUTINES)).map(normalizeRoutine).filter(Boolean), logs: [], foodDb: [...JSON.parse(JSON.stringify(DEFAULT_FOOD_DB)), ...JSON.parse(JSON.stringify(DEFAULT_FOOD_DB_ITEMS))], history: {}, config: { profile: {}, overrides: {}, schedule: {}, liked: [], prefs: {} } };
       applyVaultData(data);
       await Promise.all([
         FS_ADAPTER.writeFile(VAULT.folder, VAULT_FILES.routines, routinesToMd(state.routines)),
@@ -1818,6 +1761,20 @@ async function loadVault(folder, options) {
       buildDefaultState();
       data = { routines, logs, foodDb, history, config: prelimConfig };
       applyVaultData(data);
+      /* A file that vanished while siblings exist usually means deletion, sync
+         damage, or a lost grant — surface it instead of silently overwriting
+         the (now empty) file on the next save. */
+      const missingFiles = [
+        routinesText ? null : VAULT_FILES.routines,
+        mealsText ? null : VAULT_FILES.meals,
+        logsText ? null : VAULT_FILES.trainingLogs,
+        diaryText ? null : VAULT_FILES.nutritionDiary,
+        configText ? null : VAULT_FILES.config
+      ].filter(Boolean);
+      if (missingFiles.length) {
+        if (!silent) toast(`Missing: ${missingFiles.join(', ')} — check your vault folder`);
+        console.warn('Vault files missing on load:', missingFiles);
+      }
     }
     VAULT.lastRead = {
       routines: routinesToMd(state.routines),
@@ -1856,7 +1813,14 @@ function updateExerciseCount(){const el=$('#settingsExerciseCount');if(el)el.tex
 async function flushPendingVaultSaves() {
   const pendingKeys = Object.keys(vaultSaveTimers);
   for (const key of pendingKeys) { clearTimeout(vaultSaveTimers[key]); delete vaultSaveTimers[key]; }
-  if (VAULT.loaded && pendingKeys.length) await Promise.all(pendingKeys.map(key => writeVaultFile(key).catch(() => {})));
+  const writes = [];
+  if (VAULT.loaded && !VAULT.switching) {
+    for (const key of Object.keys(VAULT_FILES)) {
+      if (pendingKeys.includes(key) || VAULT.dirty[key] || (VAULT.deleted[key] && VAULT.deleted[key].size)) writes.push(writeVaultFile(key));
+    }
+  }
+  await Promise.all(writes.map(promise => promise.catch(() => {})));
+  await Promise.all(Object.values(vaultSavePromises).map(promise => promise.catch(() => {})));
 }
 
 async function reloadVault() {
@@ -1970,7 +1934,7 @@ if (window.Capacitor?.isNativePlatform?.()) {
     if (state.mobileTab !== 'workout') { setMobileTab('workout'); return; }
     const now = Date.now();
     if (now - lastBackExitAttempt < 2000) {
-      window.Capacitor?.Plugins?.App?.exitApp();
+      flushPendingVaultSaves().finally(() => window.Capacitor?.Plugins?.App?.exitApp());
     } else {
       lastBackExitAttempt = now;
       toast('Press back again to exit');
@@ -2419,8 +2383,11 @@ function renderCard(exercise){
   let cardActions;
   if(state.awPick){
     const duplicate=Boolean(awPickUsedIds&&awPickUsedIds.has(String(exercise.id)));
+    const adding=state.awPick.mode==='add';
     const oldExercise=getExercise(state.awPick.exerciseId);
-    cardActions=`<button class="card-action replace-button" type="button" data-aw-replace="${esc(exercise.id)}" aria-label="Replace ${esc(oldExercise?oldExercise.name:'exercise')} with ${esc(exercise.name)}"${duplicate?' disabled':''}>${icon('swap')}</button>`;
+    cardActions=adding
+      ?`<button class="card-action replace-button add-button" type="button" data-aw-add="${esc(exercise.id)}" aria-label="Add ${esc(exercise.name)} to workout"${duplicate?' disabled':''}>${icon('plus')}</button>`
+      :`<button class="card-action replace-button" type="button" data-aw-replace="${esc(exercise.id)}" aria-label="Replace ${esc(oldExercise?oldExercise.name:'exercise')} with ${esc(exercise.name)}"${duplicate?' disabled':''}>${icon('swap')}</button>`;
   }else cardActions=editingRoutine?editAction:(routineItem||state.loggedOnly)?progressAction:normalLike;
 
   const mediaBlock=exercise.custom
@@ -2465,9 +2432,9 @@ function render(){
   const mobileCount=$('#mobileResultCount');
   const mobileContext=$('#mobileResultContext');
   const mobileTitle=document.querySelector('.mobile-phone-title');
-  if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?'Replace exercise':'Exercises';
+  if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?(state.awPick?.mode==='add'?'Add exercise':'Replace exercise'):'Exercises';
   if(mobileCount){const counts=awSession?awCounts():null;mobileCount.textContent=awSession?`${counts.done}/${counts.total} exercises`:`${all.length.toLocaleString()} exercises`;}
-  if(mobileContext) mobileContext.textContent=awSession?'in active workout':picking?'pick a replacement':routine?`in ${routine.name}`:hasFilters()?'matching filters':'with animations';
+  if(mobileContext) mobileContext.textContent=awSession?'in active workout':picking?(state.awPick?.mode==='add'?'tap + to add':'pick a replacement'):routine?`in ${routine.name}`:hasFilters()?'matching filters':'with animations';
   renderAwElapsed();
 
   $('#loadMore').style.display=!awSession&&shown.length<all.length?'block':'none';
@@ -3028,6 +2995,12 @@ function awSessionEntries(session,routine){
       entries.push({item,secondaryName:sec.name});
     }
   }
+  for(const extra of session.extras||[]){
+    const item=effective(extra);
+    if(seen.has(String(item.exerciseId)))continue;
+    seen.add(String(item.exerciseId));
+    entries.push({item,secondaryName:'Added'});
+  }
   return entries;
 }
 function awSessionItems(session,routine){return awSessionEntries(session,routine).map(entry=>entry.item);}
@@ -3203,7 +3176,7 @@ function syncAwLog(exercise,item){
 function startRoutineWorkout(routine){
   if(state.activeWorkout){return render();}
   if(!routine||!routine.items.length)return;
-  state.activeWorkout={date:localDateValue(),routineId:routine.id,routineName:routine.name,startedAt:Date.now(),paused:false,sets:seedAwSets(routine),skipped:{},secondaryIds:[]};
+  state.activeWorkout={date:localDateValue(),routineId:routine.id,routineName:routine.name,startedAt:Date.now(),paused:false,sets:seedAwSets(routine),skipped:{},secondaryIds:[],extras:[],replacements:{},jumpTo:null};
   saveActiveWorkout();
   awSetKeepAwake(true);
   render();
@@ -3288,6 +3261,24 @@ function applyAwReplacement(newId){
   render();
   toast(message);
 }
+function applyAwAdd(newId){
+  const pick=state.awPick,session=state.activeWorkout;
+  if(!pick||!session)return;
+  const exercise=getExercise(newId);
+  if(!exercise){cancelAwPick();return render();}
+  const routine=state.routines.find(candidate=>candidate.id===session.routineId);
+  if(!routine){cancelAwPick();return render();}
+  if(awSessionItems(session,routine).some(item=>String(item.exerciseId)===String(newId))){toast('Already in this workout');return;}
+  session.extras=session.extras||[];
+  const extra={exerciseId:String(newId),sets:DEFAULTS.sets,reps:DEFAULTS.reps};
+  session.extras.push(extra);
+  const seeded=seedAwSets({...routine,items:[extra]});
+  if(seeded[newId])session.sets[newId]=seeded[newId];
+  cancelAwPick();
+  saveActiveWorkout();
+  render();
+  toast('Exercise added');
+}
 async function handleAwAction(action,exerciseId,delta,rowIndex){
   if(action==='start')return startActiveWorkout();
   const session=state.activeWorkout;if(!session)return;
@@ -3326,6 +3317,13 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
     if(!routine)return;
     state.awPick={exerciseId,prev:{search:state.search,category:state.category,target:state.target,equipment:state.equipment,routineFilter:state.routineFilter,savedOnly:state.savedOnly,loggedOnly:state.loggedOnly,tags:state.tags,limit:state.limit}};
     Object.assign(state,{search:'',category:'',equipment:'',routineFilter:'',savedOnly:false,loggedOnly:false,tags:'',limit:DEFAULTS.pageSize,target:exercise.target});
+    $('#search').value='';
+    render();
+    return;
+  }
+  if(action==='add-pick'){
+    state.awPick={mode:'add',prev:{search:state.search,category:state.category,target:state.target,equipment:state.equipment,routineFilter:state.routineFilter,savedOnly:state.savedOnly,loggedOnly:state.loggedOnly,tags:state.tags,limit:state.limit}};
+    Object.assign(state,{search:'',category:'',target:'',equipment:'',routineFilter:'',savedOnly:false,loggedOnly:false,tags:'',limit:DEFAULTS.pageSize});
     $('#search').value='';
     render();
     return;
@@ -3486,7 +3484,7 @@ function renderActiveWorkout(){
   const secondaryRow=secondaryPills.length?`<div class="aw-secondary-row" role="group" aria-label="Secondary routines">${secondaryRowChunks(secondaryPills.length).map(size=>`<div class="aw-sec-row">${secondaryPills.splice(0,size).join('')}</div>`).join('')}</div>`:'';
   return `<section class="aw-inner" aria-label="Active workout">
     <div class="track aw-progress"><i style="width:${counts.total?Math.round(counts.done/counts.total*100):0}%"></i></div>
-    <div class="aw-list">${rowHtml||'<div class="empty-state">This routine has no exercises yet.</div>'}</div>
+    <div class="aw-list">${rowHtml||''}<button type="button" class="aw-add-row" data-aw-action="add-pick"><span class="aw-add-row-icon">${icon('plus')}</span>Add exercise</button></div>
     <footer class="aw-footer"><button type="button" class="feature-primary aw-finish" data-aw-action="finish">Finish workout</button>${secondaryRow}<div class="aw-footer-secondary"><button type="button" class="aw-secondary" data-aw-action="pause">Pause</button><button type="button" class="aw-secondary aw-cancel" data-aw-action="discard">Cancel</button></div></footer>
   </section>`;
 }
@@ -3517,10 +3515,11 @@ function renderAwBanner(){
   const element=$('#awBanner');
   if(!element)return;
   if(state.awPick&&state.activeWorkout){
-    const oldExercise=getExercise(state.awPick.exerciseId);
+    const adding=state.awPick.mode==='add';
+    const oldExercise=adding?null:getExercise(state.awPick.exerciseId);
     element.hidden=false;
     element.style.display='';
-    element.innerHTML=`<div class="aw-banner aw-pick-banner"><div class="aw-banner-info"><span class="eyebrow">Replace exercise</span><strong>${esc(oldExercise?oldExercise.name:'')}</strong><span class="aw-banner-meta">Tap the swap icon on an exercise</span></div><button type="button" class="aw-start" data-aw-action="pick-cancel">Cancel</button></div>`;
+    element.innerHTML=`<div class="aw-banner aw-pick-banner"><div class="aw-banner-info"><span class="eyebrow">${adding?'Add exercise':'Replace exercise'}</span><strong>${adding?'Pick from the library':esc(oldExercise?oldExercise.name:'')}</strong><span class="aw-banner-meta">${adding?'Tap the + on an exercise':'Tap the swap icon on an exercise'}</span></div><button type="button" class="aw-start" data-aw-action="pick-cancel">Cancel</button></div>`;
     return;
   }
   const editRoutine=currentRoutine();
@@ -3915,7 +3914,7 @@ function seedProgressStrengthDraft(exercise) {
   const seedSets = clamp(Number(strengthLog?.sets) || seedRepsSource.length || DEFAULTS.sets, 1, LIMITS.sets);
   const seedSetReps = Array.from({ length: seedSets }, (_, index) => clamp(Math.round(seedRepsSource[index] ?? seedRepsSource[seedRepsSource.length - 1] ?? baseReps) || baseReps, 1, LIMITS.reps));
   draft.showWeight = strengthLog ? logTrackedWeight(strengthLog) : exerciseHasWeight(exercise);
-  Object.assign(draft, { sets: seedSets, reps: DEFAULTS.reps, setWeights: Array.from({ length: seedSets }, () => seedWeight), setReps: seedSetReps, setDurations: [], setDistances: [] });
+  Object.assign(draft, { sets: seedSets, setWeights: Array.from({ length: seedSets }, () => seedWeight), setReps: seedSetReps, setDurations: [], setDistances: [] });
 }
 function resetProgressDraft() {
   const exercise = getExercise(state.progress.activeExerciseId);
@@ -4407,7 +4406,6 @@ function syncProgressDraft() {
   } else {
     draft.setWeights = fitList(draft.setWeights, draft.sets, (value) => value, DEFAULTS.weight);
     draft.setReps = fitList(draft.setReps, draft.sets, (value) => clamp(Math.round(Number(value)) || 1, 1, LIMITS.reps), DEFAULTS.reps);
-    draft.reps = draft.setReps[0] ?? DEFAULTS.reps;
   }
   document.querySelectorAll('#progressModeSwitch [data-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mode === draft.mode)));
   const weightWrap = $('#progressWeightSwitch');
@@ -4856,6 +4854,8 @@ function openProgress(exerciseId = '', returnFocus = document.activeElement) {
   $('#progressDashboard').hidden = Boolean(validExercise);
   $('#progressForm').hidden = !validExercise;
   $('#progressSubtitle').textContent = validExercise ? 'Add a training entry for this exercise.' : 'Daily balance, macros, hydration, and training.';
+  const gearBtn = $('#dashboardSettingsBtn');
+  if (gearBtn) gearBtn.hidden = Boolean(validExercise);
   resetProgressPanel();
   openOverlay('progress', returnFocus);
   syncMobileTabs();
@@ -4901,7 +4901,7 @@ function saveProgressLog(event) {
     log = {
       ...base,
       sets: draft.sets,
-      reps: setReps[0] ?? clamp(draft.reps, 1, LIMITS.reps),
+      reps: setReps[0] ?? DEFAULTS.reps,
       weight: weighted ? tracked[tracked.length - 1] : null,
       ...(weighted ? { setWeights } : {}),
       ...(setReps.length ? { setReps } : {}),
@@ -4932,6 +4932,8 @@ function prepareDashboardTab(resetView = true) {
   $('#progressDashboard').hidden = false;
   $('#progressForm').hidden = true;
   $('#progressSubtitle').textContent = 'Daily balance, macros, hydration, and training.';
+  const gearBtn = $('#dashboardSettingsBtn');
+  if (gearBtn) gearBtn.hidden = false;
   resetProgressPanel();
   requestAnimationFrame(resetProgressScroll);
 }
@@ -5292,6 +5294,11 @@ $('#grid').addEventListener('click', async (event) => {
     if (!replaceButton.disabled) applyAwReplacement(replaceButton.dataset.awReplace);
     return;
   }
+  const awAddButton = event.target.closest('[data-aw-add]');
+  if (awAddButton) {
+    if (!awAddButton.disabled) applyAwAdd(awAddButton.dataset.awAdd);
+    return;
+  }
   const awTop = event.target.closest('.aw-row-top');
   if (awTop) {
     const row = awTop.closest('.aw-row');
@@ -5632,7 +5639,7 @@ $('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
   if(currentUnitSystem()===(imperial?'imperial':'metric'))return;
   if((state.units.weight==='lb')!==imperial){
     const factor=imperial?LB_PER_KG:1/LB_PER_KG;
-    ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{
+    ['currentWeightKg'].forEach(key=>{
       const v=state.fuel.profile[key]*factor;
       state.fuel.profile[key]=imperial?Math.round(v):Math.round(v*2)/2;
     });
@@ -7130,8 +7137,6 @@ function applyBodyTargets(){
     heightValue=Math.max(50,Math.min(300,parseFloat(document.getElementById('inHeight').value)||178));
   }
   const currentWeightKg=parseFloat(document.getElementById('inCurrentWeight').value)||75.0;
-  const startWeightKg=state.fuel.profile.startWeightKg||currentWeightKg;
-  const goalWeightKg=state.fuel.profile.goalWeightKg||currentWeightKg;
 
   const activity=parseFloat(document.getElementById('inActivity').value)||1.55;
   const strategy=parseInt(document.getElementById('inStrategy').value)||0;
@@ -7139,7 +7144,7 @@ function applyBodyTargets(){
 
   const prevSex=state.fuel.profile.sex;
   state.fuel.profile={
-    age, sex, heightCm:heightValue, currentWeightKg, startWeightKg, goalWeightKg,
+    age, sex, heightCm:heightValue, currentWeightKg,
     activity, strategy, proteinRate,
     overrides:{...fuelOverrides()}
   };
@@ -7315,13 +7320,23 @@ initModalSwipeDown();
 })();
 
 function flushDirtyVaultFiles(){
-  if(!VAULT.loaded||VAULT.switching)return;
+  if(!VAULT.loaded||VAULT.switching)return null;
+  const writes=[];
   for(const key of Object.keys(VAULT_FILES)){
-    if(VAULT.dirty[key]||(VAULT.deleted[key]&&VAULT.deleted[key].size))writeVaultFile(key).catch(()=>{});
+    if(VAULT.dirty[key]||(VAULT.deleted[key]&&VAULT.deleted[key].size))writes.push(writeVaultFile(key).catch(()=>{}));
   }
+  const inFlight=Object.values(vaultSavePromises).map(promise=>promise.catch(()=>{}));
+  const all=[...writes,...inFlight];
+  return all.length?Promise.all(all):null;
 }
-window.addEventListener('pagehide',flushDirtyVaultFiles);
+window.addEventListener('pagehide',()=>{flushDirtyVaultFiles()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushDirtyVaultFiles()});
+if (window.Capacitor?.isNativePlatform?.()) {
+  window.Capacitor?.Plugins?.App?.addListener('pause', () => { flushDirtyVaultFiles(); });
+  window.Capacitor?.Plugins?.App?.addListener('resume', () => {
+    if (FS_ADAPTER.saf?.available && !VAULT.switching && !document.getElementById('welcomeBackdrop')?.open) reloadVault();
+  });
+}
 
 /* =========================================================
    WELCOME OVERLAY (first launch)

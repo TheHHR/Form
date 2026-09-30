@@ -300,7 +300,7 @@ async function estimateMealMacros(){
       meal.cals100=result.cals100;
       meal.defaultGrams=result.portionGrams;
     }else{
-      meal={id:'ai-'+Date.now(),name:result.name,p100:result.p100,c100:result.c100,f100:result.f100,cals100:result.cals100,defaultGrams:result.portionGrams,liked:false};
+      meal={id:'ai-'+Date.now(),name:String(result.name||'Meal').replace(/\s+/g,' ').replace(/^#+\s*/,'').trim().slice(0,40)||'Meal',p100:result.p100,c100:result.c100,f100:result.f100,cals100:result.cals100,defaultGrams:result.portionGrams,liked:false};
       state.fuel.foodDb.push(meal);
     }
     saveFuelState('meals');
@@ -819,7 +819,7 @@ async function generateAiRoutines(){
     pauseActiveWorkoutForEdit();
     state.routineCreating=false;
     const created=plan.routines.map((routine,index)=>{
-      const record={id:`r-${Date.now()}-${index}`,name:routine.name,liked:false,items:routine.items};
+      const record={id:`r-${Date.now()}-${index}`,name:String(routine.name||'').replace(/\s+/g,' ').replace(/^#+\s*/,'').trim().slice(0,40)||'Routine',liked:false,items:routine.items};
       state.routines.push(record);
       return record;
     });

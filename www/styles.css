@@ -274,6 +274,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-list { display: grid; gap: 8px; }
 .aw-group-separator { display: flex; align-items: center; gap: var(--space-2); margin-top: 2px; padding: 2px 2px 0; color: var(--text-muted); font-size: 11px; font-weight: var(--weight-semibold); letter-spacing: .04em; text-transform: uppercase; }
 .aw-group-separator::after { content: ""; flex: 1; height: 1px; background: var(--divider); }
+.aw-add-row { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin-top: 2px; padding: 12px var(--space-3); color: var(--accent); background: transparent; border: 1px dashed rgba(var(--accent-rgb), .45); border-radius: var(--radius-control); font-size: 13px; font-weight: var(--weight-semibold); cursor: pointer; appearance: none; transition: background-color .15s ease, border-color .15s ease; }
+.aw-add-row .aw-add-row-icon { display: grid; place-items: center; }
+.aw-add-row .aw-add-row-icon .icon { width: 16px; height: 16px; }
+.aw-add-row:active { background: rgba(var(--accent-rgb), .1); }
+.aw-add-row:focus-visible { border-color: var(--accent); outline: none; }
 .aw-row.collapsed { min-height: 0; gap: 6px; box-shadow: none; }
 .aw-row.collapsed .aw-addremove { margin-top: 0; }
 .aw-row { display: grid; gap: 8px; min-height: 68px; padding: 10px var(--space-3); background: var(--surface-container); border: 1px solid transparent; border-radius: var(--radius-control); box-sizing: border-box; align-content: center; }
