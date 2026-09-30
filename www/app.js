@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.9';
+const APP_VERSION='3.4.0';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -2084,8 +2084,13 @@ function positionCustomSelectMenu(wrapper){
     const neededWidth=scheduleMenuNeededWidth(wrapper);
     if(neededWidth>normalWidth+1)options={minWidth:neededWidth};
   }else if(wrapper.closest('.settings-select-host')){
-    const widths={inActivity:340,inStrategy:340,inProteinRate:340,aiProvider:340};
-    options={minWidth:widths[wrapper.querySelector('select')?.id]||370,alignRight:true};
+    const selectId=wrapper.querySelector('select')?.id;
+    /* The AI provider menu holds short labels; letting it match the button
+       width looks cleaner than the 340px nutrition-select menus. */
+    if(selectId!=='aiProvider'){
+      const widths={inActivity:340,inStrategy:340,inProteinRate:340};
+      options={minWidth:widths[selectId]||370,alignRight:true};
+    }
   }
   positionMenuBetween(menu,button,options);
 }
