@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.3.7';
+const APP_VERSION='3.3.8';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -519,7 +519,7 @@ function loadActiveWorkout(){
     }
   }
   const rest=raw.rest&&Number(raw.rest.endsAt)>Date.now()&&Number(raw.rest.total)>0
-    ?{endsAt:Number(raw.rest.endsAt),total:clamp(Math.round(Number(raw.rest.total)),10,600),type:raw.rest.type==='exercise'?'exercise':'sets'}
+    ?{endsAt:Number(raw.rest.endsAt),total:clamp(Math.round(Number(raw.rest.total)),10,600),type:raw.rest.type==='exercise'?'exercise':'sets',away:true}
     :null;
   return{
     date:String(raw.date),
@@ -1032,7 +1032,15 @@ function parseTrainingLogsMd(text) {
     parseLegacyLine(line);
   }
   flushBlock();
-  return logs.filter(Boolean);
+  /* Collapse duplicates by id (a past bug could write two logs sharing a
+     `-aw-` id): keep the entry with the latest createdAt. */
+  const byId = new Map();
+  for (const log of logs) {
+    if (!log) continue;
+    const existing = byId.get(log.id);
+    if (!existing || (Number(log.createdAt) || 0) > (Number(existing.createdAt) || 0)) byId.set(log.id, log);
+  }
+  return [...byId.values()];
 }
 
 function parseNutritionDiaryMd(text) {
@@ -1986,9 +1994,13 @@ function positionMenuBetween(menu, button, options=null){
   const gap=6;
 
   const bottomBar = document.querySelector('.mobile-tab-bar');
-  let reservedBottom = bottomBar && getComputedStyle(bottomBar).display !== 'none'
-    ? bottomBar.offsetHeight
-    : 0;
+  /* Measure the bar's real top edge — it floats above the viewport bottom
+     (--bar-float + safe-area), so offsetHeight alone under-reserves. */
+  let reservedBottom = 0;
+  if (bottomBar && getComputedStyle(bottomBar).display !== 'none') {
+    const barRect = bottomBar.getBoundingClientRect();
+    if (barRect.height > 0) reservedBottom = Math.ceil(window.innerHeight - barRect.top);
+  }
   const planSwitch = document.getElementById('planSwitch');
   if (planSwitch && !planSwitch.hidden && getComputedStyle(planSwitch).display !== 'none') {
     const switchTopFromBottom = Math.ceil(window.innerHeight - planSwitch.getBoundingClientRect().top);
@@ -2529,7 +2541,7 @@ function openOverlay(key,returnFocus=document.activeElement){
   if(key==='progress'){$('#progressBackdrop').classList.add('open');$('#progressBackdrop').setAttribute('aria-hidden','false');}
   else if(key==='modal'){$('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');}
    else if(key==='logMeal'){$('#fuelLogMealModal').classList.add('open');$('#fuelLogMealModal').setAttribute('aria-hidden','false');logMealSlot=nextLogSlot();renderLogMealSlot();}
-   else if(key==='settings'){$('#settingsBackdrop').classList.add('open');$('#settingsBackdrop').setAttribute('aria-hidden','false');syncSettingsControls();}
+   else if(key==='settings'){$('#settingsBackdrop').classList.add('open');$('#settingsBackdrop').setAttribute('aria-hidden','false');syncSettingsControls();if(!aiModuleReady)loadAiModule(true);}
    else if(key==='mealHistory'){$('#mealHistoryBackdrop').classList.add('open');$('#mealHistoryBackdrop').setAttribute('aria-hidden','false');}
    else if(key==='customExercise'){$('#customExerciseModal').classList.add('open');$('#customExerciseModal').setAttribute('aria-hidden','false');}
    else if(key==='clearData'){$('#clearDataModal').classList.add('open');$('#clearDataModal').setAttribute('aria-hidden','false');updateSelectAllClearCheckbox();}
@@ -3148,7 +3160,9 @@ function awCounts(){
 function syncAwLog(exercise,item){
   const session=state.activeWorkout;if(!session)return;
   const token=String(session.startedAt);
-  state.progress.logs=state.progress.logs.filter(log=>!(log.sessionId===token&&log.exerciseId===exercise.id));
+  /* Match by deterministic id as well as sessionId — sessionId is lost when a
+     log round-trips through the vault, so the id is the durable key. */
+  state.progress.logs=state.progress.logs.filter(log=>!(log.sessionId===token&&log.exerciseId===exercise.id)&&log.id!==`${token}-aw-${exercise.id}`);
   if(routineItemMode(item,exercise)==='timed'){
     const checked=awChecked(exercise.id).slice(0,LIMITS.sets);
     if(checked.length>0){
@@ -3200,7 +3214,9 @@ function endActiveWorkout(save=true){
       syncAwLog(exercise,item);
     });
   }else{
-    state.progress.logs=state.progress.logs.filter(log=>log.sessionId!==token);
+    /* Discard must also catch logs restored from the vault, whose sessionId
+       was lost — the `-aw-` id prefix identifies them durably. */
+    state.progress.logs=state.progress.logs.filter(log=>log.sessionId!==token&&!String(log.id||'').startsWith(`${token}-aw-`));
     persistProgress();
   }
   clearActiveWorkout();
@@ -3595,9 +3611,12 @@ function cancelAwRest(){
 function stopAwRestTicker(){if(!awRestTickerId)return;clearInterval(awRestTickerId);awRestTickerId=0}
 function ensureAwRestTicker(){if(awRestTickerId)return;awRestTickerId=setInterval(awRestTick,250)}
 function awRestTick(){
-  if(!state.activeWorkout?.rest){stopAwRestTicker();return;}
+  const rest=state.activeWorkout?.rest;
+  if(!rest){stopAwRestTicker();return;}
+  const wasAway=rest.away===true;
+  if(wasAway)delete rest.away;
   const left=awRestSecondsLeft();
-  if(left<=0){cancelAwRest();toast('Rest complete');return;}
+  if(left<=0){cancelAwRest();if(!wasAway)toast('Rest complete');return;}
   updateAwRestPill(left);
 }
 function updateAwRestPill(left){
@@ -3933,12 +3952,17 @@ function resetProgressDraft() {
 function normalizeImportedProgressLog(log,index){
   if(!log||!VALID_EXERCISE_IDS.has(String(log.exerciseId).replace(/^#/,''))||!isValidProgressDate(log.date))return null;
   const idTimestamp=String(log.id||'').match(/\d{10,}/)?.[0],timestamp=Number(log.timestamp??log.createdAt??idTimestamp)||Date.now()+index;
+  /* Active-workout logs carry a deterministic `<startedAt>-aw-<exerciseId>` id;
+     sessionId is not serialized, so re-derive it to keep sync/discard working
+     across restarts. */
+  const awSession=String(log.id||'').match(/^(\d{10,})-aw-/);
+  const awFields=awSession?{sessionId:awSession[1]}:{};
   const timed=normalizeTimedFields(log);
-  if(timed)return{id:String(log.id||timestamp),exerciseId:String(log.exerciseId).replace(/^#/,''),date:String(log.date),...timed,weight:null,notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:timestamp};
+  if(timed)return{id:String(log.id||timestamp),exerciseId:String(log.exerciseId).replace(/^#/,''),date:String(log.date),...awFields,...timed,weight:null,notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:timestamp};
   const setWeights=sanitizeSetWeights(log.setWeights);
   const setCount=setWeights?setWeights.length:clamp(log.sets,1,LIMITS.sets);
   const setReps=sanitizeSetReps(log.setReps,setCount)||setRepsFromUniform(log.reps,setCount);
-  return{id:String(log.id||timestamp),exerciseId:String(log.exerciseId).replace(/^#/,''),date:String(log.date),sets:clamp(log.sets,1,LIMITS.sets),reps:clamp(log.reps,1,LIMITS.reps),weight:log.weight===''||log.weight==null?null:Math.min(LIMITS.weight,Math.max(0,Number(log.weight)||0)),...(setWeights?{setWeights}:{}),...(setReps?{setReps}:{}),notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:timestamp};
+  return{id:String(log.id||timestamp),exerciseId:String(log.exerciseId).replace(/^#/,''),date:String(log.date),sets:clamp(log.sets,1,LIMITS.sets),reps:clamp(log.reps,1,LIMITS.reps),weight:log.weight===''||log.weight==null?null:Math.min(LIMITS.weight,Math.max(0,Number(log.weight)||0)),...(setWeights?{setWeights}:{}),...(setReps?{setReps}:{}),...awFields,notes:String(log.notes||'').slice(0,LIMITS.notes),createdAt:timestamp};
 }
 function progressLogToText(log){
   const exercise=getExercise(log.exerciseId),timestamp=Number(log.createdAt)||Date.now(),exportId=String(log.id||timestamp);
@@ -4693,12 +4717,13 @@ function renderProgressDashboard() {
   const balanceLabel = $('#dashboardBalanceLabel');
   balanceLabel.textContent = state.dashboard.selectedDate ? parseLocalDate(state.dashboard.selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : allTime ? 'All time' : monthly ? 'Monthly' : 'Weekly';
 
+  const todayKey = localDateValue();
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + index);
     const key = localDateValue(date);
     const dayLogs = logs.filter((log) => log.date === key);
-    return { key, label: date.toLocaleString(undefined, { weekday: 'narrow' }), longLabel: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }), sets: dayLogs.reduce((sum, log) => sum + logSetsCount(log), 0), entries: dayLogs.length };
+    return { key, today: key === todayKey, label: date.toLocaleString(undefined, { weekday: 'narrow' }), longLabel: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }), sets: dayLogs.reduce((sum, log) => sum + logSetsCount(log), 0), entries: dayLogs.length };
   });
   const maxSets = Math.max(1, ...days.map((day) => day.sets));
   const weekSets = days.reduce((sum, day) => sum + day.sets, 0);
@@ -4742,7 +4767,7 @@ function renderProgressDashboard() {
   $('#dashboardResetWeek').disabled = (monthly ? currentMonth : currentWeek) && !state.dashboard.selectedDate;
   $('#dashboardWeeklyBars').innerHTML = days.map((day) => {
     const color = day.sets ? (mapTierColor(day.sets / maxSets) || `rgba(${ACCENTS[activeAccent].rgb},.10)`) : 'transparent';
-    return `<button class="weekly-bar-item" type="button" data-date="${day.key}" aria-label="${esc(day.longLabel)}: ${day.sets} sets in ${day.entries} entries" aria-pressed="${state.dashboard.selectedDate === day.key}"${day.entries ? '' : ' disabled'}><span>${day.sets || ''}</span><div class="weekly-bar-track"><i style="height:${day.sets ? Math.max(10, Math.round((day.sets / maxSets) * 100)) : 3}%;background:${color}"></i></div><small>${esc(day.label)}</small></button>`;
+    return `<button class="weekly-bar-item${day.today ? ' today' : ''}" type="button" data-date="${day.key}" aria-label="${esc(day.longLabel)}: ${day.sets} sets in ${day.entries} entries" aria-pressed="${state.dashboard.selectedDate === day.key}"${day.entries ? '' : ' disabled'}><span>${day.sets || ''}</span><div class="weekly-bar-track"><i style="height:${day.sets ? Math.max(10, Math.round((day.sets / maxSets) * 100)) : 3}%;background:${color}"></i></div><small>${esc(day.label)}</small></button>`;
   }).join('');
   const weekNavigation = $('#dashboardWeekNav');
   $('.dashboard-week-card').classList.toggle('all-time-view', allTime);
@@ -5799,10 +5824,20 @@ $('#progressHistory').addEventListener('click', async (event) => {
     if (!(await appConfirm(`Delete progress entry for "${exercise?.name || 'this exercise'}"?`, { title: 'Delete progress entry', okLabel: 'Delete' }))) return;
     if (VAULT.loaded) markDeleted('trainingLogs', row.dataset.progressId);
     state.progress.logs = state.progress.logs.filter((log) => log.id !== row.dataset.progressId);
+    /* Deleting the current session's AW log unchecks its rows so the workout
+       stays in sync — otherwise endActiveWorkout/syncAwLog resurrect the
+       deleted entry. */
+    const session = state.activeWorkout;
+    const token = session ? String(session.startedAt) : null;
+    const isAwLog = Boolean(token && row.dataset.progressId === `${token}-aw-${row.dataset.exerciseId}`);
+    if (isAwLog) {
+      (session.sets[row.dataset.exerciseId] || []).forEach((awRow) => { awRow.done = false; });
+      saveActiveWorkout();
+    }
     if (state.dashboard.selectedDate && !state.progress.logs.some((log) => log.date === state.dashboard.selectedDate)) state.dashboard.selectedDate = null;
     persistProgress();
     renderProgressHistory();
-    if (state.loggedOnly || state.routineFilter) render();
+    if (isAwLog || state.loggedOnly || state.routineFilter) render();
     toast('Progress entry deleted');
     return;
   }
@@ -7334,7 +7369,10 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 if (window.Capacitor?.isNativePlatform?.()) {
   window.Capacitor?.Plugins?.App?.addListener('pause', () => { flushDirtyVaultFiles(); });
   window.Capacitor?.Plugins?.App?.addListener('resume', () => {
-    if (FS_ADAPTER.saf?.available && !VAULT.switching && !document.getElementById('welcomeBackdrop')?.open) reloadVault();
+    if (FS_ADAPTER.saf?.available && !VAULT.switching && !mealEditorLocked()
+        && !document.getElementById('welcomeBackdrop')?.open) {
+      loadVault(VAULT.folder, { silent: true });
+    }
   });
 }
 
@@ -7460,14 +7498,27 @@ async function checkForUpdates(){
    and is loaded on demand: at startup when a provider is
    configured, otherwise when the Settings overlay opens.
    ========================================================= */
-function loadAiModule(){
+let aiRetryAttempted=false;
+function loadAiModule(notify){
   if(aiModuleReady)return Promise.resolve();
   if(aiModuleLoading)return aiModuleLoading;
   aiModuleLoading=new Promise(resolve=>{
     const script=document.createElement('script');
     script.src='ai.js';
     script.onload=()=>{aiModuleReady=true;resolve();};
-    script.onerror=()=>{aiModuleLoading=null;toast('AI module failed to load');resolve();};
+    script.onerror=()=>{
+      aiModuleLoading=null;
+      /* Background preloads (boot/settings render) retry once silently; only
+         an explicit AI action surfaces the failure as a toast. */
+      if(!aiRetryAttempted){
+        aiRetryAttempted=true;
+        setTimeout(()=>loadAiModule(notify),1500);
+        return;
+      }
+      if(notify)toast('AI module failed to load');
+      else console.warn('AI module failed to load');
+      resolve();
+    };
     document.head.appendChild(script);
   });
   return aiModuleLoading;
@@ -7475,9 +7526,9 @@ function loadAiModule(){
 function syncAiActionButtonsVisibility(){if(aiModuleReady)FormAI.syncAiActionButtonsVisibility();}
 function renderAiSettings(){if(aiModuleReady)FormAI.renderAiSettings();}
 function renderAiInsights(){if(aiModuleReady)FormAI.renderAiInsights();}
-function estimateMealMacros(){loadAiModule().then(()=>{if(aiModuleReady)FormAI.estimateMealMacros();});}
-function generateAiReview(){loadAiModule().then(()=>{if(aiModuleReady)FormAI.generateAiReview();});}
-function generateAiRoutines(){loadAiModule().then(()=>{if(aiModuleReady)FormAI.generateAiRoutines();});}
+function estimateMealMacros(){loadAiModule(true).then(()=>{if(aiModuleReady)FormAI.estimateMealMacros();});}
+function generateAiReview(){loadAiModule(true).then(()=>{if(aiModuleReady)FormAI.generateAiReview();});}
+function generateAiRoutines(){loadAiModule(true).then(()=>{if(aiModuleReady)FormAI.generateAiRoutines();});}
 if((readStorage(STORAGE_KEYS.ai,null)||{}).provider)loadAiModule();
 
 

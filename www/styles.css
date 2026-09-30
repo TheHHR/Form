@@ -1068,13 +1068,14 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .weekly-bar-item { min-width: 0; display: grid; grid-template-rows: 18px minmax(0,1fr) 18px; align-items: stretch; gap: 5px; padding: 0; color: inherit; background: transparent; border: 0; border-radius: 8px; text-align: center; appearance: none; }
 .weekly-bar-item:not(:disabled) { cursor: pointer; }
 .weekly-bar-item:disabled { cursor: default; opacity: .72; }
-.weekly-bar-item[aria-pressed="true"] { background: var(--surface-container-high); outline: 1px solid var(--border-strong); outline-offset: 3px; }
+  .weekly-bar-item[aria-pressed="true"] { background: var(--surface-container-high); outline: 1px solid var(--border-strong); outline-offset: 3px; }
 .weekly-bar-item > span { color: var(--text-soft); font-size: 10px; font-variant-numeric: tabular-nums; }
 .weekly-bar-item small { color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
 .weekly-bar-track { position: relative; width: 60%; height: 100%; min-height: 0; margin-inline: auto; overflow: hidden; background: var(--surface-container-high); border-radius: 6px; }
 .weekly-bar-track i { position: absolute; right: 0; bottom: 0; left: 0; width: 100%; min-height: 3px; display: block; background: var(--accent); border-radius: 6px 6px 2px 2px; }
 .weekly-bar-item[aria-pressed="true"] .weekly-bar-track { background: var(--border-strong); }
 .weekly-bar-item[aria-pressed="true"] small { color: var(--text); }
+.weekly-bar-item.today small { color: var(--accent); }
 .month-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: var(--space-3); height: 14px; line-height: 14px; }
 .month-weekdays span { color: var(--text-muted); font-size: 10px; font-weight: var(--weight-semibold); text-transform: uppercase; text-align: center; }
 .month-weekdays:not([hidden]) + .month-grid { margin-top: var(--space-2); grid-auto-rows: 19.6px; }
@@ -2236,7 +2237,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     .fuel-modal-backdrop.open .fuel-modal { animation: sheetUp .25s cubic-bezier(0.32, 0.72, 0, 1); }
   }
 
-  .progress-date-picker-layer { align-items: end; padding: var(--space-3) var(--space-3) var(--space-4); }
+  .progress-date-picker-layer { align-items: end; padding: var(--space-3) var(--space-3) calc(var(--bar-clear) + 12px); }
   .progress-date-picker-card { width: 100%; max-width: 380px; background: var(--surface-container); border: none; border-radius: var(--radius-sheet); }
 
   .fuel-drawer-backdrop {
