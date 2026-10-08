@@ -203,6 +203,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-secondary,
 .btn-clear-cancel,
 .btn-clear-submit,
+.btn-confirm-ok,
 .progress-date-button,
 .custom-exercise-edit,
 .custom-exercise-delete {
