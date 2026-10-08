@@ -47,6 +47,7 @@ const ACCENTS=Object.freeze({
   pink:{base:'#ff375f',rgb:'255,55,95',ink:'#ffffff'}
 });
 function normalizeAccent(value){return value&&ACCENTS[value]?value:'red'}
+const ACCENT_COMPLEMENT=Object.freeze({red:'blue',blue:'red',green:'orange',orange:'green',purple:'pink',pink:'purple'});
 let activeAccent=normalizeAccent(readStorage(STORAGE_KEYS.accent,'red'));
 function applyAccent(name){
   const palette=ACCENTS[name]||ACCENTS.red;
@@ -3782,6 +3783,13 @@ function renderAwRestPill(){
   const over=state.activeWorkout?.rest?.over===true;
   pill.toggleAttribute('data-over',over);
   if(overlay)overlay.toggleAttribute('data-over',over);
+  const palette=over?(ACCENTS[ACCENT_COMPLEMENT[activeAccent]]||ACCENTS.red):(ACCENTS[activeAccent]||ACCENTS.red);
+  [pill,overlay].forEach(el=>{
+    if(!el)return;
+    el.style.setProperty('--accent',palette.base);
+    el.style.setProperty('--accent-ink',palette.ink);
+    el.style.setProperty('--accent-rgb',palette.rgb);
+  });
   updateAwRestPill(awRestSecondsLeft());
   ensureAwRestTicker();
 }

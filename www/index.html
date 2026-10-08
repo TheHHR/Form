@@ -563,8 +563,14 @@
         <section class="settings-group" id="bodyTargetsSection">
           <h3 class="settings-heading">Body & targets</h3>
           <div class="settings-card">
-            <div class="settings-row">
-              <span class="settings-row-main"><svg class="icon"><use href="#icon-progress"/></svg><span>Current BMI</span></span>
+            <div class="settings-row settings-row-bmi">
+              <span class="settings-row-main">
+                <svg class="icon"><use href="#icon-progress"/></svg>
+                <span class="settings-row-stack">
+                  <span>Current BMI</span>
+                  <small class="weight-goal-line" id="weightGoalLine"><span id="weightDeltaText">Goal Achieved!</span> · <span id="goalPercentText">0%</span></small>
+                </span>
+              </span>
               <span class="settings-row-value body-bmi-value"><b id="bmiValDisplay">23.7</b><small id="bmiCategory">Normal (18.5 – 24.9)</small></span>
             </div>
             <div class="settings-row">
@@ -588,6 +594,22 @@
                 <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="-0.5" aria-label="Decrease current weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
                 <input id="inCurrentWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Current weight in kilograms">
                 <button class="routine-step" type="button" data-target="inCurrentWeight" data-delta="0.5" aria-label="Increase current weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Start weight <span id="unitStartLabel">(kg)</span></span></span>
+              <div class="routine-stepper settings-stepper" role="group" aria-label="Start weight">
+                <button class="routine-step" type="button" data-target="inStartWeight" data-delta="-0.5" aria-label="Decrease start weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inStartWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Start weight in kilograms">
+                <button class="routine-step" type="button" data-target="inStartWeight" data-delta="0.5" aria-label="Increase start weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-main"><svg class="icon"><use href="#icon-target"/></svg><span>Target weight <span id="unitGoalLabel">(kg)</span></span></span>
+              <div class="routine-stepper settings-stepper" role="group" aria-label="Target weight">
+                <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="-0.5" aria-label="Decrease target weight"><svg class="icon"><use href="#icon-minus"/></svg></button>
+                <input id="inGoalWeight" type="text" readonly tabindex="-1" value="75.0" aria-label="Target weight in kilograms">
+                <button class="routine-step" type="button" data-target="inGoalWeight" data-delta="0.5" aria-label="Increase target weight"><svg class="icon"><use href="#icon-plus"/></svg></button>
               </div>
             </div>
             <div class="settings-row">

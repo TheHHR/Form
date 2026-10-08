@@ -18,7 +18,7 @@
   --carbs: #a8c7fa;
   --fats: #ffb951;
   --danger: #ff5449;
-  --scrim: rgba(0, 0, 0, .52);
+  --scrim: rgba(0, 0, 0, .65);
   --radius-chip: 8px;
   --radius-control: 16px;
   --radius-surface: 20px;
@@ -1511,6 +1511,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .preset-chip span { font-size: 10px; color: var(--text-muted); }
 
 .preset-chip-add {
+  flex: 1 0 auto;
   background: var(--surface-container);
   border: none;
   padding: 8px 14px;
@@ -1523,6 +1524,9 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 
 /* Meal history — mirrors Stats progress-history layout */
 .meal-history { display: grid; }
+.settings-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.weight-goal-line { color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.weight-goal-line.positive { color: var(--accent); }
 .meal-group { margin-top: var(--space-4); }
 .meal-group:first-child { margin-top: 0; }
 .meal-group-head {
