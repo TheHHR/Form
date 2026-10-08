@@ -53,20 +53,20 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleProdRelease --no-daemon
 
       - name: Read app version
         id: ver
         run: echo "version=$(cat version.properties)" >> "$GITHUB_OUTPUT"
 
       - name: Stage versioned APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
+        run: cp android/app/build/outputs/apk/prod/release/app-prod-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Form-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/prod/release/app-prod-release.apk
           if-no-files-found: error
 
       - name: Publish version release

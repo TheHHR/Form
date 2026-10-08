@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.4.2';
+const APP_VERSION='3.4.5';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -605,14 +605,14 @@ function normalizeTimedFields(log){
 function normalizeProgressPreferences(value){const firstDay=Number(value?.firstDay);const defaultView=['week','month','all'].includes(value?.defaultView)?value.defaultView:'week';return{firstDay:[0,1,6].includes(firstDay)?firstDay:1,defaultView}}
 function normalizePillRowModes(value){const modes=['default','pin','hidden'],keys=['routine','category','target','equipment'],out={};keys.forEach(key=>{out[key]=modes.includes(value?.[key])?value[key]:(key==='routine'?'pin':'default')});out.toggles=['routine','category','target','equipment'].includes(value?.toggles)?value.toggles:'equipment';out.tagsHost=['routine','category','target','equipment'].includes(value?.tagsHost)?value.tagsHost:'equipment';return out}
 function roundRestDuration(value,fallback){const target=Math.round(Number(value)/5)*5;return Number.isFinite(target)?clamp(target,30,180):fallback}
-function normalizeRestPrefs(value){return{enabled:value?.enabled===true,betweenSets:roundRestDuration(value?.betweenSets,60),betweenExercise:roundRestDuration(value?.betweenExercise,90)}}
+function normalizeRestPrefs(value){return{enabled:value?.enabled!==false,sound:value?.sound!==false,betweenSets:roundRestDuration(value?.betweenSets,60),betweenExercise:roundRestDuration(value?.betweenExercise,90)}}
 function normalizeUnits(value){return{weight:['kg','lb'].includes(value?.weight)?value.weight:'kg',distance:['km','mi'].includes(value?.distance)?value.distance:'km',height:['cm','ftin'].includes(value?.height)?value.height:'cm'}}
 
 const storedSaved=readStorage(STORAGE_KEYS.saved,[],Array.isArray).map(String).filter(id=>VALID_EXERCISE_IDS.has(id));
 const storedRoutines=readStorage(STORAGE_KEYS.routines,[],Array.isArray).map(normalizeRoutine).filter(Boolean);
 const storedProgressPrefs=normalizeProgressPreferences(readStorage(STORAGE_KEYS.progressPreferences,{firstDay:1}));
 const storedPillRowModes=normalizePillRowModes(readStorage(STORAGE_KEYS.pillRowModes,{}));
-const storedRestPrefs=normalizeRestPrefs(readStorage(STORAGE_KEYS.restPrefs,{enabled:false,betweenSets:60,betweenExercise:90}));
+const storedRestPrefs=normalizeRestPrefs(readStorage(STORAGE_KEYS.restPrefs,{enabled:true,sound:true,betweenSets:60,betweenExercise:90}));
 
 const state={
   search:'',
@@ -1186,6 +1186,7 @@ function parseConfigMd(text) {
       else if (key === 'rest-enabled') cfg.prefs.restEnabled = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'rest-between-sets') cfg.prefs.restBetweenSets = vClampNum(raw, 30, 180, 60);
       else if (key === 'rest-between-exercises') cfg.prefs.restBetweenExercises = vClampNum(raw, 30, 180, 90);
+      else if (key === 'rest-sound') cfg.prefs.restSound = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'show-secondary-pills') cfg.prefs.showSecondaryPills = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'pill-routine') cfg.prefs.pillRoutine = ['default','pin','hidden'].includes(raw) ? raw : 'default';
       else if (key === 'pill-category') cfg.prefs.pillCategory = ['default','pin','hidden'].includes(raw) ? raw : 'default';
@@ -1363,6 +1364,7 @@ function configToMd() {
   lines.push(`rest-enabled: ${state.restPrefs.enabled}`);
   lines.push(`rest-between-sets: ${state.restPrefs.betweenSets}`);
   lines.push(`rest-between-exercises: ${state.restPrefs.betweenExercise}`);
+  lines.push(`rest-sound: ${state.restPrefs.sound!==false}`);
   lines.push(`show-secondary-pills: ${state.showSecondaryPills}`);
   lines.push(`pill-routine: ${state.pillRowModes.routine}`);
   lines.push(`pill-category: ${state.pillRowModes.category}`);
@@ -1450,6 +1452,7 @@ function applyConfigToState(cfg) {
     if (cfg.prefs.restEnabled !== undefined) state.restPrefs.enabled = cfg.prefs.restEnabled;
     if (cfg.prefs.restBetweenSets !== undefined) state.restPrefs.betweenSets = cfg.prefs.restBetweenSets;
     if (cfg.prefs.restBetweenExercises !== undefined) state.restPrefs.betweenExercise = cfg.prefs.restBetweenExercises;
+    if (cfg.prefs.restSound !== undefined) state.restPrefs.sound = cfg.prefs.restSound !== false;
     if (cfg.prefs.showSecondaryPills !== undefined) state.showSecondaryPills = cfg.prefs.showSecondaryPills;
     if (cfg.prefs.pillRoutine) state.pillRowModes.routine = cfg.prefs.pillRoutine;
     if (cfg.prefs.pillCategory) state.pillRowModes.category = cfg.prefs.pillCategory;
@@ -1719,7 +1722,7 @@ function buildDefaultState() {
   state.routineDraftName = '';
   state.fuel = loadFuelState();
   state.fuelSelectedDate = localDateValue();
-  state.restPrefs = normalizeRestPrefs({ enabled: false, betweenSets: 60, betweenExercise: 90 });
+  state.restPrefs = normalizeRestPrefs({ enabled: true, sound: true, betweenSets: 60, betweenExercise: 90 });
   state.progressPreferences = normalizeProgressPreferences({ firstDay: 1 });
   state.pillRowModes = normalizePillRowModes({});
   state.showWorkoutReminder = true;
@@ -3630,6 +3633,40 @@ function renderAwBanner(){
 }
 
 let awRestTickerId=0;
+let restAudioCtx=null;
+function unlockRestAudio(){
+  try{
+    if(!restAudioCtx)restAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(restAudioCtx.state==='suspended')restAudioCtx.resume().catch(()=>{});
+  }catch{}
+}
+document.addEventListener('pointerdown',unlockRestAudio,{once:true,capture:true});
+function playRestBeepPattern(){
+  try{
+    if(!restAudioCtx)restAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const ctx=restAudioCtx;
+    if(ctx.state==='suspended'){ctx.resume().catch(()=>{});}
+    const start=ctx.currentTime+0.05;
+    for(let i=0;i<3;i++){
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      const at=start+i*0.25;
+      osc.type='sine';
+      osc.frequency.value=880;
+      gain.gain.setValueAtTime(0.0001,at);
+      gain.gain.exponentialRampToValueAtTime(0.35,at+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001,at+0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(at);
+      osc.stop(at+0.2);
+    }
+  }catch{}
+}
+function fireRestCompleteCue(){
+  if(state.restPrefs.sound!==false)playRestBeepPattern();
+  try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch{}
+}
 function awRestIsOpen(){
   return Boolean(state.activeWorkout?.restOpen);
 }
@@ -3697,7 +3734,7 @@ function awRestTick(){
     rest.over=true;
     if(state.activeWorkout)state.activeWorkout.restOpen=state.activeWorkout.restMaximized===true;
     saveActiveWorkout();
-    if(!wasAway)toast('Rest complete');
+    if(!wasAway){toast('Rest complete');fireRestCompleteCue();}
     renderAwRestPill();
     return;
   }
@@ -4217,6 +4254,7 @@ function syncSettingsControls(){
   $('#workoutReminder').setAttribute('aria-checked',String(state.showWorkoutReminder));
   $('#showSecondaryPills').setAttribute('aria-pressed',String(state.showSecondaryPills));
   $('#restEnabled').setAttribute('aria-checked',String(state.restPrefs.enabled));
+  $('#restSound').setAttribute('aria-checked',String(state.restPrefs.sound!==false));
   $('#tabLabels').setAttribute('aria-checked',String(state.showTabLabels));
   renderPrefSegs();
   renderUnitSegs();
@@ -5773,6 +5811,7 @@ $('#showSecondaryPills').addEventListener('click',(event)=>{
   toast(state.showSecondaryPills?'2nd routines shown in filters':'2nd routines hidden from filters');
 });
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
+$('#restSound').addEventListener('click',(event)=>{state.restPrefs.sound=state.restPrefs.sound===false;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.sound));unlockRestAudio();toast(state.restPrefs.sound?'Completion sound on':'Completion sound off');});
 $('#tabLabels').addEventListener('click',(event)=>{state.showTabLabels=!state.showTabLabels;writeStorage(STORAGE_KEYS.tabLabels,state.showTabLabels);if(VAULT.loaded)saveConfigToVault();applyTabLabels();event.currentTarget.setAttribute('aria-checked',String(state.showTabLabels));toast(state.showTabLabels?'Tab labels shown':'Tab labels hidden');});
 $('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
   const button=event.target.closest('[data-unit-value]');

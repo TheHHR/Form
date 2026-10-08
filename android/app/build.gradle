@@ -24,6 +24,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    flavorDimensions "variant"
+    productFlavors {
+        prod {
+            dimension "variant"
+            applicationId "com.thehhr.form"
+        }
+        beta {
+            dimension "variant"
+            applicationId "com.thehhr.form.beta"
+            versionNameSuffix "-beta"
+            resValue "string", "app_name", "Form Beta"
+            resValue "string", "title_activity_main", "Form Beta"
+        }
+    }
     signingConfigs {
         release {
             def ksPath = System.getenv("FORM_KEYSTORE")
