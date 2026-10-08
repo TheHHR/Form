@@ -438,7 +438,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-rest-full-actions [data-rest-action="skip"]:focus-visible { color: var(--text); background: var(--surface-container-high); }
 .aw-rest-fullscreen[data-over] .circle-label strong,
 .aw-rest-fullscreen[data-over] .circle-label span { color: var(--accent); }
-.aw-rest-fullscreen[data-over] #awRestMeter { stroke-dasharray: .1 11.9; }
 @media (prefers-reduced-motion: no-preference) {
   .aw-rest-fullscreen:not([hidden]) { animation: fadeIn .28s cubic-bezier(.32,.72,.28,1); }
 }
