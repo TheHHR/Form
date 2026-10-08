@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.4.0';
+const APP_VERSION='3.4.1';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -518,8 +518,15 @@ function loadActiveWorkout(){
       if(rows.length)sets[key]=rows;
     }
   }
-  const rest=raw.rest&&Number(raw.rest.endsAt)>Date.now()&&Number(raw.rest.total)>0
-    ?{endsAt:Number(raw.rest.endsAt),total:clamp(Math.round(Number(raw.rest.total)),10,600),type:raw.rest.type==='exercise'?'exercise':'sets',away:true}
+  const rawRest=raw.rest&&typeof raw.rest==='object'?raw.rest:null;
+  const restOvertimeCap=Date.now()-12*3600*1000;
+  const rest=rawRest&&Number(rawRest.total)>0
+    ?{
+      endsAt:Math.max(Number(rawRest.endsAt)||Date.now(),restOvertimeCap),
+      total:clamp(Math.round(Number(rawRest.total)),10,600),
+      type:rawRest.type==='exercise'?'exercise':'sets',
+      ...(rawRest.over===true||Number(rawRest.endsAt)<=Date.now()?{over:true}:{away:true})
+    }
     :null;
   return{
     date:String(raw.date),
@@ -535,7 +542,7 @@ function loadActiveWorkout(){
     jumpTo:raw.jumpTo!=null?String(raw.jumpTo):null,
     rest,
     restMaximized:raw.restMaximized===true,
-    restOpen:Boolean(rest)&&raw.restOpen===true&&rest.type!=='exercise',
+    restOpen:Boolean(rest)&&(rest.over===true?raw.restMaximized===true:raw.restOpen===true&&rest.type!=='exercise'),
     pausedAccum:Number(raw.pausedAccum)||0,
     pausedAt:Number(raw.pausedAt)||null,
   };
@@ -3249,6 +3256,40 @@ function awRestDecision(routine,item){
   const nextUp=awRows().find(({exercise})=>exercise.id!==item.exerciseId&&!awSkipped(exercise.id)&&!awIsComplete(exercise.id));
   return nextUp?'between-exercises':'none';
 }
+function awNextSetTarget(){
+  const session=state.activeWorkout;
+  if(!session)return null;
+  const jumpTo=session.jumpTo&&!awSkipped(session.jumpTo)&&!awIsComplete(session.jumpTo)?String(session.jumpTo):null;
+  const rows=awRows();
+  const fromJump=jumpTo?rows.find(row=>String(row.item.exerciseId)===jumpTo):null;
+  return fromJump||rows.find(row=>!awSkipped(row.exercise.id)&&!awIsComplete(row.exercise.id))||null;
+}
+function awLogNextSet(){
+  const session=state.activeWorkout;
+  const routine=awSessionRoutine();
+  if(!session||!routine)return;
+  const target=awNextSetTarget();
+  if(!target){cancelAwRest();render();return toast('No pending set');}
+  const{item,exercise}=target;
+  const rows=session.sets[exercise.id]||[];
+  const index=rows.findIndex(row=>!row.done);
+  if(index<0){cancelAwRest();render();return toast('No pending set');}
+  const doneCount=rows.filter(row=>row.done).length;
+  rows[index].done=true;
+  if(awIsComplete(exercise.id)&&session.jumpTo===exercise.id)delete session.jumpTo;
+  saveActiveWorkout();
+  syncAwLog(exercise,item);
+  if(state.restPrefs.enabled){
+    const type=awRestDecision(routine,item);
+    if(type==='between-sets')startAwRest(state.restPrefs.betweenSets,'sets');
+    else if(type==='between-exercises')startAwRest(state.restPrefs.betweenExercise,'exercise');
+    else cancelAwRest();
+  }else if(session.rest){
+    cancelAwRest();
+  }
+  render();
+  toast(`Set ${doneCount+1} done · ${exercise.name}`);
+}
 function cancelAwPick(){
   const pick=state.awPick;if(!pick)return;
   if(pick.prev)Object.assign(state,pick.prev);
@@ -3488,8 +3529,8 @@ function renderActiveWorkout(){
       ${isActive?`<div class="aw-sets">${setsHead+setRows}</div>`:''}
       <div class="aw-addremove">
         <div class="aw-addremove-group">
-          <button type="button" data-aw-action="add-rep" data-exercise="${exercise.id}"${!skipped&&(isActive||complete)?'':' disabled'}>Add ${timed?'interval':'rep'}</button>
-          <button type="button" data-aw-action="remove-rep" data-exercise="${exercise.id}"${isActive&&!skipped&&sets.length>1?'':' disabled'}>Remove ${timed?'interval':'rep'}</button>
+          <button type="button" data-aw-action="add-rep" data-exercise="${exercise.id}"${!skipped&&(isActive||complete)?'':' disabled'}>Add ${timed?'interval':'set'}</button>
+          <button type="button" data-aw-action="remove-rep" data-exercise="${exercise.id}"${isActive&&!skipped&&sets.length>1?'':' disabled'}>Remove ${timed?'interval':'set'}</button>
           <button type="button" class="aw-jump-btn${jumped?' active':''}" data-aw-action="jump" data-exercise="${exercise.id}" aria-pressed="${jumped}"${complete||skipped||(isActive&&!jumped)?' disabled':''}>Jump</button>
         </div>
         <div class="aw-addremove-group">
@@ -3599,9 +3640,16 @@ function startAwRest(seconds,type='sets'){
 function extendAwRest(){
   const rest=state.activeWorkout?.rest;
   if(!rest)return;
-  rest.endsAt+=30000;
-  rest.total+=30;
+  if(rest.over===true){
+    delete rest.over;
+    rest.endsAt=Date.now()+30000;
+    rest.total=30;
+  }else{
+    rest.endsAt+=30000;
+    rest.total+=30;
+  }
   saveActiveWorkout();
+  renderAwRestPill();
 }
 function cancelAwRest(){
   if(state.activeWorkout&&state.activeWorkout.rest){delete state.activeWorkout.rest;saveActiveWorkout();}
@@ -3613,6 +3661,16 @@ function cancelAwRest(){
   if(pill)pill.hidden=true;
   document.body.removeAttribute('data-rest-active');
 }
+function skipAwRest(){
+  const session=state.activeWorkout;
+  const rest=session?.rest;
+  if(!rest||rest.over===true)return cancelAwRest();
+  rest.over=true;
+  rest.endsAt=Date.now();
+  session.restOpen=session.restMaximized===true;
+  saveActiveWorkout();
+  renderAwRestPill();
+}
 function stopAwRestTicker(){if(!awRestTickerId)return;clearInterval(awRestTickerId);awRestTickerId=0}
 function ensureAwRestTicker(){if(awRestTickerId)return;awRestTickerId=setInterval(awRestTick,250)}
 function awRestTick(){
@@ -3621,27 +3679,52 @@ function awRestTick(){
   const wasAway=rest.away===true;
   if(wasAway)delete rest.away;
   const left=awRestSecondsLeft();
-  if(left<=0){cancelAwRest();if(!wasAway)toast('Rest complete');return;}
+  if(rest.over===true){
+    updateAwRestPill(left);
+    return;
+  }
+  if(left<=0){
+    rest.over=true;
+    session.restOpen=session.restMaximized===true;
+    saveActiveWorkout();
+    if(!wasAway)toast('Rest complete');
+    renderAwRestPill();
+    return;
+  }
   updateAwRestPill(left);
+}
+function awRestOvertimeLeft(){
+  const rest=state.activeWorkout?.rest;
+  if(!rest)return 0;
+  return Math.max(1,Math.ceil((Date.now()-rest.endsAt)/1000));
+}
+function awRestLabel(left){
+  const rest=state.activeWorkout?.rest;
+  const seconds=rest&&rest.over===true?awRestOvertimeLeft():left;
+  return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 }
 function updateAwRestPill(left){
   const rest=state.activeWorkout?.rest;
   if(!rest)return;
-  const label=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;
+  const over=rest.over===true;
+  const label=awRestLabel(left);
   const pill=$('#awRestPill');
   if(pill&&!pill.hidden){
     $('#awRestTime').textContent=label;
-    pill.style.setProperty('--p',Math.max(0,Math.min(100,Math.round(left/rest.total*100))));
+    pill.style.setProperty('--p',over?100:Math.max(0,Math.min(100,Math.round(left/rest.total*100))));
   }
   if(awRestIsOpen()){
     const full=$('#awRestTimeFull');
     if(full)full.textContent=label;
+    const mode=$('#awRestMode');
+    if(mode)mode.textContent=over?'set':'rest';
     const meter=$('#awRestMeter');
     if(meter){
-      const pct=Math.max(0,Math.min(100,left/rest.total*100));
+      const pct=over?100:Math.max(0,Math.min(100,left/rest.total*100));
       meter.style.strokeDashoffset=(282.74-(pct/100)*282.74).toFixed(2);
     }
   }
+  document.querySelectorAll('#awRestPill [data-rest-action="skip"],#awRestFullscreen [data-rest-action="skip"]').forEach(button=>{button.textContent=over?'Stop':'Skip'});
 }
 function setAwRestMaximized(on){
   const session=state.activeWorkout;
@@ -3687,20 +3770,31 @@ function renderAwRestPill(){
     if(overlay&&!overlay.hidden)overlay.hidden=true;
     pill.hidden=false;
   }
+  const over=state.activeWorkout?.rest?.over===true;
+  pill.toggleAttribute('data-over',over);
+  if(overlay)overlay.toggleAttribute('data-over',over);
   updateAwRestPill(awRestSecondsLeft());
   ensureAwRestTicker();
 }
 $('#awRestPill').addEventListener('click',event=>{
   const action=event.target.closest('[data-rest-action]')?.dataset.restAction;
   if(action==='extend')extendAwRest();
-  else if(action==='skip')cancelAwRest();
+  else if(action==='skip')skipAwRest();
   else if(action==='maximize')setAwRestMaximized(true);
 });
 $('#awRestFullscreen').addEventListener('click',event=>{
   const action=event.target.closest('[data-rest-action]')?.dataset.restAction;
   if(action==='extend')extendAwRest();
-  else if(action==='skip')cancelAwRest();
+  else if(action==='skip')skipAwRest();
+  else if(action==='log-set')awLogNextSet();
   else if(action==='minimize')setAwRestMaximized(false);
+});
+$('#awRestFullscreen').addEventListener('keydown',event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  const target=event.target.closest('.aw-rest-circle[data-rest-action="log-set"]');
+  if(!target)return;
+  event.preventDefault();
+  awLogNextSet();
 });
 
 let awClockTickerId=0;

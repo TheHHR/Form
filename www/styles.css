@@ -373,6 +373,16 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 }
 .aw-rest-pill [data-rest-action="extend"] { color: var(--accent); border: 1px solid rgba(var(--accent-rgb), .45); }
 .aw-rest-pill [data-rest-action="skip"]:focus-visible { color: var(--text); background: var(--surface-container-high); }
+.aw-rest-pill[data-over] { border-color: rgba(var(--accent-rgb), .55); }
+.aw-rest-pill[data-over] .aw-rest-ring { background: conic-gradient(var(--accent) 100%, var(--accent) 0); animation: restOverPulse 2s ease-in-out infinite; }
+.aw-rest-pill[data-over] #awRestTime { color: var(--accent); }
+@keyframes restOverPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-rest-pill[data-over] .aw-rest-ring { animation: none; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .aw-rest-pill:not([hidden]) { animation: planSwitchIn .28s cubic-bezier(.32,.72,.28,1); }
 }
@@ -406,7 +416,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   cursor: pointer;
   appearance: none;
 }
-.circle-chart.aw-rest-circle { width: min(43vw, 180px); height: min(43vw, 180px); }
+.circle-chart.aw-rest-circle { width: min(43vw, 180px); height: min(43vw, 180px); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease; }
+.circle-chart.aw-rest-circle:active { transform: scale(.96); }
+.circle-chart.aw-rest-circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 50%; }
 .aw-rest-circle .circle-label strong { font-size: 28px; }
 .aw-rest-circle .circle-label span { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 .aw-rest-full-actions { display: flex; gap: 10px; }
@@ -424,6 +436,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 }
 .aw-rest-full-actions [data-rest-action="extend"] { color: var(--accent); border-color: rgba(var(--accent-rgb), .45); }
 .aw-rest-full-actions [data-rest-action="skip"]:focus-visible { color: var(--text); background: var(--surface-container-high); }
+.aw-rest-fullscreen[data-over] .circle-label strong,
+.aw-rest-fullscreen[data-over] .circle-label span { color: var(--accent); }
+.aw-rest-fullscreen[data-over] #awRestMeter { stroke-dasharray: .1 11.9; }
 @media (prefers-reduced-motion: no-preference) {
   .aw-rest-fullscreen:not([hidden]) { animation: fadeIn .28s cubic-bezier(.32,.72,.28,1); }
 }

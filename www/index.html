@@ -933,14 +933,14 @@
 
 <div class="aw-rest-fullscreen" id="awRestFullscreen" role="timer" aria-label="Rest countdown full screen" hidden>
   <button type="button" class="aw-rest-minimize" data-rest-action="minimize" aria-label="Exit full screen"><svg class="icon"><use href="#icon-minimize"/></svg></button>
-  <div class="circle-chart aw-rest-circle">
-    <svg viewBox="0 0 100 100">
+  <div class="circle-chart aw-rest-circle" data-rest-action="log-set" role="button" tabindex="0" aria-label="Mark next set done">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
       <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
       <circle class="circle-meter" id="awRestMeter" cx="50" cy="50" r="45"></circle>
     </svg>
     <div class="circle-label">
       <strong id="awRestTimeFull">1:00</strong>
-      <span>rest</span>
+      <span id="awRestMode">rest</span>
     </div>
   </div>
   <div class="aw-rest-full-actions">
