@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.4.1';
+const APP_VERSION='3.4.2';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -416,6 +416,7 @@ function loadFuelState() {
   const fallback = {
     profile: {
       age: 22, sex: 'm', heightCm: 178, currentWeightKg: 75.0,
+      startWeightKg: 75.0, goalWeightKg: 75.0,
       activity: 1.55, strategy: 250, proteinRate: 2.0,
       overrides: {}
     },
@@ -454,6 +455,8 @@ function loadFuelState() {
     proteinRate: vClampNum(rawProfile.proteinRate, 0.5, 5, 2),
     overrides: rawProfile.overrides && typeof rawProfile.overrides === 'object' && !Array.isArray(rawProfile.overrides) ? rawProfile.overrides : {}
   };
+  profile.startWeightKg = vClampNum(rawProfile.startWeightKg, 20, 500, profile.currentWeightKg);
+  profile.goalWeightKg = vClampNum(rawProfile.goalWeightKg, 20, 500, profile.currentWeightKg);
   return { ...fallback, ...data, selectedManageMealId: null, mealCreating: false, mealDraftName: '', profile };
 }
 
@@ -1137,9 +1140,11 @@ function parseConfigMd(text) {
     let raw = kvMatch[2].trim();
     if (section === 'profile') {
       if (key === 'age') cfg.profile.age = vClampNum(raw, 10, 110, 22);
-      else if (key === 'sex') cfg.profile.sex = /^[mf]/i.test(raw) ? 'm' : 'f';
+      else if (key === 'sex') cfg.profile.sex = /^[mf]/i.test(raw) ? raw.trim().toLowerCase()[0] : 'm';
       else if (key === 'height') cfg.profile.heightCm = vClampNum(raw, 50, 300, 178);
       else if (key === 'current-weight') cfg.profile.currentWeightKg = vClampNum(raw, 20, 500, 75);
+      else if (key === 'start-weight') cfg.profile.startWeightKg = vClampNum(raw, 20, 500, 75);
+      else if (key === 'goal-weight') cfg.profile.goalWeightKg = vClampNum(raw, 20, 500, 78);
       else if (key === 'activity') cfg.profile.activity = vClampNum(raw, 1, 3, 1.55);
       else if (key === 'strategy') cfg.profile.strategy = vClampNum(raw, -1000, 1000, 250);
       else if (key === 'protein-rate') cfg.profile.proteinRate = vClampNum(raw, 0.5, 5, 2.0);
@@ -1329,6 +1334,8 @@ function configToMd() {
   lines.push(`sex: ${p.sex || 'm'}`);
   lines.push(`height: ${p.heightCm}`);
   lines.push(`current-weight: ${p.currentWeightKg}`);
+  lines.push(`start-weight: ${p.startWeightKg}`);
+  lines.push(`goal-weight: ${p.goalWeightKg}`);
   lines.push(`activity: ${p.activity}`);
   lines.push(`strategy: ${p.strategy}`);
   lines.push(`protein-rate: ${p.proteinRate}`);
@@ -1418,6 +1425,8 @@ function applyConfigToState(cfg) {
     if (cfg.profile.sex) fp.sex = cfg.profile.sex;
     if (cfg.profile.heightCm !== undefined) fp.heightCm = cfg.profile.heightCm;
     if (cfg.profile.currentWeightKg !== undefined) fp.currentWeightKg = cfg.profile.currentWeightKg;
+    if (cfg.profile.startWeightKg !== undefined) fp.startWeightKg = cfg.profile.startWeightKg;
+    if (cfg.profile.goalWeightKg !== undefined) fp.goalWeightKg = cfg.profile.goalWeightKg;
     if (cfg.profile.activity !== undefined) fp.activity = cfg.profile.activity;
     if (cfg.profile.strategy !== undefined) fp.strategy = cfg.profile.strategy;
     if (cfg.profile.proteinRate !== undefined) fp.proteinRate = cfg.profile.proteinRate;
@@ -3685,7 +3694,7 @@ function awRestTick(){
   }
   if(left<=0){
     rest.over=true;
-    session.restOpen=session.restMaximized===true;
+    if(state.activeWorkout)state.activeWorkout.restOpen=state.activeWorkout.restMaximized===true;
     saveActiveWorkout();
     if(!wasAway)toast('Rest complete');
     renderAwRestPill();
@@ -4139,8 +4148,10 @@ function syncUnitLabels(){
   const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text};
   set('unitHeightLabel',state.units.height==='ftin'?'(ft + in)':'(cm)');
   set('unitWeightLabel',`(${w})`);
+  set('unitStartLabel',`(${w})`);
+  set('unitGoalLabel',`(${w})`);
   const wStep=state.units.weight==='lb'?1:0.5;
-  document.querySelectorAll('[data-target="inCurrentWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
+  document.querySelectorAll('[data-target="inCurrentWeight"],[data-target="inStartWeight"],[data-target="inGoalWeight"]').forEach(btn=>{btn.dataset.delta=(btn.dataset.delta.startsWith('-')?'-':'')+wStep});
   const ftInRow=$('#heightFtInStepper'),cmRow=$('#heightCmStepper');
   if(ftInRow&&cmRow){
     ftInRow.hidden=state.units.height!=='ftin';
@@ -5763,7 +5774,7 @@ $('[data-unit-seg="system"]')?.addEventListener('click',(event)=>{
   if(currentUnitSystem()===(imperial?'imperial':'metric'))return;
   if((state.units.weight==='lb')!==imperial){
     const factor=imperial?LB_PER_KG:1/LB_PER_KG;
-    ['currentWeightKg'].forEach(key=>{
+    ['currentWeightKg','startWeightKg','goalWeightKg'].forEach(key=>{
       const v=state.fuel.profile[key]*factor;
       state.fuel.profile[key]=imperial?Math.round(v):Math.round(v*2)/2;
     });
@@ -7239,6 +7250,43 @@ function renderBodySection() {
     : bmiValue < 25 ? 'Normal (18.5 – 24.9)'
     : bmiValue < 30 ? 'Overweight (25 – 29.9)'
     : 'Obese (30+)';
+
+  renderWeightGoal();
+}
+
+function renderWeightGoal() {
+  const line = document.getElementById('weightGoalLine');
+  if (!line) return;
+  const p = state.fuel.profile;
+  const isWeightLoss = p.startWeightKg > p.goalWeightKg;
+  const isWeightGain = p.startWeightKg < p.goalWeightKg;
+  let pct = 0;
+
+  if (isWeightLoss) {
+    const totalSpan = p.startWeightKg - p.goalWeightKg;
+    const progressDone = p.startWeightKg - p.currentWeightKg;
+    pct = Math.max(0, Math.min(100, Math.round((progressDone / totalSpan) * 100)));
+  } else if (isWeightGain) {
+    const totalSpan = p.goalWeightKg - p.startWeightKg;
+    const progressDone = p.currentWeightKg - p.startWeightKg;
+    pct = Math.max(0, Math.min(100, Math.round((progressDone / totalSpan) * 100)));
+  } else {
+    pct = 100;
+  }
+
+  document.getElementById('goalPercentText').innerText = `${pct}%`;
+  const deltaText = document.getElementById('weightDeltaText');
+  const remainingDiff = formatBodyWeight(Math.abs(p.goalWeightKg - p.currentWeightKg));
+  if (parseFloat(remainingDiff) === 0) {
+    deltaText.innerText = 'Goal Achieved!';
+    line.classList.add('positive');
+  } else if (p.currentWeightKg > p.goalWeightKg) {
+    deltaText.innerText = `${remainingDiff} ${unitWeightLabel()} to lose`;
+    line.classList.remove('positive');
+  } else {
+    deltaText.innerText = `${remainingDiff} ${unitWeightLabel()} to gain`;
+    line.classList.remove('positive');
+  }
 }
 
 /* --- Body & targets (Settings section) --- */
@@ -7249,6 +7297,10 @@ function syncBodyTargetsEditor(){
   syncUnitLabels();
   syncHeightInputs();
   $('#inCurrentWeight').value=formatBodyWeight(p.currentWeightKg);
+  const inStartWeight=document.getElementById('inStartWeight');
+  if(inStartWeight)inStartWeight.value=formatBodyWeight(p.startWeightKg);
+  const inGoalWeight=document.getElementById('inGoalWeight');
+  if(inGoalWeight)inGoalWeight.value=formatBodyWeight(p.goalWeightKg);
   setSelectByFloat('inActivity',p.activity||1.55);
   setSelectByFloat('inStrategy',p.strategy!==undefined?p.strategy:250);
   setSelectByFloat('inProteinRate',p.proteinRate||2.0);
@@ -7271,6 +7323,8 @@ function applyBodyTargets(){
     heightValue=Math.max(50,Math.min(300,parseFloat(document.getElementById('inHeight').value)||178));
   }
   const currentWeightKg=parseFloat(document.getElementById('inCurrentWeight').value)||75.0;
+  const startWeightKg=parseFloat(document.getElementById('inStartWeight').value)||currentWeightKg;
+  const goalWeightKg=parseFloat(document.getElementById('inGoalWeight').value)||currentWeightKg;
 
   const activity=parseFloat(document.getElementById('inActivity').value)||1.55;
   const strategy=parseInt(document.getElementById('inStrategy').value)||0;
@@ -7278,7 +7332,7 @@ function applyBodyTargets(){
 
   const prevSex=state.fuel.profile.sex;
   state.fuel.profile={
-    age, sex, heightCm:heightValue, currentWeightKg,
+    age, sex, heightCm:heightValue, currentWeightKg, startWeightKg, goalWeightKg,
     activity, strategy, proteinRate,
     overrides:{...fuelOverrides()}
   };
