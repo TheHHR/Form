@@ -33,9 +33,9 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
-  --card-title: 15px;
-  --card-sub: 12px;
-  --card-note: 11px;
+  --card-title: 16px;
+  --card-sub: 13px;
+  --card-note: 12px;
   --shadow: 0 1px 3px rgba(0,0,0,.3), 0 12px 36px rgba(0,0,0,.28);
   --frame-max: 480px;
   --frame-inset: max(0px, (100vw - var(--frame-max)) / 2);
