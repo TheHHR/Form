@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.5.0';
+const APP_VERSION='3.5.1';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -177,7 +177,6 @@ function createExerciseTag(exerciseId,value){
     const exercise=getExercise(exerciseId);
     if(exercise)renderModalBadges(exercise);
     renderModalTagMenu();
-    renderFilterPills();
     render();
   }
   return result;
@@ -224,8 +223,6 @@ function mergeCustomExercisesImported(parsed){
     persistCustomExercises();
     if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}
     render();
-    renderFilterPills();
-    renderRoutineDrawer();
   }
   return added;
 }
@@ -283,7 +280,6 @@ async function importCustomExercises(mode='add'){
   closeCustomExercisePaste();
   renderCustomExerciseList();
   render();
-  renderFilterPills();
   renderProgressHistory();
   toast(`Replaced with ${parsed.length} custom exercise${parsed.length===1?'':'s'}`);
 }
@@ -544,6 +540,7 @@ function loadActiveWorkout(){
     extras,
     replacements,
     jumpTo:raw.jumpTo!=null?String(raw.jumpTo):null,
+    editId:raw.editId!=null&&VALID_EXERCISE_IDS.has(String(raw.editId))?String(raw.editId):null,
     rest,
     restMaximized:raw.restMaximized===true,
     restOpen:Boolean(rest)&&(rest.over===true?raw.restMaximized===true:raw.restOpen===true&&rest.type!=='exercise'),
@@ -1479,7 +1476,6 @@ function applyConfigToState(cfg) {
   if (Array.isArray(cfg.customExercises) && cfg.customExercises.length) {
     if (registerConfigCustomExercises(cfg.customExercises)) {
       render();
-      renderFilterPills();
       renderRoutineDrawer();
       updateExerciseCount();
     }
@@ -2181,7 +2177,6 @@ $('#exerciseTagMenu').addEventListener('click',(event)=>{
   renderModalTagMenu();
   positionMenuBetween($('#exerciseTagMenu'),$('#modalTagButton'),{alignRight:true,minWidth:240});
   $('#modalTagButton')?.setAttribute('aria-expanded','true');
-  renderFilterPills();
   render();
 });
 $('#exerciseTagInput').addEventListener('keydown',(event)=>{
@@ -2320,16 +2315,22 @@ document.addEventListener('click',event=>{
   closeSortMenu();
 });
 
+let menuRepositionFrame=0;
+function scheduleMenuReposition(extra){
+  if(menuRepositionFrame)return;
+  menuRepositionFrame=requestAnimationFrame(()=>{
+    menuRepositionFrame=0;
+    const openCustomSelect = document.querySelector('.custom-select-menu:not([hidden])')?.closest('.custom-select');
+    if (openCustomSelect) positionCustomSelectMenu(openCustomSelect);
+    repositionOpenLegacyMenus();
+    if(extra)extra();
+  });
+}
 window.addEventListener('scroll', () => {
-  const openCustomSelect = document.querySelector('.custom-select-menu:not([hidden])')?.closest('.custom-select');
-  if (openCustomSelect) positionCustomSelectMenu(openCustomSelect);
-  repositionOpenLegacyMenus();
+  scheduleMenuReposition();
 }, true);
 window.addEventListener('resize', () => {
-  const openCustomSelect = document.querySelector('.custom-select-menu:not([hidden])')?.closest('.custom-select');
-  if (openCustomSelect) positionCustomSelectMenu(openCustomSelect);
-  repositionOpenLegacyMenus();
-  syncPlanScrollClearance();
+  scheduleMenuReposition(syncPlanScrollClearance);
 });
 
 function buildFilterContext(skipKey=null){
@@ -2443,9 +2444,10 @@ let lastAwSession=null;
 let awPickUsedIds=null;
 function render(){
   if(state.activeWorkout&&syncAwSessionSets())saveActiveWorkout();
-  const all=getFiltered(),shown=all.slice(0,state.limit),routine=state.routines.find(item=>item.id===state.routineFilter);
   const picking=Boolean(state.awPick&&state.activeWorkout);
   const awSession=Boolean(state.activeWorkout&&!state.activeWorkout.paused)&&!picking;
+  const routine=state.routines.find(item=>item.id===state.routineFilter);
+  const all=awSession?[]:getFiltered(),shown=awSession?[]:all.slice(0,state.limit);
   if(lastAwSession!==null&&lastAwSession!==awSession)window.scrollTo(0,0);
   lastAwSession=awSession;
   const searchRow=document.querySelector('.mobile-search-row');
@@ -3385,6 +3387,13 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
     saveActiveWorkout();
     return render();
   }
+  if(action==='edit'){
+    if(awSkipped(exerciseId))return;
+    if(String(session.editId||'')===String(exerciseId))delete session.editId;
+    else session.editId=exerciseId;
+    saveActiveWorkout();
+    return render();
+  }
   if(action==='replace'){
     const exercise=getExercise(exerciseId);
     if(!exercise||awIsComplete(exerciseId))return;
@@ -3415,9 +3424,7 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
   }
   if(action==='undo'){
     const rows=session.sets[exerciseId]||[];
-    for(let index=rows.length-1;index>=0;index--){
-      if(rows[index].done){rows[index].done=false;break}
-    }
+    rows.forEach(row=>{row.done=false});
     saveActiveWorkout();
     syncAwLog(exercise,item);
     return render();
@@ -3484,6 +3491,8 @@ function renderActiveWorkout(){
   const jumpTo=session&&session.jumpTo&&!awSkipped(session.jumpTo)&&!awIsComplete(session.jumpTo)?String(session.jumpTo):null;
   const activeRow=(jumpTo&&rowStates.find(row=>String(row.item.exerciseId)===jumpTo))||rowStates.find(row=>!row.skipped&&!row.complete)||null;
   const activeItems=new Set();
+  const editId=session.editId&&!awSkipped(String(session.editId))?String(session.editId):null;
+  if(editId&&rowStates.some(row=>String(row.item.exerciseId)===editId))activeItems.add(editId);
   if(activeRow){
     activeItems.add(activeRow.item.exerciseId);
     const partnerItem=supersetPartner(session?awSessionRoutine():null,activeRow.item);
@@ -3501,6 +3510,7 @@ function renderActiveWorkout(){
     const timed=routineItemMode(item,exercise)==='timed';
     const showWeight=routineItemWeighted(item,exercise);
     const isActive=activeItems.has(item.exerciseId);
+    const editing=editId!==null&&String(item.exerciseId)===editId;
     const jumped=String(session.jumpTo||'')===String(exercise.id);
     const mediaSrc=isActive?esc(exercise.gif_url||exercise.image):esc(exercise.image);    const setsHead=timed
       ?`<div class="aw-sets-head"><span class="aw-h-num"></span><span class="aw-h-label">Duration</span><span class="aw-h-label">Distance</span><span class="aw-h-check"></span></div>`
@@ -3536,7 +3546,7 @@ function renderActiveWorkout(){
           ${exercise.custom?`<button type="button" class="aw-media aw-media-custom" data-aw-action="open" data-exercise="${exercise.id}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon">${icon('movement')}</span></button>`:`<button type="button" class="aw-media" data-aw-action="open" data-exercise="${exercise.id}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon" aria-hidden="true">${icon('movement')}</span><img src="${mediaSrc}" alt="" loading="lazy" data-aw-media data-aw-exercise="${exercise.id}"></button>`}
           <div class="aw-name-wrap"><span class="aw-name">${esc(exercise.name)}</span><span class="aw-target">${timed?`${item.sets} intervals · ${Math.round((Number(item.reps)||0)*100)/100} ${routineItemUnit(item,exercise)==='min'?'min':'sec'} each · ${esc(title(exercise.target))}`:`${item.sets} sets × ${item.reps} reps · ${esc(title(exercise.target))}`}</span></div>
         </div>
-        <div class="aw-row-badges">${item.superset?`<span class="aw-superset-badge">${icon('link')} Superset</span>`:''}${complete&&!skipped?`<span class="aw-done-badge">${icon('check')} Done</span>`:''}${skipped?`<span class="aw-skipped-badge">Skipped</span>`:''}</div>
+        <div class="aw-row-badges">${item.superset?`<span class="aw-superset-badge">${icon('link')} Superset</span>`:''}${skipped?`<span class="aw-skipped-badge">Skipped</span>`:''}</div>
         <div class="aw-row-tools">${!complete&&!skipped?`<button type="button" class="aw-icon-btn" data-aw-action="replace" data-exercise="${exercise.id}" aria-label="Replace ${esc(exercise.name)}">${icon('swap')}</button>`:''}</div>
       </div>
       ${isActive?`<div class="aw-sets">${setsHead+setRows}</div>`:''}
@@ -3544,11 +3554,13 @@ function renderActiveWorkout(){
         <div class="aw-addremove-group">
           <button type="button" data-aw-action="add-rep" data-exercise="${exercise.id}"${!skipped&&(isActive||complete)?'':' disabled'}>Add ${timed?'interval':'set'}</button>
           <button type="button" data-aw-action="remove-rep" data-exercise="${exercise.id}"${isActive&&!skipped&&sets.length>1?'':' disabled'}>Remove ${timed?'interval':'set'}</button>
-          <button type="button" class="aw-jump-btn${jumped?' active':''}" data-aw-action="jump" data-exercise="${exercise.id}" aria-pressed="${jumped}"${complete||skipped||(isActive&&!jumped)?' disabled':''}>Jump</button>
         </div>
         <div class="aw-addremove-group">
-          <button type="button" data-aw-action="skip" data-exercise="${exercise.id}"${complete&&!skipped?' disabled':''}>${skipped?'Restore':'Skip'}</button>
-          <button type="button" class="aw-done" data-aw-action="${complete&&!skipped?'undo':'check-all'}" data-exercise="${exercise.id}"${skipped?' disabled':''}>${complete&&!skipped?'Undo':'Done'}</button>
+          <button type="button" class="aw-jump-btn${jumped?' active':''}" data-aw-action="jump" data-exercise="${exercise.id}" aria-pressed="${jumped}"${complete||skipped||(isActive&&!jumped)?' disabled':''}>Jump</button>
+          ${complete&&!skipped
+            ?`<button type="button" class="aw-edit-btn${editing?' active':''}" data-aw-action="edit" data-exercise="${exercise.id}" aria-pressed="${editing}">Edit</button>`
+            :`<button type="button" data-aw-action="skip" data-exercise="${exercise.id}">${skipped?'Restore':'Skip'}</button>`}
+          <button type="button" class="aw-done-btn${complete?' active':''}" data-aw-action="${complete?'undo':'check-all'}" data-exercise="${exercise.id}" aria-pressed="${complete}"${skipped?' disabled':''}>Done</button>
         </div>
       </div>
     </div>`;
@@ -3753,6 +3765,7 @@ function awRestLabel(left){
 function updateAwRestPill(left){
   const rest=state.activeWorkout?.rest;
   if(!rest)return;
+  if(document.hidden)return;
   const over=rest.over===true;
   const label=awRestLabel(left);
   const pill=$('#awRestPill');
@@ -5003,7 +5016,7 @@ function renderProgressHistory() {
     const isRecord = record && log.id === record.id;
     const entryVisual = activeExercise
       ? (() => { const d = parseLocalDate(log.date); return `<div class="progress-entry-date progress-entry-thumbnail"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${esc(d.toLocaleDateString(undefined,{month:'short'}))}</span></div>`; })()
-      : `<div class="progress-entry-date progress-entry-thumbnail" aria-hidden="true">${icon('movement')}${exercise.custom?'':`<img src="${esc(exercise.image)}" alt="">`}</div>`;
+      : `<div class="progress-entry-date progress-entry-thumbnail" aria-hidden="true">${icon('movement')}${exercise.custom?'':`<img src="${esc(exercise.image)}" alt="" loading="lazy">`}</div>`;
     return `<article class="progress-entry" data-progress-id="${esc(log.id)}" data-exercise-id="${esc(exercise.id)}" role="button" tabindex="0" aria-label="Open ${esc(exercise.name)} details">${entryVisual}<div class="progress-entry-copy">${activeExercise ? '' : `<strong>${esc(title(exercise.name))}</strong>`}<span>${esc(formatProgress(log))}${isRecord ? ' · PR' : ''}</span>${log.notes ? `<small>${esc(log.notes)}</small>` : ''}</div><button class="entry-delete" type="button" aria-label="Delete ${esc(exercise.name)} progress entry">${icon('trash')}</button></article>`;
   }).join('') : `<div class="empty-state empty-state--panel">${activeExercise ? 'No progress entries for this exercise.' : 'No workouts logged this day.'}</div>`;
   $('#progressHistory').querySelectorAll('.progress-entry-thumbnail img').forEach((image) => image.addEventListener('error', () => image.classList.add('failed'), { once: true }));
@@ -5224,7 +5237,7 @@ function tagPillChips(){
 }
 function renderFilterPills(){
   const wrap=$('#filterPills');
-  if(!wrap)return;
+  if(!wrap||wrap.hidden)return;
   const expanded=Boolean(state.pillRowsExpanded);
   const tagsHost=effectiveTagsHost();
   for(const key of PILL_ROW_KEYS){
@@ -5806,8 +5819,9 @@ $('#showSecondaryPills').addEventListener('click',(event)=>{
   if(!state.showSecondaryPills&&state.routineFilter&&state.routines.find(routine=>routine.id===state.routineFilter)?.secondary){
     state.routineFilter='';
     render();
+  }else{
+    renderFilterPills();
   }
-  renderFilterPills();
   toast(state.showSecondaryPills?'2nd routines shown in filters':'2nd routines hidden from filters');
 });
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
@@ -6344,7 +6358,6 @@ $('#customExerciseForm').addEventListener('submit',event=>{
     resetCustomExerciseSheet();
     renderCustomExerciseList();
     render();
-    renderFilterPills();
     toast('Custom exercise updated');
     return;
   }
@@ -6353,7 +6366,6 @@ $('#customExerciseForm').addEventListener('submit',event=>{
   resetCustomExerciseSheet();
   renderCustomExerciseList();
   render();
-  renderFilterPills();
   renderRoutineDrawer();
   toast('Custom exercise added');
 });
@@ -6393,7 +6405,6 @@ $('#customExerciseList').addEventListener('click',async(event)=>{
     if(customExerciseDraft.id===exercise.id)resetCustomExerciseSheet();
     renderCustomExerciseList();
     render();
-    renderFilterPills();
     renderRoutineDrawer();
     renderProgressHistory();
     toast('Custom exercise deleted');
