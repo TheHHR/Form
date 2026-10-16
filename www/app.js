@@ -7520,9 +7520,12 @@ function renderFuelDay() {
   document.getElementById('calMeter').style.stroke = remaining < 0 ? 'var(--danger)' : 'var(--accent)';
 
   const updateBar = (id, current, goal) => {
-    document.getElementById(`meta${id}`).innerText = `${Math.round(current)} / ${goal}g`;
+    const meta = document.getElementById(`meta${id}`);
+    const bar = document.getElementById(`bar${id}`);
+    if (!meta || !bar) return;
+    meta.innerText = `${Math.round(current)} / ${goal}g`;
     const safeGoal = Number(goal) > 0 ? goal : 1;
-    document.getElementById(`bar${id}`).style.width = `${Math.min((current / safeGoal) * 100, 100)}%`;
+    bar.style.width = `${Math.min((current / safeGoal) * 100, 100)}%`;
   };
   updateBar('Protein', foodTotals.p, targets.p);
   updateBar('Carbs', foodTotals.c, targets.c);
