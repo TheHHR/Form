@@ -53,8 +53,6 @@
   <symbol id="icon-copy-all" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3M4 9h2M5 8v2"/></symbol>
   <symbol id="icon-clipboard" viewBox="0 0 24 24"><path d="M9 5h6M9 3h6v4H9z"/><path d="M8 5H6a2 2 0 0 0-2 2v13h16V7a2 2 0 0 0-2-2h-2"/></symbol>
   <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
-  <symbol id="icon-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
-  <symbol id="icon-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.5 15a7 7 0 1 0 .7-7.8L4 10"/></symbol>
   <symbol id="icon-swap" viewBox="0 0 24 24"><path d="M16 3l5 5-5 5M21 8H7M8 21l-5-5 5-5M3 16h14"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
@@ -124,7 +122,7 @@
     <h1 id="welcomeTitle">Welcome to Form</h1>
     <p class="welcome-lede">Your routines, training logs, and meals are stored as plain markdown files you own — private, offline, no account.</p>
     <ul class="welcome-points">
-      <li><svg class="icon"><use href="#icon-folder"/></svg><span><strong id="welcomePointOne">Pick a folder</strong><small id="welcomePointOneSub">Your data vault lives in a folder you choose on your device</small></span></li>
+      <li><svg class="icon"><use href="#icon-folder"/></svg><span><strong>Pick a folder</strong><small>Your data vault lives in a folder you choose on your device</small></span></li>
       <li><svg class="icon"><use href="#icon-clipboard"/></svg><span><strong>Human-readable files</strong><small>Five simple .md files you can back up, edit, or move anywhere</small></span></li>
       <li><svg class="icon"><use href="#icon-heart"/></svg><span><strong>Always yours</strong><small>Nothing leaves your device and nothing is locked in</small></span></li>
     </ul>
@@ -216,16 +214,16 @@
             </div>
             <div class="macros-stack">
               <div class="macro-bar-row">
-                <div class="macro-meta"><span>Protein</span><b id="metaProtein">0 / 150g</b></div>
-                <div class="track"><i id="barProtein" style="background:var(--positive); width:0%"></i></div>
+                <div class="macro-meta"><span>Protein</span><b>0 / 150g</b></div>
+                <div class="track"><i style="background:var(--positive); width:0%"></i></div>
               </div>
               <div class="macro-bar-row">
-                <div class="macro-meta"><span>Carbs</span><b id="metaCarbs">0 / 411g</b></div>
-                <div class="track"><i id="barCarbs" style="background:var(--carbs); width:0%"></i></div>
+                <div class="macro-meta"><span>Carbs</span><b>0 / 411g</b></div>
+                <div class="track"><i style="background:var(--carbs); width:0%"></i></div>
               </div>
               <div class="macro-bar-row">
-                <div class="macro-meta"><span>Fats</span><b id="metaFats">0 / 83g</b></div>
-                <div class="track"><i id="barFats" style="background:var(--fats); width:0%"></i></div>
+                <div class="macro-meta"><span>Fats</span><b>0 / 83g</b></div>
+                <div class="track"><i style="background:var(--fats); width:0%"></i></div>
               </div>
             </div>
           </div>
@@ -281,18 +279,9 @@
         <div class="progress-exercise-fixed feature-field-wide"><span>Exercise</span><strong id="progressExerciseName">Choose an exercise from its details page</strong><small id="progressExerciseMeta">Open an exercise and select Log progress.</small></div>
         <div class="feature-field progress-date-field"><span>Date</span><div class="progress-date-control"><input id="progressDate" type="hidden"><button class="progress-date-button" id="progressDateButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="progressDatePicker"><span id="progressDateDisplay"></span><svg class="icon progress-date-icon" aria-hidden="true"><use href="#icon-calendar"/></svg></button></div></div>
         <div class="feature-field" id="progressSetsField"><span id="progressSetsLabel">Sets</span><div class="routine-stepper"><button class="routine-step progress-step" type="button" data-field="sets" data-delta="-1" aria-label="Decrease sets"><svg class="icon"><use href="#icon-minus"/></svg></button><output id="progressSets" aria-live="polite">3</output><button class="routine-step progress-step" type="button" data-field="sets" data-delta="1" aria-label="Increase sets"><svg class="icon"><use href="#icon-plus"/></svg></button></div></div>
-        <div class="feature-field feature-field-wide" id="progressSetsDetailField"><div class="set-weight-list" id="progressSetRows"></div></div>
+        <div class="feature-field feature-field-wide" id="progressSetsDetailField"><div class="set-cols-toolbar" id="progressColsToolbar" hidden><div class="set-cols-left"><div class="mode-switch mode-switch--compact" id="progressModeSwitch"><button type="button" data-mode="reps" aria-pressed="true">Reps</button><button type="button" data-mode="timed" aria-pressed="false">Timed</button></div><div class="mode-switch mode-switch--compact" id="progressDurationUnitSwitch" role="group" aria-label="Duration unit" hidden><button type="button" data-duration-unit="min" aria-pressed="false">min</button><button type="button" data-duration-unit="sec" aria-pressed="false">sec</button></div></div><div class="set-cols-right"><div class="mode-switch mode-switch--compact" id="progressDistanceSwitch" hidden><button type="button" id="progressColDistanceToggle" aria-pressed="false">Distance</button></div><div class="mode-switch mode-switch--compact"><button type="button" id="progressColWeightToggle" aria-pressed="false">Weight</button></div></div></div><div class="set-weight-list" id="progressSetRows"></div></div>
         <label class="feature-field feature-field-wide"><span>Notes <small>optional</small></span><textarea id="progressNotes" maxlength="160" rows="2" placeholder="Form, tempo, or how the set felt"></textarea></label>
         <div class="progress-actions feature-field-wide">
-          <div class="feature-field" id="progressModeSwitch" hidden>
-            <div class="mode-switch">
-              <button type="button" data-mode="reps" aria-pressed="true">Reps</button>
-              <button type="button" data-mode="timed" aria-pressed="false">Timed</button>
-            </div>
-          </div>
-          <div class="mode-switch" id="progressWeightSwitch" hidden>
-            <button type="button" id="progressWeightToggle" aria-pressed="false">Weight</button>
-          </div>
           <button type="button" class="progress-cancel" id="progressCancel">Cancel</button>
           <button class="feature-primary" id="progressSave" type="submit">Save</button>
         </div>
@@ -709,7 +698,7 @@
             </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-sound"/></svg><span>Completion sound &amp; vibration</span></span>
-              <button type="button" class="settings-switch" id="restSound" role="switch" aria-checked="true" aria-label="Completion sound and vibration"></button>
+              <button type="button" class="settings-switch" id="restSound" role="switch" aria-checked="true" aria-disabled="false" aria-label="Completion sound and vibration"></button>
             </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Rest between sets</span></span>
@@ -885,7 +874,7 @@
           <div class="settings-card">
             <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.3.3</span>
+              <span class="settings-row-value" id="updateStatus">v3.5.2</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
             <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
