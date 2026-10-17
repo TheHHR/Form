@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#0a0b0d">
   <meta name="description" content="Browse 1,300+ exercises, build routines, track training progress, and manage nutrition, macros, and hydration.">
   <title>Form — Training & Nutrition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400;1,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <script>
     (function () {
       try {
@@ -19,7 +19,9 @@
           green:  ['#30d158', '48, 209, 88', '#131314'],
           orange: ['#ff9f0a', '255, 159, 10', '#131314'],
           purple: ['#bf5af2', '191, 90, 242', '#ffffff'],
-          pink:   ['#ff375f', '255, 55, 95', '#ffffff']
+          pink:   ['#ff375f', '255, 55, 95', '#ffffff'],
+          lime:   ['#c6f432', '198, 244, 50', '#111400'],
+          cyan:   ['#64d2ff', '100, 210, 255', '#0b1c26']
         }[name];
         if (p) {
           var s = document.documentElement.style;
@@ -81,7 +83,7 @@
         <div hidden><select id="sortBy" aria-label="Sort exercises"><option value="custom" disabled>Custom</option><option value="name">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="category">Body part</option><option value="target">Target muscle</option><option value="equipment">Equipment</option></select><select id="mainRoutineSelect" aria-label="Filter by routine"><option value="">All exercises</option></select></div>
         <header class="mobile-phone-header">
           <div class="mobile-phone-header-top">
-            <h1 class="mobile-phone-title">Exercises</h1>
+            <h1 class="mobile-phone-title">Workout</h1>
           </div>
           <div class="mobile-phone-subtitle"><span id="mobileResultCount">0 exercises</span> · <span id="mobileResultContext">with animations</span><span id="awElapsed" hidden></span></div>
           <div class="mobile-search-row">
@@ -164,7 +166,7 @@
 <aside class="routine-drawer panel-drawer" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
   <div class="routine-header panel-header"><div><h2 id="routineTitle">Your routines</h2><span class="panel-summary" id="routineHeaderSummary">Create your first routine</span></div></div>
   <button class="routine-new-toggle" id="routineNewToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add routine</span></button>
-  <div class="routine-switch"><label>Routine manager</label><div class="routine-select-row"><div class="routine-editor-control"><button class="routine-selector-button custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
+  <div class="routine-switch"><div class="routine-select-row"><div class="routine-editor-control"><button class="routine-selector-button custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
   <div class="routine-data-actions" aria-label="Routine export and import tools"><button id="copyRoutine" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Export</span></button><button id="copyAllRoutines" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button><button id="pasteRoutineToggle" type="button" aria-expanded="false" aria-controls="routinePastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button></div>
   <div class="routine-paste-panel" id="routinePastePanel" hidden><label for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="addRoutineText" type="button">Add</button><button id="importRoutineText" type="button">Replace</button></div></div>
   <div class="routine-schedule" id="routineSchedule"></div>
@@ -419,7 +421,6 @@
     </div>
     <button class="routine-new-toggle" id="fuelNewMealToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add meal</span></button>
     <div class="routine-switch">
-      <label>Meal manager</label>
       <div class="routine-select-row">
         <div class="routine-editor-control">
           <button class="custom-select-button" id="btnCustomManageSelect" type="button" aria-haspopup="menu" aria-expanded="false">Select a meal to edit</button>
@@ -770,13 +771,15 @@
           <h3 class="settings-heading">Appearance</h3>
           <div class="settings-card">
             <div class="accent-row" id="accentRow" role="radiogroup" aria-label="Accent color">
-              <button type="button" class="accent-swatch" role="radio" data-accent="red" aria-checked="true" aria-label="Red" style="--swatch:#ff453a"></button>
-              <button type="button" class="accent-swatch" role="radio" data-accent="blue" aria-checked="false" aria-label="Blue" style="--swatch:#0a84ff"></button>
-              <button type="button" class="accent-swatch" role="radio" data-accent="green" aria-checked="false" aria-label="Green" style="--swatch:#30d158"></button>
-              <button type="button" class="accent-swatch" role="radio" data-accent="orange" aria-checked="false" aria-label="Orange" style="--swatch:#ff9f0a"></button>
-              <button type="button" class="accent-swatch" role="radio" data-accent="purple" aria-checked="false" aria-label="Purple" style="--swatch:#bf5af2"></button>
-              <button type="button" class="accent-swatch" role="radio" data-accent="pink" aria-checked="false" aria-label="Pink" style="--swatch:#ff375f"></button>
-            </div>
+                <button type="button" class="accent-swatch" role="radio" data-accent="red" aria-checked="false" aria-label="Red" style="--swatch:#ff453a"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="blue" aria-checked="false" aria-label="Blue" style="--swatch:#0a84ff"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="green" aria-checked="false" aria-label="Green" style="--swatch:#30d158"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="orange" aria-checked="false" aria-label="Orange" style="--swatch:#ff9f0a"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="purple" aria-checked="false" aria-label="Purple" style="--swatch:#bf5af2"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="pink" aria-checked="false" aria-label="Pink" style="--swatch:#ff375f"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="lime" aria-checked="true" aria-label="Lime" style="--swatch:#c6f432"></button>
+                <button type="button" class="accent-swatch" role="radio" data-accent="cyan" aria-checked="false" aria-label="Cyan" style="--swatch:#64d2ff"></button>
+                </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-settings"/></svg><span>Tab labels</span></span>
               <button type="button" class="settings-switch" id="tabLabels" role="switch" aria-checked="true" aria-label="Bottom bar labels"></button>
@@ -874,7 +877,7 @@
           <div class="settings-card">
             <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.5.3</span>
+              <span class="settings-row-value" id="updateStatus">v3.5.4</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
             <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">

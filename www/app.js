@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.5.3';
+const APP_VERSION='3.5.4';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -39,6 +39,8 @@ function unitDistLabel(){return state.units.distance}
 function weightStep(){return state.units.weight==='lb'?5:2.5}
 function distStep(){return state.units.distance==='mi'?0.25:0.5}
 const ACCENTS=Object.freeze({
+  lime:{base:'#c6f432',rgb:'198,244,50',ink:'#111400'},
+  cyan:{base:'#64d2ff',rgb:'100,210,255',ink:'#0b1c26'},
   red:{base:'#ff453a',rgb:'255,69,58',ink:'#ffffff'},
   blue:{base:'#0a84ff',rgb:'10,132,255',ink:'#ffffff'},
   green:{base:'#30d158',rgb:'48,209,88',ink:'#131314'},
@@ -46,11 +48,11 @@ const ACCENTS=Object.freeze({
   purple:{base:'#bf5af2',rgb:'191,90,242',ink:'#ffffff'},
   pink:{base:'#ff375f',rgb:'255,55,95',ink:'#ffffff'}
 });
-function normalizeAccent(value){return value&&ACCENTS[value]?value:'red'}
-const ACCENT_COMPLEMENT=Object.freeze({red:'blue',blue:'red',green:'orange',orange:'green',purple:'pink',pink:'purple'});
-let activeAccent=normalizeAccent(readStorage(STORAGE_KEYS.accent,'red'));
+function normalizeAccent(value){return value&&ACCENTS[value]?value:'lime'}
+const ACCENT_COMPLEMENT=Object.freeze({lime:'cyan',cyan:'lime',red:'blue',blue:'red',green:'orange',orange:'green',purple:'pink',pink:'purple'});
+let activeAccent=normalizeAccent(readStorage(STORAGE_KEYS.accent,'lime'));
 function applyAccent(name){
-  const palette=ACCENTS[name]||ACCENTS.red;
+  const palette=ACCENTS[name]||ACCENTS.lime;
   const root=document.documentElement.style;
   root.setProperty('--accent',palette.base);
   root.setProperty('--accent-ink',palette.ink);
@@ -1173,7 +1175,7 @@ function parseConfigMd(text) {
         if (last) last.description = raw.replace(/ \/ /g, '\n');
       }
     } else if (section === 'preferences') {
-      if (key === 'accent') cfg.prefs.accent = ['red','blue','green','orange','purple','pink'].includes(raw) ? raw : 'red';
+      if (key === 'accent') cfg.prefs.accent = ['lime','cyan','red','blue','green','orange','purple','pink'].includes(raw) ? raw : 'lime';
       else if (key === 'liked') cfg.liked = raw.split(',').map(s => s.trim().replace(/^#/, '')).filter(id => VALID_EXERCISE_IDS.has(id));
       else if (key === 'week-start') cfg.prefs.weekStart = [0,1,6].includes(Number(raw)) ? Number(raw) : 1;
       else if (key === 'default-view') cfg.prefs.defaultView = ['week','month','all'].includes(raw) ? raw : 'week';
@@ -1720,7 +1722,7 @@ function buildDefaultState() {
   state.pillRowModes = normalizePillRowModes({});
   state.showWorkoutReminder = true;
   state.showSecondaryPills = false;
-  activeAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'red'));
+  activeAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'lime'));
   applyAccent(activeAccent);
 }
 
@@ -2467,9 +2469,12 @@ function render(){
   const mobileCount=$('#mobileResultCount');
   const mobileContext=$('#mobileResultContext');
   const mobileTitle=document.querySelector('.mobile-phone-title');
-  if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?(state.awPick?.mode==='add'?'Add exercise':'Replace exercise'):'Exercises';
+  if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?(state.awPick?.mode==='add'?'Add exercise':'Replace exercise'):'Workout';
   if(mobileCount){const counts=awSession?awCounts():null;mobileCount.textContent=awSession?`${counts.done}/${counts.total} exercises`:`${all.length.toLocaleString()} exercises`;}
-  if(mobileContext) mobileContext.textContent=awSession?'in active workout':picking?(state.awPick?.mode==='add'?'tap + to add':'pick a replacement'):routine?`in ${routine.name}`:hasFilters()?'matching filters':'with animations';
+  if(mobileContext){
+    const loggedCount=awSession||picking?0:new Set(state.progress.logs.map(log=>log.exerciseId)).size;
+    mobileContext.textContent=awSession?'in active workout':picking?(state.awPick?.mode==='add'?'tap + to add':'pick a replacement'):routine?`in ${routine.name}`:hasFilters()?`matching filters · ${loggedCount.toLocaleString()} logged`:`${loggedCount.toLocaleString()} logged`;
+  }
   renderAwElapsed();
 
   $('#loadMore').style.display=!awSession&&shown.length<all.length?'block':'none';
@@ -3865,12 +3870,13 @@ function renderAwRestPill(){
   const over=state.activeWorkout?.rest?.over===true;
   pill.toggleAttribute('data-over',over);
   if(overlay)overlay.toggleAttribute('data-over',over);
-  const palette=over?(ACCENTS[ACCENT_COMPLEMENT[activeAccent]]||ACCENTS.red):(ACCENTS[activeAccent]||ACCENTS.red);
+  const palette=over?(ACCENTS[ACCENT_COMPLEMENT[activeAccent]]||ACCENTS.lime):(ACCENTS[activeAccent]||ACCENTS.lime);
   [pill,overlay].forEach(el=>{
     if(!el)return;
     el.style.setProperty('--accent',palette.base);
     el.style.setProperty('--accent-ink',palette.ink);
     el.style.setProperty('--accent-rgb',palette.rgb);
+    el.style.setProperty('--accent-glow-rgb',palette.rgb);
   });
   updateAwRestPill(awRestSecondsLeft());
   ensureAwRestTicker();
@@ -6438,7 +6444,13 @@ function syncFuelTargetEditor() {
 }
 function adjustFuelTarget(key, delta) {
   if (!FUEL_TARGET_LIMITS[key]) return;
-  if (!setFuelTargetOverride(key, effectiveFuelTargets()[key] + delta)) return;
+  const next = effectiveFuelTargets()[key] + delta;
+  // stepping back to the calculated baseline clears the override instead of pinning it
+  if (isFuelTargetOverridden(key) && Math.round(clamp(next, FUEL_TARGET_LIMITS[key].min, FUEL_TARGET_LIMITS[key].max)) === calculatedFuelTargets()[key]) {
+    if (setFuelTargetOverride(key, null)) { syncFuelTargetEditor(); renderAll(); }
+    return;
+  }
+  if (!setFuelTargetOverride(key, next)) return;
   syncFuelTargetEditor();
   renderAll();
 }
@@ -6447,11 +6459,22 @@ function commitFuelTargetInput(input) {
   const key = row?.dataset.fuelTarget;
   if (!key) return;
   const raw = String(input.value).trim().replace(/,/g, '');
+  const calcTarget = calculatedFuelTargets()[key];
+  const storedIsValue = isFuelTargetOverridden(key);
   let changed = false;
-  if (!raw) changed = setFuelTargetOverride(key, null);
-  else {
+  if (!raw) {
+    // empty field only clears when an override actually exists
+    if (storedIsValue) changed = setFuelTargetOverride(key, null);
+  } else {
     const num = Number(raw);
-    if (Number.isFinite(num)) changed = setFuelTargetOverride(key, num);
+    if (Number.isFinite(num)) {
+      const rounded = Math.round(clamp(num, FUEL_TARGET_LIMITS[key].min, FUEL_TARGET_LIMITS[key].max));
+      // only write when the value differs from the effective state:
+      // equals calculated baseline (no override) or equals stored override → no-op
+      if (!storedIsValue && rounded === calcTarget) changed = false;
+      else if (storedIsValue && rounded === Math.round(clamp(Number(fuelOverrides()[key]), FUEL_TARGET_LIMITS[key].min, FUEL_TARGET_LIMITS[key].max))) changed = false;
+      else changed = setFuelTargetOverride(key, num);
+    }
   }
   if (changed) renderAll();
   syncFuelTargetEditor();
@@ -7422,8 +7445,13 @@ function saveMealEntry() {
   if (isCustom && !customFoodName.trim()) customFoodName = String(document.getElementById('ingredientSearchSwap')?.value || '').trim();
   const name = isCustom ? customFoodName.trim() : `${selected.name.split(',')[0]} (${ingredientPortionGrams}g)`;
   if (!name) {
-    toast('Select a meal first');
-    return false;
+    const day = state.fuel.history[state.fuelSelectedDate];
+    const slotTaken = day?.meals.some(meal => (meal.category || 'Snacks') === logMealSlot);
+    if (logMealSlot === 'Snacks' || slotTaken) {
+      toast('Select a meal first');
+      return false;
+    }
+    return skipMealEntry();
   }
   const p = parseFloat(document.getElementById('inFoodP').value) || 0;
   const c = parseFloat(document.getElementById('inFoodC').value) || 0;
@@ -7436,6 +7464,13 @@ function saveMealEntry() {
   const category = logMealSlot || nextLogSlot();
 
   ensureDateRecord(state.fuelSelectedDate);
+  const dayMeals = state.fuel.history[state.fuelSelectedDate].meals;
+  // a real meal replaces a placeholder skip for the same slot
+  const skipIdx = dayMeals.findIndex(meal => meal.name === 'Skipped' && (meal.category || 'Snacks') === category && !Number(meal.cals) && !Number(meal.p) && !Number(meal.c) && !Number(meal.f));
+  if (skipIdx >= 0) {
+    if (VAULT.loaded) markDeleted('nutritionDiary', dayMeals[skipIdx].id);
+    dayMeals.splice(skipIdx, 1);
+  }
   let mealId = Date.now();
   while (state.fuel.history[state.fuelSelectedDate].meals.some(meal => String(meal.id) === String(mealId))) mealId++;
   state.fuel.history[state.fuelSelectedDate].meals.push({
@@ -7453,6 +7488,33 @@ function saveMealEntry() {
   resetMealSelection();
   closeOverlay('logMeal');
   toast('Meal saved');
+  return true;
+}
+
+function skipMealEntry() {
+  const category = logMealSlot || nextLogSlot();
+  const day = state.fuel.history[state.fuelSelectedDate];
+  if (day?.meals.some(meal => meal.name === 'Skipped' && (meal.category || 'Snacks') === category)) {
+    closeOverlay('logMeal');
+    return true;
+  }
+  ensureDateRecord(state.fuelSelectedDate);
+  let mealId = Date.now();
+  while (state.fuel.history[state.fuelSelectedDate].meals.some(meal => String(meal.id) === String(mealId))) mealId++;
+  state.fuel.history[state.fuelSelectedDate].meals.push({
+    id: mealId,
+    name: 'Skipped',
+    cals: 0,
+    p: 0,
+    c: 0,
+    f: 0,
+    category
+  });
+  saveFuelState('diary');
+  renderFuelDay();
+  resetMealSelection();
+  closeOverlay('logMeal');
+  toast(`${category} skipped`);
   return true;
 }
 
@@ -7553,11 +7615,11 @@ function renderFuelDay() {
             <span>${catCals} kcal</span>
           </div>
           ${items.map(i => `
-            <article class="progress-entry" data-meal-id="${i.id}">
+            <article class="progress-entry${i.name === 'Skipped' && !Number(i.cals) ? ' progress-entry--skipped' : ''}" data-meal-id="${i.id}">
               <div class="progress-entry-date progress-entry-thumbnail"><b>${i.cals}</b><span>KCAL</span></div>
               <div class="progress-entry-copy">
                 <strong>${esc(i.name)}</strong>
-                <span>P: ${i.p}g · C: ${i.c}g · F: ${i.f}g</span>
+                <span>${i.name === 'Skipped' && !Number(i.cals) && !Number(i.p) && !Number(i.c) && !Number(i.f) ? 'Skipped' : `P: ${i.p}g · C: ${i.c}g · F: ${i.f}g`}</span>
               </div>
               <button class="entry-delete" type="button" data-delete-meal="${i.id}" aria-label="Delete ${esc(i.name)}">
                 ${icon('trash')}
