@@ -16,7 +16,7 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(SafVaultPlugin.class);
     super.onCreate(savedInstanceState);
     View container = (View) bridge.getWebView().getParent();
-    container.setBackgroundColor(Color.BLACK);
+    container.setBackgroundColor(Color.parseColor("#0a0b0d"));
     ViewCompat.setOnApplyWindowInsetsListener(container, (v, insets) -> {
       Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
       boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());

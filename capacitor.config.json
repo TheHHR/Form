@@ -10,7 +10,7 @@
   },
   "plugins": {
     "SystemBars": {
-      "style": "DARK",
+      "style": "LIGHT",
       "insetsHandling": "disable"
     }
   }
