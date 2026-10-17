@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.5.7';
+const APP_VERSION='3.5.8';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -2472,7 +2472,7 @@ function render(){
   if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?(state.awPick?.mode==='add'?'Add exercise':'Replace exercise'):'Workout';
   if(mobileCount){const counts=awSession?awCounts():null;mobileCount.textContent=awSession?`${counts.done}/${counts.total} exercises`:`${all.length.toLocaleString()} exercises`;}
   if(mobileContext){
-    const loggedCount=awSession||picking?0:new Set(state.progress.logs.map(log=>log.exerciseId)).size;
+    const loggedCount=awSession||picking?0:new Set(all.filter(exercise=>state.progress.logs.some(log=>log.exerciseId===exercise.id)).map(exercise=>exercise.id)).size;
     mobileContext.textContent=awSession?'in active workout':picking?(state.awPick?.mode==='add'?'tap + to add':'pick a replacement'):routine?`in ${routine.name}`:hasFilters()?`matching filters · ${loggedCount.toLocaleString()} logged`:`${loggedCount.toLocaleString()} logged`;
   }
   renderAwElapsed();
