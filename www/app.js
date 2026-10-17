@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.5.8';
+const APP_VERSION='3.5.9';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -7619,7 +7619,7 @@ function renderFuelDay() {
               <div class="progress-entry-date progress-entry-thumbnail"><b>${i.cals}</b><span>KCAL</span></div>
               <div class="progress-entry-copy">
                 <strong>${esc(i.name)}</strong>
-                <span>${i.name === 'Skipped' && !Number(i.cals) && !Number(i.p) && !Number(i.c) && !Number(i.f) ? 'Skipped' : `P: ${i.p}g · C: ${i.c}g · F: ${i.f}g`}</span>
+                <span>${i.name === 'Skipped' && !Number(i.cals) && !Number(i.p) && !Number(i.c) && !Number(i.f) ? '' : `P: ${i.p}g · C: ${i.c}g · F: ${i.f}g`}</span>
               </div>
               <button class="entry-delete" type="button" data-delete-meal="${i.id}" aria-label="Delete ${esc(i.name)}">
                 ${icon('trash')}
