@@ -412,9 +412,12 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   align-items: center;
   justify-content: center;
   gap: 28px;
-  background: var(--scrim);
+  background: var(--surface);
 }
 .aw-rest-fullscreen[hidden] { display: none; }
+/* fullscreen rest timer: page behind must not scroll */
+html:has(.aw-rest-fullscreen:not([hidden])),
+html:has(.aw-rest-fullscreen:not([hidden])) body { overflow: hidden; }
 .aw-rest-minimize {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 14px);
@@ -430,12 +433,17 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   cursor: pointer;
   appearance: none;
 }
-.circle-chart.aw-rest-circle { width: min(43vw, 180px); height: min(43vw, 180px); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease; }
-.circle-chart.aw-rest-circle:active { transform: scale(.96); }
+.circle-chart.aw-rest-circle { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); width: min(43vw, 180px); height: min(43vw, 180px); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease; }
+.circle-chart.aw-rest-circle:active { transform: translateX(-50%) scale(.96); }
 .circle-chart.aw-rest-circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 50%; }
 .aw-rest-circle .circle-label strong { font-size: 28px; }
 .aw-rest-circle .circle-label span { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-.aw-rest-full-actions { display: flex; gap: 10px; }
+.aw-rest-full-actions { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%); display: flex; gap: 10px; }
+.aw-rest-meta { position: absolute; left: 50%; top: calc(30% + min(43vw, 180px) + 16px); transform: translateX(-50%); width: min(86vw, 360px); max-height: calc(70vh - min(43vw, 180px) - 116px); display: grid; gap: 8px; justify-items: center; overflow-y: auto; overscroll-behavior: contain; }
+.aw-rest-meta[hidden] { display: none; }
+.aw-rest-exercise { width: 100%; text-align: center; color: var(--text); font-family: "Space Grotesk", Roboto, system-ui, sans-serif; font-size: 17px; font-weight: 600; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-rest-sets { width: 100%; display: grid; gap: 6px; }
+.aw-rest-sets[hidden] { display: none; }
 .aw-rest-full-actions button {
   min-height: 40px;
   padding: 0 18px;
@@ -1408,6 +1416,9 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   border-radius: 999px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
   font-weight: var(--weight-medium);
+  text-align: center;
+  justify-content: center;
+  white-space: pre-line;
   opacity: 0;
   pointer-events: none;
   transform: translate3d(-50%, -10px, 0);
@@ -1787,6 +1798,10 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     font-size: 13px;
     font-weight: 500;
     line-height: 1.4;
+  }
+  /* AW mode hides the search row — kill the leftover void under the subtitle */
+  .mobile-phone-header:has(.mobile-search-row[hidden]) .mobile-phone-subtitle {
+    margin-bottom: 0;
   }
   .mobile-search-row {
     display: flex;

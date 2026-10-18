@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.5.9';
+const APP_VERSION='3.6.0';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -476,7 +476,7 @@ function sanitizeAwRows(value,fallbackReps){
   if(!Array.isArray(value))return null;
   const rows=value.slice(0,LIMITS.sets).map(entry=>{
     const row=entry&&typeof entry==='object'?entry:{};
-    return{reps:clamp(row.reps??fallbackReps,1,LIMITS.reps),weight:row.weight==null?null:Math.round(clamp(row.weight,0,LIMITS.weight)*10)/10,duration:Math.round(clamp(Number(row.duration)||0,0,LIMITS.duration)*100)/100,distance:Math.round(clamp(Number(row.distance)||0,0,LIMITS.distance)*10)/10,done:Boolean(row.done)};
+    return{reps:clamp(row.reps??fallbackReps,1,LIMITS.reps),weight:row.weight==null?null:Math.round(clamp(row.weight,0,LIMITS.weight)*10)/10,duration:Math.round(clamp(Number(row.duration)||0,0,LIMITS.duration)*10000)/10000,distance:Math.round(clamp(Number(row.distance)||0,0,LIMITS.distance)*10)/10,done:Boolean(row.done)};
   });
   return rows.length?rows:null;
 }
@@ -525,6 +525,8 @@ function loadActiveWorkout(){
       endsAt:Math.max(Number(rawRest.endsAt)||Date.now(),restOvertimeCap),
       total:clamp(Math.round(Number(rawRest.total)),10,600),
       type:rawRest.type==='exercise'?'exercise':'sets',
+      ...(rawRest.exerciseId?{exerciseId:String(rawRest.exerciseId)}:{}),
+      ...(rawRest.warmup===true?{warmup:true}:{}),
       ...(rawRest.over===true||Number(rawRest.endsAt)<=Date.now()?{over:true}:{away:true})
     }
     :null;
@@ -543,7 +545,7 @@ function loadActiveWorkout(){
     editId:raw.editId!=null&&VALID_EXERCISE_IDS.has(String(raw.editId))?String(raw.editId):null,
     rest,
     restMaximized:raw.restMaximized===true,
-    restOpen:Boolean(rest)&&(rest.over===true?raw.restMaximized===true:raw.restOpen===true&&rest.type!=='exercise'),
+    restOpen:Boolean(rest)&&(rest.over===true?raw.restMaximized===true:raw.restOpen===true),
     pausedAccum:Number(raw.pausedAccum)||0,
     pausedAt:Number(raw.pausedAt)||null,
   };
@@ -582,9 +584,9 @@ function fitList(value,count,mapValue,fallback){
   list.length=count;
   return list;
 }
-function sanitizeDurationValue(value){const num=Number(value);return num>0?Math.round(Math.min(LIMITS.duration,num)*100)/100:null}
+function sanitizeDurationValue(value){const num=Number(value);return num>0?Math.round(Math.min(LIMITS.duration,num)*10000)/10000:null}
 function sanitizeDistanceValue(value){const num=Number(value);return num>0?Math.round(Math.min(LIMITS.distance,num)*10)/10:null}
-function sanitizeSetDurations(value,fallbackLength){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.round(clamp(Number(entry)||0,0,LIMITS.duration)*100)/100).slice(0,fallbackLength||LIMITS.sets);return list.length?list:null}
+function sanitizeSetDurations(value,fallbackLength){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.round(clamp(Number(entry)||0,0,LIMITS.duration)*10000)/10000).slice(0,fallbackLength||LIMITS.sets);return list.length?list:null}
 function sanitizeSetDistances(value,fallbackLength){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.round(Math.min(LIMITS.distance,Math.max(0,Number(entry)||0))*10)/10).slice(0,fallbackLength||LIMITS.sets);return list.length?list:null}
 function normalizeTimedFields(log){
   const durations=sanitizeSetDurations(log.setDurations);
@@ -937,7 +939,7 @@ function parseTrainingLogsMd(text) {
   const toList = (rawValue) => rawValue ? rawValue.split(',').map(entry => entry.trim()).filter(Boolean) : undefined;
   const flushBlock = () => {
     if (!block) return;
-    const setDurations = toList(block.durationsRaw)?.map(entry => { const num = Number(entry); return Number.isFinite(num) ? Math.round((block.durationsUnit === 'sec' ? num / 60 : num) * 100) / 100 : 0; }) || toList(block.duration);
+    const setDurations = toList(block.durationsRaw)?.map(entry => { const num = Number(entry); return Number.isFinite(num) ? Math.round((block.durationsUnit === 'sec' ? num / 60 : num) * 10000) / 10000 : 0; }) || toList(block.duration);
     const repsList = toList(block.reps);
     const normalized = normalizeImportedProgressLog({
       exerciseId: block.exerciseId,
@@ -980,7 +982,7 @@ function parseTrainingLogsMd(text) {
       if (durMatch) log.setDurations = durMatch[1].split(',').map(s => vClampNum(s.trim(), 0, LIMITS.duration, 0)).filter(v => v > 0);
       else if (durSecMatch) {
         log.durUnit = 'sec';
-        log.setDurations = durSecMatch[1].split(',').map(s => Math.round(vClampNum(s.trim(), 0, LIMITS.duration * 60, 0) / 60 * 100) / 100).filter(v => v > 0);
+        log.setDurations = durSecMatch[1].split(',').map(s => Math.round(vClampNum(s.trim(), 0, LIMITS.duration * 60, 0) / 60 * 10000) / 10000).filter(v => v > 0);
       }
       const distMatch = dataLine.match(/([\d.,\s]+)\s*(km|mi)/);
       if (distMatch) log.setDistances = distMatch[1].split(',').map(s => vClampNum(s.trim(), 0, LIMITS.distance, 0)).filter(v => v > 0);
@@ -2468,12 +2470,28 @@ function render(){
   });
   const mobileCount=$('#mobileResultCount');
   const mobileContext=$('#mobileResultContext');
+  const mobileSep=$('#mobileResultSep');
   const mobileTitle=document.querySelector('.mobile-phone-title');
   if(mobileTitle)mobileTitle.textContent=awSession?(state.routines.find(item=>item.id===state.activeWorkout.routineId)?.name||'Workout'):picking?(state.awPick?.mode==='add'?'Add exercise':'Replace exercise'):'Workout';
-  if(mobileCount){const counts=awSession?awCounts():null;mobileCount.textContent=awSession?`${counts.done}/${counts.total} exercises`:`${all.length.toLocaleString()} exercises`;}
+  if(mobileCount){const counts=awSession?awCounts():null;mobileCount.textContent=awSession?`${counts.done}/${counts.total} exercises`:`${all.length.toLocaleString()} exercises${!awSession&&!picking&&!routine&&state.loggedOnly?' logged':''}`;}
   if(mobileContext){
     const loggedCount=awSession||picking?0:new Set(all.filter(exercise=>state.progress.logs.some(log=>log.exerciseId===exercise.id)).map(exercise=>exercise.id)).size;
-    mobileContext.textContent=awSession?'in active workout':picking?(state.awPick?.mode==='add'?'tap + to add':'pick a replacement'):routine?`in ${routine.name}`:hasFilters()?`matching filters · ${loggedCount.toLocaleString()} logged`:`${loggedCount.toLocaleString()} logged`;
+    const loggedText=state.loggedOnly?'':`${loggedCount.toLocaleString()} logged`;
+    let contextText;
+    if(awSession) contextText='in active workout';
+    else if(picking) contextText=state.awPick?.mode==='add'?'tap + to add':'pick a replacement';
+    else if(routine) contextText=`in ${routine.name}`;
+    else{
+      const chips=[];
+      if(state.savedOnly)chips.push('Liked');
+      if(state.tags)chips.push(`#${state.tags}`);
+      if(state.category)chips.push(title(state.category));
+      if(state.target)chips.push(title(state.target));
+      if(state.equipment)chips.push(title(state.equipment));
+      contextText=[loggedText,...chips].filter(Boolean).join(' · ');
+    }
+    mobileContext.textContent=contextText;
+    if(mobileSep)mobileSep.hidden=!contextText;
   }
   renderAwElapsed();
 
@@ -3089,7 +3107,7 @@ function seedAwSets(routine){
     if(timed){
       const unitLog=lastTimedLogForUnit(item.exerciseId,unitSec?'sec':'min');
       const durations=Array.isArray(unitLog?.setDurations)&&unitLog.setDurations.length?unitLog.setDurations:[];
-      const lastDuration=durations.length?(unitSec?Math.round((clamp(Number(durations[durations.length-1])||0,0,1)*60)*100)/100:clamp(Math.round(Number(durations[durations.length-1]))||0,0,60)):(Number(item.reps)||0);
+      const lastDuration=durations.length?(unitSec?Math.round((clamp(Number(durations[durations.length-1])||0,0,1)*60)*100)/100:clamp(Math.round(Number(durations[durations.length-1])*100)/100||0,0,60)):(Number(item.reps)||0);
       const lastDistance=routineItemDistance(item)?(lastLoggedDistanceFor(item.exerciseId)??0):0;
       const weighted=routineItemWeighted(item);
       const lastWeight=weighted?lastLoggedWeightFor(item.exerciseId,true):null;
@@ -3147,7 +3165,7 @@ function lastLoggedDurationFor(exerciseId){
   if(!latest)return null;
   const durations=Array.isArray(latest.setDurations)&&latest.setDurations.length?latest.setDurations:(sanitizeDurationValue(latest.duration)?[sanitizeDurationValue(latest.duration)]:[]);
   if(!durations.length)return null;
-  return clamp(Math.round((Number(durations[durations.length-1]))*100)/100,0,LIMITS.duration)||null;
+  return clamp(Math.round((Number(durations[durations.length-1]))*10000)/10000,0,LIMITS.duration)||null;
 }
 function lastLoggedDistanceFor(exerciseId){
   const logs=[...state.progress.logs].filter(log=>log.exerciseId===exerciseId&&isTimedCardioLog(log)).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
@@ -3196,6 +3214,20 @@ function awCounts(){
   const rows=awRows().filter(({exercise})=>!awSkipped(exercise.id)),session=state.activeWorkout;
   return{total:rows.length,done:rows.filter(({exercise})=>awIsComplete(exercise.id)).length};
 }
+function awActiveRestRow(){
+  const session=state.activeWorkout;
+  if(!session)return null;
+  const rows=awRows();
+  const jump=session.jumpTo?String(session.jumpTo):null;
+  // active card = same rule as renderActiveWorkout: jump target, else first not-complete & not-skipped
+  const active=(jump&&rows.find(({item,exercise})=>String(item.exerciseId)===jump&&!awSkipped(exercise.id)&&!awIsComplete(exercise.id)))||rows.find(({exercise})=>!awSkipped(exercise.id)&&!awIsComplete(exercise.id))||null;
+  if(active)return active;
+  // everything done: fall back to the rest's own exercise, then the last row
+  const restExercise=session.rest?.exerciseId?getExercise(session.rest.exerciseId):null;
+  if(restExercise&&rows.some(({exercise})=>exercise.id===restExercise.id))return rows.find(({exercise})=>exercise.id===restExercise.id);
+  if(restExercise)return{exercise:restExercise,item:null};
+  return rows.length?rows[rows.length-1]:null;
+}
 function syncAwLog(exercise,item){
   const session=state.activeWorkout;if(!session)return;
   const token=String(session.startedAt);
@@ -3207,7 +3239,7 @@ function syncAwLog(exercise,item){
     if(checked.length>0){
       /* AW rows hold seconds for sec-unit items; log values are always stored in minutes. */
       const unitIsSec=routineItemUnit(item)==='sec';
-      const setDurations=checked.map(row=>{const raw=clamp(Number(row.duration)||0,0,LIMITS.duration);const value=unitIsSec?Math.round(raw/60*100)/100:Math.round(raw*100)/100;return clamp(value,0,LIMITS.duration)});
+      const setDurations=checked.map(row=>{const raw=clamp(Number(row.duration)||0,0,LIMITS.duration);const value=unitIsSec?Math.round(raw/60*10000)/10000:Math.round(raw*10000)/10000;return clamp(value,0,LIMITS.duration)});
       const setDistances=routineItemDistance(item)?checked.map(row=>Math.round(clamp(Number(row.distance)||0,0,LIMITS.distance)*10)/10):[];
       const hasDuration=setDurations.some(value=>value>0),hasDistance=setDistances.some(value=>value>0);
       const setWeights=checked.map(row=>row.weight==null?0:Math.round(clamp(row.weight,0,LIMITS.weight)*10)/10);
@@ -3234,6 +3266,7 @@ function startRoutineWorkout(routine){
   state.activeWorkout={date:localDateValue(),routineId:routine.id,routineName:routine.name,startedAt:Date.now(),paused:false,sets:seedAwSets(routine),skipped:{},secondaryIds:[],extras:[],replacements:{},jumpTo:null};
   saveActiveWorkout();
   awSetKeepAwake(true);
+  startAwRest(600,'sets',routine.items[0]?.exerciseId||null,true,true);
   render();
   toast(`Started ${routine.name}`);
 }
@@ -3264,7 +3297,7 @@ function endActiveWorkout(save=true){
   cancelAwRest();
   if(save)writeStorage(STORAGE_KEYS.awBannerDismissed,{date:localDateValue(),routineId:String(session.routineId)});
   render();
-  toast(save?`Workout complete · ${done}/${total} · ${durationText}`:'Workout discarded');
+  toast(save?`Workout complete ${done}/${total}\n${durationText}`:'Workout discarded');
 }
 function awRestDecision(routine,item){
   const myPending=awSets(item.exerciseId).some(row=>!row.done);
@@ -3298,26 +3331,29 @@ function awLogNextSet(){
   const routine=awSessionRoutine();
   if(!session||!routine)return;
   const target=awNextSetTarget();
-  if(!target){cancelAwRest();render();return toast('No pending set');}
+  if(!target){cancelAwRest();render();return toast('All done!');}
   const{item,exercise}=target;
   const rows=session.sets[exercise.id]||[];
   const index=rows.findIndex(row=>!row.done);
-  if(index<0){cancelAwRest();render();return toast('No pending set');}
-  const doneCount=rows.filter(row=>row.done).length;
+  if(index<0){cancelAwRest();render();return;}
   rows[index].done=true;
   if(awIsComplete(exercise.id)&&session.jumpTo===exercise.id)delete session.jumpTo;
   saveActiveWorkout();
   syncAwLog(exercise,item);
   if(state.restPrefs.enabled){
     const type=awRestDecision(routine,item);
-    if(type==='between-sets')startAwRest(state.restPrefs.betweenSets,'sets');
-    else if(type==='between-exercises')startAwRest(state.restPrefs.betweenExercise,'exercise');
+    if(type==='between-sets')startAwRest(state.restPrefs.betweenSets,'sets',exercise.id);
+    else if(type==='between-exercises')startAwRest(state.restPrefs.betweenExercise,'exercise',exercise.id);
     else cancelAwRest();
   }else if(session.rest){
     cancelAwRest();
   }
   render();
-  toast(`Set ${doneCount+1} done · ${exercise.name}`);
+  if(!awNextSetTarget())toast('All done!');
+}
+function awRingActivate(){
+  if(state.activeWorkout?.rest?.over===true)awLogNextSet();
+  else skipAwRest();
 }
 function cancelAwPick(){
   const pick=state.awPick;if(!pick)return;
@@ -3476,7 +3512,7 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
     if(!timed||!rows[index])return;
     const unitSec=routineItemUnit(item)==='sec';
     const durDelta=unitSec?5:1;
-    rows[index].duration=Math.round(clamp((Number(rows[index].duration)||0)+(action==='dur-inc'?durDelta:-durDelta),0,60)*100)/100;
+    rows[index].duration=Math.round(clamp((Number(rows[index].duration)||0)+(action==='dur-inc'?durDelta:-durDelta),0,60)*10000)/10000;
     if(index===0)propagateAwFirstRow(rows,'duration');
     changed=true;
   }else if(action==='dist-inc'||action==='dist-dec'){
@@ -3505,49 +3541,23 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
   syncAwLog(exercise,item);
   if(restTrigger&&state.restPrefs.enabled){
     const type=awRestDecision(routine,item);
-    if(type==='between-sets')startAwRest(state.restPrefs.betweenSets,'sets');
-    else if(type==='between-exercises')startAwRest(state.restPrefs.betweenExercise,'exercise');
+    if(type==='between-sets')startAwRest(state.restPrefs.betweenSets,'sets',exercise.id);
+    else if(type==='between-exercises')startAwRest(state.restPrefs.betweenExercise,'exercise',exercise.id);
+    else cancelAwRest();
   }
   render();
+  if(restTrigger&&!awNextSetTarget())toast('All done!');
 }
 function secondaryRowChunks(count){if(count<=3)return[count];const rows=[];let remaining=count;while(remaining>4){rows.push(3);remaining-=3;}if(remaining===4)rows.push(2,2);else rows.push(remaining);return rows;}
-function renderActiveWorkout(){
-  const session=state.activeWorkout;
-  const rows=awRows();
-  const counts=awCounts();
-  const rowStates=rows.map(({item,exercise,secondaryName})=>{
-    const skipped=awSkipped(exercise.id);
-    return{item,exercise,skipped,secondaryName,complete:!skipped&&awIsComplete(exercise.id)};
-  });
-  const jumpTo=session&&session.jumpTo&&!awSkipped(session.jumpTo)&&!awIsComplete(session.jumpTo)?String(session.jumpTo):null;
-  const activeRow=(jumpTo&&rowStates.find(row=>String(row.item.exerciseId)===jumpTo))||rowStates.find(row=>!row.skipped&&!row.complete)||null;
-  const activeItems=new Set();
-  const editId=session.editId&&!awSkipped(String(session.editId))?String(session.editId):null;
-  if(editId&&rowStates.some(row=>String(row.item.exerciseId)===editId))activeItems.add(editId);
-  if(activeRow){
-    activeItems.add(activeRow.item.exerciseId);
-    const partnerItem=supersetPartner(session?awSessionRoutine():null,activeRow.item);
-    if(partnerItem&&!awSkipped(partnerItem.exerciseId)&&!awIsComplete(partnerItem.exerciseId))activeItems.add(partnerItem.exerciseId);
-  }
-  let lastSecondary=null;
-  const rowHtml=rowStates.map(row=>{
-    const{item,exercise,skipped,complete}=row;
-    let separator='';
-    if(row.secondaryName&&row.secondaryName!==lastSecondary){
-      separator=`<div class="aw-group-separator"><span>${esc(row.secondaryName)}</span></div>`;
-    }
-    lastSecondary=row.secondaryName;
-    const sets=awSets(exercise.id);
-    const timed=routineItemMode(item)==='timed';
+function awSetsBlockHtml(exercise,item,skipped=awSkipped(exercise.id)){
+  const sets=awSets(exercise.id);
+  const timed=routineItemMode(item)==='timed';
   const showWeight=routineItemWeighted(item);
   const showDistance=routineItemDistance(item);
-    const isActive=activeItems.has(item.exerciseId);
-    const editing=editId!==null&&String(item.exerciseId)===editId;
-    const jumped=String(session.jumpTo||'')===String(exercise.id);
-    const mediaSrc=isActive?esc(exercise.gif_url||exercise.image):esc(exercise.image);    const setsHead=timed
-      ?`<div class="aw-sets-head"><span class="aw-h-num"></span><span class="aw-h-label">Duration</span>${showDistance?'<span class="aw-h-label">Distance</span>':''}${showWeight?'<span class="aw-h-label">Weight</span>':''}<span class="aw-h-check"></span></div>`
-      :`<div class="aw-sets-head"><span class="aw-h-num"></span><span class="aw-h-label">Reps</span>${showWeight?'<span class="aw-h-label">Weight</span>':''}<span class="aw-h-check"></span></div>`;
-    const setRows=sets.map((set,index)=>`
+  const setsHead=timed
+    ?`<div class="aw-sets-head"><span class="aw-h-num"></span><span class="aw-h-label">Duration</span>${showDistance?'<span class="aw-h-label">Distance</span>':''}${showWeight?'<span class="aw-h-label">Weight</span>':''}<span class="aw-h-check"></span></div>`
+    :`<div class="aw-sets-head"><span class="aw-h-num"></span><span class="aw-h-label">Reps</span>${showWeight?'<span class="aw-h-label">Weight</span>':''}<span class="aw-h-check"></span></div>`;
+  const setRows=sets.map((set,index)=>`
       <div class="aw-set-row${set.done?' checked':''}">
         <span class="aw-num">${index+1}</span>
         ${timed?`<div class="routine-stepper" role="group" aria-label="Duration for interval ${index+1} of ${esc(exercise.name)}">
@@ -3577,6 +3587,40 @@ function renderActiveWorkout(){
         </div>`:''}`}
         <button type="button" class="aw-check${set.done?' on':''}" data-aw-action="check" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="${timed?`Interval ${index+1}`:`Set ${index+1}`} ${set.done?'completed':'not completed'}"${skipped?' disabled':''}>${icon('check')}</button>
       </div>`).join('');
+  return `<div class="aw-sets">${setsHead+setRows}</div>`;
+}
+function renderActiveWorkout(){
+  const session=state.activeWorkout;
+  const rows=awRows();
+  const counts=awCounts();
+  const rowStates=rows.map(({item,exercise,secondaryName})=>{
+    const skipped=awSkipped(exercise.id);
+    return{item,exercise,skipped,secondaryName,complete:!skipped&&awIsComplete(exercise.id)};
+  });
+  const jumpTo=session&&session.jumpTo&&!awSkipped(session.jumpTo)&&!awIsComplete(session.jumpTo)?String(session.jumpTo):null;
+  const activeRow=(jumpTo&&rowStates.find(row=>String(row.item.exerciseId)===jumpTo))||rowStates.find(row=>!row.skipped&&!row.complete)||null;
+  const activeItems=new Set();
+  const editId=session.editId&&!awSkipped(String(session.editId))?String(session.editId):null;
+  if(editId&&rowStates.some(row=>String(row.item.exerciseId)===editId))activeItems.add(editId);
+  if(activeRow){
+    activeItems.add(activeRow.item.exerciseId);
+    const partnerItem=supersetPartner(session?awSessionRoutine():null,activeRow.item);
+    if(partnerItem&&!awSkipped(partnerItem.exerciseId)&&!awIsComplete(partnerItem.exerciseId))activeItems.add(partnerItem.exerciseId);
+  }
+  let lastSecondary=null;
+  const rowHtml=rowStates.map(row=>{
+    const{item,exercise,skipped,complete}=row;
+    let separator='';
+    if(row.secondaryName&&row.secondaryName!==lastSecondary){
+      separator=`<div class="aw-group-separator"><span>${esc(row.secondaryName)}</span></div>`;
+    }
+    lastSecondary=row.secondaryName;
+    const sets=awSets(exercise.id);
+    const timed=routineItemMode(item)==='timed';
+    const isActive=activeItems.has(item.exerciseId);
+    const editing=editId!==null&&String(item.exerciseId)===editId;
+    const jumped=String(session.jumpTo||'')===String(exercise.id);
+    const mediaSrc=isActive?esc(exercise.gif_url||exercise.image):esc(exercise.image);
     return separator+`<div class="aw-row${complete?' done':''}${skipped?' skipped':''}${isActive?'':' collapsed'}" data-exercise="${exercise.id}">
       <div class="aw-row-top">
         <div class="aw-main">
@@ -3586,7 +3630,7 @@ function renderActiveWorkout(){
         <div class="aw-row-badges">${item.superset?`<span class="aw-superset-badge">${icon('link')} Superset</span>`:''}${skipped?`<span class="aw-skipped-badge">Skipped</span>`:''}</div>
         <div class="aw-row-tools">${!complete&&!skipped?`<button type="button" class="aw-icon-btn" data-aw-action="replace" data-exercise="${exercise.id}" aria-label="Replace ${esc(exercise.name)}">${icon('swap')}</button>`:''}</div>
       </div>
-      ${isActive?`<div class="aw-sets">${setsHead+setRows}</div>`:''}
+      ${isActive?awSetsBlockHtml(exercise,item,skipped):''}
       <div class="aw-addremove">
         <div class="aw-addremove-group">
           <button type="button" data-aw-action="add-rep" data-exercise="${exercise.id}"${!skipped&&(isActive||complete)?'':' disabled'}>Add ${timed?'interval':'set'}</button>
@@ -3724,12 +3768,12 @@ function awRestSecondsLeft(){
   if(!rest)return 0;
   return Math.max(0,Math.ceil((rest.endsAt-Date.now())/1000));
 }
-function startAwRest(seconds,type='sets'){
+function startAwRest(seconds,type='sets',exerciseId=null,forceMinimized=false,warmup=false){
   const session=state.activeWorkout;
   if(!session||!state.restPrefs.enabled)return;
-  const total=clamp(Math.round(Number(seconds)||state.restPrefs.betweenSets),10,600);
-  session.rest={endsAt:Date.now()+total*1000,total,type:type==='exercise'?'exercise':'sets'};
-  session.restOpen=type!=='exercise'&&session.restMaximized===true;
+  const total=warmup?600:clamp(Math.round(Number(seconds)||state.restPrefs.betweenSets),10,600);
+  session.rest={endsAt:Date.now()+total*1000,total,type:type==='exercise'?'exercise':'sets',...(warmup?{warmup:true}:{}),...(exerciseId?{exerciseId:String(exerciseId)}:{})};
+  session.restOpen=!forceMinimized&&session.restMaximized===true;
   saveActiveWorkout();
   renderAwRestPill();
 }
@@ -3814,7 +3858,9 @@ function updateAwRestPill(left){
     const full=$('#awRestTimeFull');
     if(full)full.textContent=label;
     const mode=$('#awRestMode');
-    if(mode)mode.textContent=over?'set':'rest';
+    if(mode)mode.textContent=over?'set':(rest.warmup?'warmup':'rest');
+    const ringEl=$('#awRestFullscreen .aw-rest-circle');
+    if(ringEl)ringEl.setAttribute('aria-label',over?'Mark next set done':(rest.warmup?'Skip warmup':'Skip rest'));
     const meter=$('#awRestMeter');
     if(meter){
       const pct=over?100:Math.max(0,Math.min(100,left/rest.total*100));
@@ -3861,6 +3907,18 @@ function renderAwRestPill(){
       overlay.hidden=false;
       const meter=$('#awRestMeter');
       if(meter)meter.style.stroke='var(--accent)';
+      const nameEl=overlay.querySelector('#awRestExercise');
+      const setsEl=overlay.querySelector('#awRestSets');
+      const metaEl=overlay.querySelector('#awRestMeta');
+      const activeRow=awActiveRestRow();
+      const exName=activeRow?.exercise?title(activeRow.exercise.name):'';
+      if(nameEl)nameEl.textContent=exName;
+      if(setsEl){
+        const setsHtml=activeRow?.exercise&&activeRow.item?awSetsBlockHtml(activeRow.exercise,activeRow.item):'';
+        setsEl.innerHTML=setsHtml;
+        setsEl.hidden=!setsHtml;
+      }
+      if(metaEl)metaEl.hidden=!exName;
     }
     if(!pill.hidden)pill.hidden=true;
   }else{
@@ -3891,15 +3949,21 @@ $('#awRestFullscreen').addEventListener('click',event=>{
   const action=event.target.closest('[data-rest-action]')?.dataset.restAction;
   if(action==='extend')extendAwRest();
   else if(action==='skip')skipAwRest();
-  else if(action==='log-set')awLogNextSet();
+  else if(action==='log-set')awRingActivate();
   else if(action==='minimize')setAwRestMaximized(false);
+  else{
+    const awButton=event.target.closest('[data-aw-action]');
+    if(!awButton)return;
+    handleAwAction(awButton.dataset.awAction,awButton.dataset.exercise,awButton.dataset.delta,awButton.dataset.awIndex);
+    renderAwRestPill();
+  }
 });
 $('#awRestFullscreen').addEventListener('keydown',event=>{
   if(event.key!=='Enter'&&event.key!==' ')return;
   const target=event.target.closest('.aw-rest-circle[data-rest-action="log-set"]');
   if(!target)return;
   event.preventDefault();
-  awLogNextSet();
+  awRingActivate();
 });
 
 let awClockTickerId=0;
@@ -4214,7 +4278,7 @@ function parseProgressLogText(text){
           });
           const toList=rawValue=>rawValue?rawValue.split(',').map(entry=>entry.trim()).filter(Boolean):undefined;
           const repsList=toList(fields.reps);
-          const setDurations=toList(durationsRaw)?.map(entry=>{const num=Number(entry);return Number.isFinite(num)?Math.round((durationsUnit==='sec'?num/60:num)*100)/100:0})||toList(fields.duration);
+          const setDurations=toList(durationsRaw)?.map(entry=>{const num=Number(entry);return Number.isFinite(num)?Math.round((durationsUnit==='sec'?num/60:num)*10000)/10000:0})||toList(fields.duration);
           return{exerciseId:fields.exerciseid,date:fields.date,sets:fields.sets,reps:repsList?repsList[0]:fields.reps,weight:weightsRaw?undefined:fields.weight,setWeights:toList(weightsRaw)||toList(fields.setweights),setReps:toList(fields.setreps)||repsList,intervals:fields.int??fields.intervals??fields.interval,setDurations,setDistances:toList(distancesRaw)||toList(fields.distance),duration:fields.duration,distance:fields.distance,durUnit:setDurations?durationsUnit:undefined,notes:fields.notes,id:fields.id,timestamp:fields.timestamp};
         });
   const logs=value.map(normalizeImportedProgressLog).filter(Boolean);
@@ -4364,7 +4428,7 @@ async function importProgressLog(mode='replace'){
       state.dashboard.selectedDate=null;
       renderProgressHistory();
       closeProgressLogPaste();
-      if(state.loggedOnly||state.routineFilter)render();
+      render();
       toast(`${additions.length} progress entr${additions.length===1?'y':'ies'} added`);
       return;
     }
@@ -4516,15 +4580,12 @@ async function handleClearDataSubmit(event) {
     return;
   }
 
-  const cleared = [];
-
   if (clearLogs) {
     if (VAULT.loaded) for (const log of state.progress.logs) markDeleted('trainingLogs', log.id);
     state.progress.logs = [];
     state.dashboard.selectedDate = null;
     persistProgress();
     renderProgressHistory();
-    cleared.push('logs');
   }
 
   if (clearRoutines) {
@@ -4540,14 +4601,12 @@ async function handleClearDataSubmit(event) {
     saveRoutines();
     endStaleActiveWorkout();
     renderRoutineDrawer();
-    cleared.push('routines');
   }
 
   if (clearSaved) {
     state.saved.clear();
     writeStorage(STORAGE_KEYS.saved, []);
     if (VAULT.loaded) saveConfigToVault();
-    cleared.push('liked exercises');
   }
 
   if (clearFuelDiary) {
@@ -4555,7 +4614,6 @@ async function handleClearDataSubmit(event) {
     state.fuel.history = {};
     saveFuelState('diary');
     renderFuelDay();
-    cleared.push('nutrition diary');
   }
 
   if (clearMeals) {
@@ -4567,7 +4625,6 @@ async function handleClearDataSubmit(event) {
     state.fuel.selectedIngredientId = 'custom';
     saveFuelState('meals');
     renderFuelDropdowns();
-    cleared.push('custom meals');
   }
 
   if (clearCustomExercises) {
@@ -4592,7 +4649,6 @@ async function handleClearDataSubmit(event) {
     deleteExerciseTagEntries(removedIds);
     if (customExerciseDraft.id && removedIds.has(customExerciseDraft.id)) resetCustomExerciseSheet();
     renderCustomExerciseList();
-    cleared.push('custom exercises');
   }
 
   if (clearTags) {
@@ -4601,12 +4657,11 @@ async function handleClearDataSubmit(event) {
     if (VAULT.loaded) { markDirty('config'); scheduleVaultSave('config'); }
     persistExerciseTags();
     renderFilterPills();
-    cleared.push('exercise tags');
   }
 
   render();
   closeOverlay('clearData');
-  toast(`Cleared: ${cleared.join(', ')}`);
+  toast('Data cleared!');
 }
 
 function updateSelectAllClearCheckbox() {
@@ -5157,7 +5212,7 @@ function saveProgressLog(event) {
   let log;
   if (draft.mode === 'timed') {
     const sec = draft.durationUnit === 'sec';
-    const toMinutes = (value) => sec ? Math.round(((Number(value) || 0) / 60) * 100) / 100 : (Number(value) || 0);
+    const toMinutes = (value) => sec ? Math.round(((Number(value) || 0) / 60) * 10000) / 10000 : (Number(value) || 0);
     const intervals = clamp(draft.sets, 1, LIMITS.sets);
     const setDurations = (Array.isArray(draft.setDurations) ? draft.setDurations : []).slice(0, intervals).map((value) => clamp(toMinutes(value), 0, LIMITS.duration));
     const setDistances = draft.showDistance ? (Array.isArray(draft.setDistances) ? draft.setDistances : []).slice(0, intervals).map((value) => Math.round(clamp(Number(value) || 0, 0, LIMITS.distance) * 10) / 10) : [];
@@ -5192,7 +5247,7 @@ function saveProgressLog(event) {
     renderProgressHistory();
    updateModalProgress(exercise.id);
    syncLikeButton($('#modalLikeExercise'), state.saved.has(exercise.id));
-   if (state.loggedOnly || state.routineFilter) render();
+   render();
   closeProgress();
   toast('Progress entry saved');
 }
@@ -6291,7 +6346,7 @@ $('#progressHistory').addEventListener('click', async (event) => {
     if (state.dashboard.selectedDate && !state.progress.logs.some((log) => log.date === state.dashboard.selectedDate)) state.dashboard.selectedDate = null;
     persistProgress();
     renderProgressHistory();
-    if (isAwLog || state.loggedOnly || state.routineFilter) render();
+    render();
     toast('Progress entry deleted');
     return;
   }

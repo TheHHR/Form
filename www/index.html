@@ -85,7 +85,7 @@
           <div class="mobile-phone-header-top">
             <h1 class="mobile-phone-title">Workout</h1>
           </div>
-          <div class="mobile-phone-subtitle"><span id="mobileResultCount">0 exercises</span> · <span id="mobileResultContext">with animations</span><span id="awElapsed" hidden></span></div>
+          <div class="mobile-phone-subtitle"><span id="mobileResultCount">0 exercises</span><span id="mobileResultSep"> · </span><span id="mobileResultContext">with animations</span><span id="awElapsed" hidden></span></div>
           <div class="mobile-search-row">
             <label class="mobile-top-search"><button type="button" id="filterPillsToggle" class="search-icon-btn" aria-expanded="false" aria-controls="filterPills" aria-label="Filter exercises"><svg class="icon"><use href="#icon-search"/></svg><svg class="icon filter-chevron"><use href="#icon-chevron"/></svg></button><input id="search" type="search" placeholder="Search..." autocomplete="off" aria-label="Search exercises"><button class="mobile-search-sort-btn" id="mobileSortBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="mobileSortMenu" aria-label="Sort exercises"><svg class="icon"><use href="#icon-sort"/></svg></button><button class="mobile-search-start-btn" id="mobileStartBtn" type="button" aria-label="Start selected routine" hidden>Start</button><button class="mobile-search-reset-btn" id="mobileResetFiltersBtn" type="button" aria-label="Reset filters"><svg class="icon"><use href="#icon-reset"/></svg></button></label>
             <div class="routine-menu custom-select-menu mobile-sort-menu" id="mobileSortMenu" role="menu" aria-label="Sort exercises" hidden></div>
@@ -877,7 +877,7 @@
           <div class="settings-card">
             <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.5.9</span>
+              <span class="settings-row-value" id="updateStatus">v3.6.0</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
             <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
@@ -961,6 +961,10 @@
       <strong id="awRestTimeFull">1:00</strong>
       <span id="awRestMode">rest</span>
     </div>
+  </div>
+  <div class="aw-rest-meta" id="awRestMeta" hidden>
+    <div class="aw-rest-exercise" id="awRestExercise"></div>
+    <div class="aw-rest-sets" id="awRestSets" hidden></div>
   </div>
   <div class="aw-rest-full-actions">
     <button type="button" data-rest-action="extend">+30s</button>
