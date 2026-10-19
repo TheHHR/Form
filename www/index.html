@@ -88,7 +88,7 @@
           <div class="mobile-phone-subtitle"><span id="mobileResultCount">0 exercises</span><span id="mobileResultSep"> · </span><span id="mobileResultContext">with animations</span><span id="awElapsed" hidden></span></div>
           <div class="mobile-search-row">
             <label class="mobile-top-search"><button type="button" id="filterPillsToggle" class="search-icon-btn" aria-expanded="false" aria-controls="filterPills" aria-label="Filter exercises"><svg class="icon"><use href="#icon-search"/></svg><svg class="icon filter-chevron"><use href="#icon-chevron"/></svg></button><input id="search" type="search" placeholder="Search..." autocomplete="off" aria-label="Search exercises"><button class="mobile-search-sort-btn" id="mobileSortBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="mobileSortMenu" aria-label="Sort exercises"><svg class="icon"><use href="#icon-sort"/></svg></button><button class="mobile-search-start-btn" id="mobileStartBtn" type="button" aria-label="Start selected routine" hidden>Start</button><button class="mobile-search-reset-btn" id="mobileResetFiltersBtn" type="button" aria-label="Reset filters"><svg class="icon"><use href="#icon-reset"/></svg></button></label>
-            <div class="routine-menu custom-select-menu mobile-sort-menu" id="mobileSortMenu" role="menu" aria-label="Sort exercises" hidden></div>
+            <div class="routine-menu custom-select-menu" id="mobileSortMenu" role="menu" aria-label="Sort exercises" hidden></div>
           </div>
 
           <div class="filter-pills" id="filterPills" hidden>
@@ -113,7 +113,7 @@
   <button class="mobile-nav-button" id="mobileProgressBtn" type="button" role="tab" aria-selected="false" aria-controls="progressBackdrop"><svg class="icon"><use href="#icon-progress"/></svg><span>Dashboard</span></button>
 </nav>
 
-<div class="plan-switch" id="planSwitch" role="tablist" aria-label="Plan sections" hidden>
+<div id="planSwitch" role="tablist" aria-label="Plan sections" hidden>
   <button type="button" class="plan-switch-btn" data-plan-section="routines" role="tab" aria-selected="true"><svg class="icon"><use href="#icon-routine"/></svg><span>Routines</span></button>
   <button type="button" class="plan-switch-btn" data-plan-section="meals" role="tab" aria-selected="false"><svg class="icon"><use href="#icon-flame"/></svg><span>Meals</span></button>
 </div>
@@ -134,7 +134,7 @@
 </div>
 
 <div class="modal-backdrop panel-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
-  <article class="modal panel-drawer">
+  <article class="modal">
     <div class="modal-sheet-handle" aria-hidden="true"></div>
     <div class="modal-grid">
       <div class="modal-visual">
@@ -163,10 +163,10 @@
   </article>
 </div>
 
-<aside class="routine-drawer panel-drawer" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
+<aside class="routine-drawer" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
   <div class="routine-header panel-header"><div><h2 id="routineTitle">Your routines</h2><span class="panel-summary" id="routineHeaderSummary">Create your first routine</span></div></div>
   <button class="routine-new-toggle" id="routineNewToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add routine</span></button>
-  <div class="routine-switch"><div class="routine-select-row"><div class="routine-editor-control"><button class="routine-selector-button custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
+  <div class="routine-switch"><div class="routine-select-row"><div class="routine-editor-control"><button class="custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
   <div class="routine-data-actions" aria-label="Routine export and import tools"><button id="copyRoutine" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Export</span></button><button id="copyAllRoutines" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button><button id="pasteRoutineToggle" type="button" aria-expanded="false" aria-controls="routinePastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button></div>
   <div class="routine-paste-panel" id="routinePastePanel" hidden><label for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="addRoutineText" type="button">Add</button><button id="importRoutineText" type="button">Replace</button></div></div>
   <div class="routine-schedule" id="routineSchedule"></div>
@@ -175,7 +175,7 @@
 </aside>
 
 <div class="feature-backdrop panel-backdrop" id="progressBackdrop" role="dialog" aria-modal="true" aria-labelledby="progressTitle" aria-hidden="true">
-  <section class="feature-panel progress-panel panel-drawer">
+  <section class="feature-panel progress-panel">
     <div class="routine-header panel-header"><div><h2 id="progressTitle" class="phone-title">Dashboard</h2><span class="panel-summary" id="progressSubtitle">Daily balance, macros, hydration, and training.</span></div><button class="panel-header-action" id="dashboardSettingsBtn" type="button" aria-label="Open settings" aria-haspopup="dialog"><svg class="icon"><use href="#icon-settings"/></svg></button></div>
     <div class="feature-scroll">
       <div class="fuel-stack" id="dashboardFuelStack">
@@ -203,7 +203,7 @@
             </div>
           </div>
 
-          <div class="energy-grid" id="dailyBalanceEnergy" role="button" tabindex="0" aria-haspopup="dialog" aria-label="View meal history">
+          <div class="energy-grid" id="dailyBalanceEnergy" role="button" tabindex="0" aria-expanded="false" aria-controls="mealHistoryExpand" aria-label="View meal history">
             <div class="circle-chart">
               <svg viewBox="0 0 100 100">
                 <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
@@ -229,10 +229,13 @@
               </div>
             </div>
           </div>
+          <div class="meal-history-expand" id="mealHistoryExpand" hidden>
+            <div class="meal-history" id="mealsContainer"></div>
+          </div>
         </div>
 
         <div class="fuel-card">
-          <div class="hydration-section">
+          <div >
             <div class="water-row">
               <div class="water-meta">
                 <span class="eyebrow">Hydration</span>
@@ -279,7 +282,7 @@
       </section>
       <form class="progress-form" id="progressForm" hidden>
         <div class="progress-exercise-fixed feature-field-wide"><span>Exercise</span><strong id="progressExerciseName">Choose an exercise from its details page</strong><small id="progressExerciseMeta">Open an exercise and select Log progress.</small></div>
-        <div class="feature-field progress-date-field"><span>Date</span><div class="progress-date-control"><input id="progressDate" type="hidden"><button class="progress-date-button" id="progressDateButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="progressDatePicker"><span id="progressDateDisplay"></span><svg class="icon progress-date-icon" aria-hidden="true"><use href="#icon-calendar"/></svg></button></div></div>
+        <div class="feature-field"><span>Date</span><div class="progress-date-control"><input id="progressDate" type="hidden"><button class="progress-date-button" id="progressDateButton" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="progressDatePicker"><span id="progressDateDisplay"></span><svg class="icon progress-date-icon" aria-hidden="true"><use href="#icon-calendar"/></svg></button></div></div>
         <div class="feature-field" id="progressSetsField"><span id="progressSetsLabel">Sets</span><div class="routine-stepper"><button class="routine-step progress-step" type="button" data-field="sets" data-delta="-1" aria-label="Decrease sets"><svg class="icon"><use href="#icon-minus"/></svg></button><output id="progressSets" aria-live="polite">3</output><button class="routine-step progress-step" type="button" data-field="sets" data-delta="1" aria-label="Increase sets"><svg class="icon"><use href="#icon-plus"/></svg></button></div></div>
         <div class="feature-field feature-field-wide" id="progressSetsDetailField"><div class="set-cols-toolbar" id="progressColsToolbar" hidden><div class="set-cols-left"><div class="mode-switch mode-switch--compact" id="progressModeSwitch"><button type="button" data-mode="reps" aria-pressed="true">Reps</button><button type="button" data-mode="timed" aria-pressed="false">Timed</button></div><div class="mode-switch mode-switch--compact" id="progressDurationUnitSwitch" role="group" aria-label="Duration unit" hidden><button type="button" data-duration-unit="min" aria-pressed="false">min</button><button type="button" data-duration-unit="sec" aria-pressed="false">sec</button></div></div><div class="set-cols-right"><div class="mode-switch mode-switch--compact" id="progressDistanceSwitch" hidden><button type="button" id="progressColDistanceToggle" aria-pressed="false">Distance</button></div><div class="mode-switch mode-switch--compact"><button type="button" id="progressColWeightToggle" aria-pressed="false">Weight</button></div></div></div><div class="set-weight-list" id="progressSetRows"></div></div>
         <label class="feature-field feature-field-wide"><span>Notes <small>optional</small></span><textarea id="progressNotes" maxlength="160" rows="2" placeholder="Form, tempo, or how the set felt"></textarea></label>
@@ -308,7 +311,7 @@
 
 <!-- FUEL: LOG MEAL PANEL -->
 <div class="feature-backdrop panel-backdrop" id="fuelLogMealModal" role="dialog" aria-modal="true" aria-labelledby="logMealTitle" aria-hidden="true">
-  <section class="feature-panel panel-drawer">
+  <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Search saved meals, describe or enter macros manually.</span></div>
     </div>
@@ -316,12 +319,12 @@
       <form class="progress-form" id="foodForm">
         <div class="feature-field feature-field-wide ingredient-select-field">
           <div class="routine-editor-control ingredient-search-control">
-            <input type="text" class="menu-search-input ingredient-search-input" id="ingredientSearchSwap" placeholder="Search meals or describe a meal" maxlength="500" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="ingredientMenuList" aria-expanded="false" aria-label="Search meals or describe a meal">
+            <input type="text" class="menu-search-input" id="ingredientSearchSwap" placeholder="Search meals or describe a meal" maxlength="500" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="ingredientMenuList" aria-expanded="false" aria-label="Search meals or describe a meal">
             <div class="ingredient-search-actions">
               <button class="ai-action-btn ingredient-search-action" id="mealAiActionButton" data-ai-action="meal" type="button" aria-label="Estimate macros with AI" title="Estimate macros with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button>
               <button class="ingredient-search-action" id="btnMealManual" type="button" aria-label="Enter macros manually" title="Enter macros manually"><svg class="icon"><use href="#icon-plus"/></svg></button>
             </div>
-            <div class="routine-menu" id="menuCustomIngredient" role="listbox" hidden><div class="menu-search-list" id="ingredientMenuList"></div></div>
+            <div class="routine-menu" id="menuCustomIngredient" role="listbox" hidden><div id="ingredientMenuList"></div></div>
           </div>
           <p class="ai-estimate-note" id="mealAiNote" hidden></p>
         </div>
@@ -378,21 +381,9 @@
   </section>
 </div>
 
-<!-- DASHBOARD: MEAL HISTORY DRAWER -->
-<div class="feature-backdrop panel-backdrop" id="mealHistoryBackdrop" role="dialog" aria-modal="true" aria-labelledby="mealHistoryTitle" aria-hidden="true">
-  <section class="feature-panel panel-drawer">
-    <div class="routine-header panel-header">
-      <div><h2 id="mealHistoryTitle">Meal history</h2><span class="panel-summary" id="mealHistoryDate">—</span></div>
-    </div>
-    <div class="feature-scroll">
-      <div class="meal-history" id="mealsContainer"></div>
-    </div>
-  </section>
-</div>
-
 <!-- CUSTOM EXERCISES PANEL -->
 <div class="feature-backdrop panel-backdrop" id="customExerciseModal" role="dialog" aria-modal="true" aria-labelledby="customExerciseTitle" aria-hidden="true">
-  <section class="feature-panel panel-drawer">
+  <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="customExerciseTitle" class="phone-title">Custom exercises</h2><span class="panel-summary">Create your own exercises and manage them here.</span></div>
     </div>
@@ -425,7 +416,7 @@
         <div class="routine-editor-control">
           <button class="custom-select-button" id="btnCustomManageSelect" type="button" aria-haspopup="menu" aria-expanded="false">Select a meal to edit</button>
           <input class="routine-name-editor" id="manageMealEditName" maxlength="40" placeholder="Meal name" aria-label="Meal name" hidden>
-          <div class="routine-menu" id="menuCustomManageSelect" role="menu" hidden><div class="menu-search-list" id="manageMenuList"></div></div>
+          <div class="routine-menu" id="menuCustomManageSelect" role="menu" hidden><div id="manageMenuList"></div></div>
           <input type="text" class="menu-search-input" id="manageSearchSwap" placeholder="Search meals" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search meals" hidden>
         </div>
         <button class="routine-like" id="btnManageLike" type="button" aria-label="Like meal" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button>
@@ -483,7 +474,7 @@
           </div>
         </div>
       </div>
-      <div class="feature-field fuel-target-row fuel-target-water" data-fuel-target="water">
+      <div class="feature-field fuel-target-row" data-fuel-target="water">
         <label>Water (ml)</label>
         <div class="routine-stepper">
           <button class="routine-step" type="button" data-target-step="-100" aria-label="Decrease water target"><svg class="icon"><use href="#icon-minus"/></svg></button>
@@ -545,16 +536,17 @@
 
 <!-- SETTINGS TAB PANEL -->
 <div class="feature-backdrop panel-backdrop" id="settingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
-  <section class="feature-panel settings-panel panel-drawer">
+  <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="settingsTitle">Settings</h2><span class="panel-summary">Preferences, filters, and data tools.</span></div>
+      <button class="panel-header-action" id="settingsGearClose" type="button" aria-label="Close settings"><svg class="icon"><use href="#icon-settings"/></svg></button>
     </div>
     <div class="feature-scroll">
       <div class="settings-stack">
-        <section class="settings-group" id="bodyTargetsSection">
+        <section id="bodyTargetsSection">
           <h3 class="settings-heading">Body & targets</h3>
           <div class="settings-card">
-            <div class="settings-row settings-row-bmi">
+            <div class="settings-row">
               <span class="settings-row-main">
                 <svg class="icon"><use href="#icon-progress"/></svg>
                 <span class="settings-row-stack">
@@ -620,11 +612,11 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Activity level</span></span>
               <div class="settings-select-host">
                 <select id="inActivity" aria-label="Daily Activity Level">
-                  <option value="1.2" data-short="Sedentary">Sedentary (Desk job, no workouts, &lt;5,000 steps/day)</option>
-                  <option value="1.375" data-short="Light">Light (Desk job + gym 1–3 days/wk or ~7,000 steps)</option>
-                  <option value="1.55" selected data-short="Moderate">Moderate (Desk job + gym 3–5 days/wk or ~10,000 steps)</option>
-                  <option value="1.725" data-short="Heavy">Heavy (Active job + gym 5–6 days/wk or ~13,000 steps)</option>
-                  <option value="1.9" data-short="Athlete">Athlete / Extreme (Physical job + hard daily training)</option>
+                  <option value="1.2">Sedentary (Desk job, no workouts, &lt;5,000 steps/day)</option>
+                  <option value="1.375">Light (Desk job + gym 1–3 days/wk or ~7,000 steps)</option>
+                  <option value="1.55" selected>Moderate (Desk job + gym 3–5 days/wk or ~10,000 steps)</option>
+                  <option value="1.725">Heavy (Active job + gym 5–6 days/wk or ~13,000 steps)</option>
+                  <option value="1.9">Athlete / Extreme (Physical job + hard daily training)</option>
                 </select>
               </div>
             </div>
@@ -632,11 +624,11 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Calorie strategy</span></span>
               <div class="settings-select-host">
                 <select id="inStrategy" aria-label="Calorie Goal Strategy">
-                  <option value="-500" data-short="Cut −500">Cut (−500 kcal · ~0.5 kg loss/wk)</option>
-                  <option value="-250" data-short="Mild Cut −250">Mild Cut (−250 kcal · ~0.25 kg loss/wk)</option>
-                  <option value="0" data-short="Maintain">Maintain (0 kcal · Weight maintenance)</option>
-                  <option value="250" selected data-short="Lean Bulk +250">Lean Bulk (+250 kcal · Clean muscle gain)</option>
-                  <option value="500" data-short="Bulk +500">Aggressive Bulk (+500 kcal · Maximum growth)</option>
+                  <option value="-500">Cut (−500 kcal · ~0.5 kg loss/wk)</option>
+                  <option value="-250">Mild Cut (−250 kcal · ~0.25 kg loss/wk)</option>
+                  <option value="0">Maintain (0 kcal · Weight maintenance)</option>
+                  <option value="250" selected>Lean Bulk (+250 kcal · Clean muscle gain)</option>
+                  <option value="500">Aggressive Bulk (+500 kcal · Maximum growth)</option>
                 </select>
               </div>
             </div>
@@ -644,17 +636,17 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-sparkle"/></svg><span>Protein target</span></span>
               <div class="settings-select-host">
                 <select id="inProteinRate" aria-label="Protein Target">
-                  <option value="2.0" selected data-short="2.0 g/kg">2.0 g/kg · Muscle Growth (Optimal Hypertrophy)</option>
-                  <option value="2.2" data-short="2.2 g/kg">2.2 g/kg · Fat Loss / Cut (Preserves Muscle in Deficit)</option>
-                  <option value="1.8" data-short="1.8 g/kg">1.8 g/kg · Maintenance (Balanced Fitness)</option>
-                  <option value="1.6" data-short="1.6 g/kg">1.6 g/kg · Baseline / Endurance (General Health)</option>
+                  <option value="2.0" selected>2.0 g/kg · Muscle Growth (Optimal Hypertrophy)</option>
+                  <option value="2.2">2.2 g/kg · Fat Loss / Cut (Preserves Muscle in Deficit)</option>
+                  <option value="1.8">1.8 g/kg · Maintenance (Balanced Fitness)</option>
+                  <option value="1.6">1.6 g/kg · Baseline / Endurance (General Health)</option>
                 </select>
               </div>
             </div>
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">Training</h3>
           <div class="settings-card">
             <div class="settings-row">
@@ -684,13 +676,13 @@
               <span class="settings-row-main"><svg class="icon"><use href="#icon-routine"/></svg><span>Workout reminder</span></span>
               <button type="button" class="settings-switch" id="workoutReminder" role="switch" aria-checked="true" aria-label="Workout reminder banner"></button>
             </div>
-            <button type="button" class="settings-row settings-row-action" id="addCustomExerciseBtn">
+            <button type="button" class="settings-row" id="addCustomExerciseBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-plus"/></svg><span>Add custom exercise</span></span>
             </button>
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">Rest timer</h3>
           <div class="settings-card">
             <div class="settings-row">
@@ -720,7 +712,7 @@
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">Workout filters</h3>
           <div class="settings-card" id="pillRowEditor" role="group" aria-label="Filter pill rows">
             <div class="settings-row">
@@ -756,18 +748,18 @@
                 <button type="button" data-editor-mode="hidden" aria-pressed="false">Hidden</button>
               </div>
             </div>
-            <button type="button" class="settings-row settings-row-action" data-editor-row="toggles">
+            <button type="button" class="settings-row" data-editor-row="toggles">
               <span class="settings-row-main"><span>Liked / Logged buttons</span></span>
               <span class="settings-row-value" id="togglesHostValue"></span>
             </button>
-            <button type="button" class="settings-row settings-row-action" data-editor-row="tagsHost">
+            <button type="button" class="settings-row" data-editor-row="tagsHost">
               <span class="settings-row-main"><span>Tags</span></span>
               <span class="settings-row-value" id="tagsHostValue"></span>
             </button>
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">Appearance</h3>
           <div class="settings-card">
             <div class="accent-row" id="accentRow" role="radiogroup" aria-label="Accent color">
@@ -787,7 +779,7 @@
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">AI</h3>
           <div class="settings-card">
             <div class="settings-row">
@@ -826,7 +818,7 @@
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">Data</h3>
           <div class="settings-card">
             <div class="settings-row">
@@ -865,27 +857,27 @@
               </div>
             </div>
             <div class="progress-log-paste" id="customExercisePaste" hidden><label for="customExercisePasteText">Custom exercises text</label><textarea id="customExercisePasteText" spellcheck="false" placeholder='## Custom Exercises&#10;- name: Landmine press&#10;  id: c-1750000000-ab12cd&#10;  category: chest&#10;  target: pectorals&#10;  equipment: barbell&#10;  description: Press from angle'></textarea><div><button id="customExercisePasteCancel" type="button">Cancel</button><button id="customExercisePasteAdd" type="button">Add</button><button id="customExercisePasteImport" type="button">Replace</button></div></div>
-            <button type="button" class="settings-row settings-row-action settings-row-danger" id="progressClearDataBtn">
+            <button type="button" class="settings-row settings-row-danger" id="progressClearDataBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-trash"/></svg><span>Clear data…</span></span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
           </div>
         </section>
 
-        <section class="settings-group">
+        <section >
           <h3 class="settings-heading">About</h3>
           <div class="settings-card">
-            <button type="button" class="settings-row settings-row-action" id="checkUpdatesBtn">
+            <button type="button" class="settings-row" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.6.0</span>
+              <span class="settings-row-value" id="updateStatus">v3.6.1</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
-            <a class="settings-row settings-row-action" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
+            <a class="settings-row" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-github"/></svg><span>Source code</span></span>
               <span class="settings-row-value">GitHub</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </a>
-            <a class="settings-row settings-row-action" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page">
+            <a class="settings-row" href="https://thehhr.github.io/Form/#donate" target="_blank" rel="noopener noreferrer" aria-label="Open the Form donation page">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-heart"/></svg><span>Support the project</span></span>
               <span class="settings-row-value">Donate</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
@@ -908,7 +900,7 @@
     <p class="panel-summary" style="margin-bottom: var(--space-4);">Select the categories of data you want to permanently reset.</p>
     <form id="clearDataForm">
       <div class="filter-checks clear-data-checks">
-        <label class="check check-select-all"><input type="checkbox" id="chkClearAll"><strong>Select all</strong></label>
+        <label class="check"><input type="checkbox" id="chkClearAll"><strong>Select all</strong></label>
         <div class="fuel-card-divider" style="margin: 6px 0 10px;"></div>
         <label class="check"><input type="checkbox" id="chkClearLogs"><span>Training progress logs</span></label>
         <label class="check"><input type="checkbox" id="chkClearRoutines"><span>Workout routines</span></label>
@@ -963,7 +955,7 @@
     </div>
   </div>
   <div class="aw-rest-meta" id="awRestMeta" hidden>
-    <div class="aw-rest-exercise" id="awRestExercise"></div>
+    <button type="button" class="aw-rest-exercise" id="awRestExercise" data-rest-action="view-exercise"></button>
     <div class="aw-rest-sets" id="awRestSets" hidden></div>
   </div>
   <div class="aw-rest-full-actions">

@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.6.0';
+const APP_VERSION='3.6.1';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -476,7 +476,7 @@ function sanitizeAwRows(value,fallbackReps){
   if(!Array.isArray(value))return null;
   const rows=value.slice(0,LIMITS.sets).map(entry=>{
     const row=entry&&typeof entry==='object'?entry:{};
-    return{reps:clamp(row.reps??fallbackReps,1,LIMITS.reps),weight:row.weight==null?null:Math.round(clamp(row.weight,0,LIMITS.weight)*10)/10,duration:Math.round(clamp(Number(row.duration)||0,0,LIMITS.duration)*10000)/10000,distance:Math.round(clamp(Number(row.distance)||0,0,LIMITS.distance)*10)/10,done:Boolean(row.done)};
+    return{reps:clamp(row.reps??fallbackReps,1,LIMITS.reps),weight:row.weight==null?null:Math.round(clamp(row.weight,0,LIMITS.weight)*10)/10,duration:Math.round(clamp(Number(row.duration)||0,0,LIMITS.duration)),distance:Math.round(clamp(Number(row.distance)||0,0,LIMITS.distance)*10)/10,done:Boolean(row.done)};
   });
   return rows.length?rows:null;
 }
@@ -574,7 +574,7 @@ $('#progressDateGrid').innerHTML=Array.from({length:6},(_,week)=>`<div role="row
 function openProgressDatePicker(returnFocus=document.activeElement){const selected=parseLocalDate($('#progressDate').value||localDateValue());progressDatePickerMonth=new Date(selected.getFullYear(),selected.getMonth(),1,12);progressDatePickerReturnFocus=returnFocus;renderProgressDatePicker();const picker=$('#progressDatePicker');picker.hidden=false;$('#progressDateButton').setAttribute('aria-expanded','true');picker.classList.add('open');picker.querySelector(`[data-date="${$('#progressDate').value}"]`)?.focus({preventScroll:true})}
 function closeProgressDatePicker(restoreFocus=true){const picker=$('#progressDatePicker');if(!picker||picker.hidden)return;picker.classList.remove('open');$('#progressDateButton').setAttribute('aria-expanded','false');picker.hidden=true;if(restoreFocus&&progressDatePickerReturnFocus?.isConnected)progressDatePickerReturnFocus.focus({preventScroll:true});progressDatePickerReturnFocus=null}
 
-function normalizeRoutine(routine){if(!routine||typeof routine!=='object'||!String(routine.id??''))return null;const seen=new Set();return{id:String(routine.id),name:String(routine.name??'Routine').trim().slice(0,LIMITS.routineName)||'Routine',liked:Boolean(routine.liked),...(routine.secondary?{secondary:true}:{}),items:(Array.isArray(routine.items)?routine.items:[]).filter(item=>item&&VALID_EXERCISE_IDS.has(String(item.exerciseId))&&!seen.has(String(item.exerciseId))&&seen.add(String(item.exerciseId))).map(item=>({exerciseId:String(item.exerciseId),sets:clamp(item.sets,1,LIMITS.sets),reps:clamp(item.reps,0,item.mode==='timed'?60:LIMITS.reps),...(item.mode==='timed'?{mode:'timed',...(item.unit==='sec'||item.unit==='min'?{unit:item.unit}:{})}:{}),...(item.unweighted?{unweighted:true}:{}),...((item.distance&&item.mode==='timed')?{distance:true}:{})}))}}
+function normalizeRoutine(routine){if(!routine||typeof routine!=='object'||!String(routine.id??''))return null;const seen=new Set();return{id:String(routine.id),name:String(routine.name??'Routine').trim().slice(0,LIMITS.routineName)||'Routine',liked:Boolean(routine.liked),...(routine.secondary?{secondary:true}:{}),items:(Array.isArray(routine.items)?routine.items:[]).filter(item=>item&&VALID_EXERCISE_IDS.has(String(item.exerciseId))&&!seen.has(String(item.exerciseId))&&seen.add(String(item.exerciseId))).map(item=>({exerciseId:String(item.exerciseId),sets:clamp(item.sets,1,LIMITS.sets),reps:clamp(Math.round(Number(item.reps)||0),0,item.mode==='timed'?60:LIMITS.reps),...(item.mode==='timed'?{mode:'timed',...(item.unit==='sec'||item.unit==='min'?{unit:item.unit}:{})}:{}),...(item.unweighted?{unweighted:true}:{}),...((item.distance&&item.mode==='timed')?{distance:true}:{})}))}}
 function sanitizeSetWeights(value){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.min(LIMITS.weight,Math.max(0,Number(entry)||0))).slice(0,LIMITS.sets);return list.length?list:null}
 function sanitizeSetReps(value,fallbackLength){if(!Array.isArray(value))return null;const list=value.map(entry=>clamp(Number(entry)||1,1,LIMITS.reps)).slice(0,fallbackLength||LIMITS.sets);return list.length?list:null}
 function setRepsFromUniform(reps,count){const value=clamp(Number(reps)||1,1,LIMITS.reps);return count>0?Array.from({length:count},()=>value):null}
@@ -643,7 +643,7 @@ const state={
   restPrefs:storedRestPrefs,
   progress:{logs:[],activeExerciseId:null,draft:{sets:DEFAULTS.sets,setWeights:[DEFAULTS.weight,DEFAULTS.weight,DEFAULTS.weight],setReps:[DEFAULTS.reps,DEFAULTS.reps,DEFAULTS.reps],setDurations:[],setDistances:[],notes:'',mode:'reps',showWeight:false,durationUnit:'min'}},
   dashboard:{weekOffset:0,monthOffset:0,selectedDate:null,scope:storedProgressPrefs.defaultView},
-  overlay:{active:null,returnFocus:{}},
+  overlay:{active:null,returnFocus:{},under:null},
   mobileTab:'workout',
   planSection:'routines',
   supersetLinking:null,
@@ -2388,7 +2388,7 @@ function formatProgress(log){
     const totals=timedLogTotals(log);
     const parts=[];
     if(totals.intervals>0)parts.push(`${totals.intervals} ${totals.intervals===1?'interval':'intervals'}`);
-    if(totals.duration>0)parts.push(`${formatWeightValue(totals.duration)} min`);
+    if(totals.duration>0){const mins=Math.round(totals.duration),secs=Math.round(totals.duration*60);if(log.durUnit==='sec'||totals.duration<1){if(secs>0)parts.push(`${secs} sec`);}else parts.push(`${mins} min`);}
     if(totals.distance>0)parts.push(`${formatWeightValue(totals.distance)} ${unitDistLabel()}`);
     const weights=(Array.isArray(log.setWeights)?log.setWeights:[]).map(Number).filter(value=>value>0);
     if(weights.length)parts.push(`${formatRange(weights,` ${unitWeightLabel()}`)}`);
@@ -2563,7 +2563,6 @@ function overlayContainer(key){
   if(key==='customExercise') return $('#customExerciseModal .feature-panel');
   if(key==='clearData') return $('#clearDataModal .fuel-modal');
   if(key==='settings') return $('#settingsBackdrop .feature-panel');
-  if(key==='mealHistory') return $('#mealHistoryBackdrop .feature-panel');
   return null;
 }
 
@@ -2578,8 +2577,13 @@ function syncPageState(){
 function openOverlay(key,returnFocus=document.activeElement){
   const preserveDashboardDate=key==='modal'&&state.overlay.active==='progress'?state.dashboard.selectedDate:null;
   if(state.overlay.active&&state.overlay.active!==key){
-    closeActiveOverlay(false);
-    if(preserveDashboardDate)state.dashboard.selectedDate=preserveDashboardDate;
+    if(key==='clearData'&&state.overlay.active==='settings'){
+      state.overlay.under='settings'; /* stack over settings (like appConfirm) — settings stays open beneath */
+    }else{
+      if(state.overlay.active==='clearData'&&state.overlay.under==='settings'){state.overlay.under=null;closeActiveOverlay(false);closeOverlay('settings',false);}
+      else closeActiveOverlay(false);
+      if(preserveDashboardDate)state.dashboard.selectedDate=preserveDashboardDate;
+    }
   }
   state.overlay.returnFocus[key]=returnFocus;
   state.overlay.active=key;
@@ -2588,7 +2592,6 @@ function openOverlay(key,returnFocus=document.activeElement){
   else if(key==='modal'){$('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');}
    else if(key==='logMeal'){$('#fuelLogMealModal').classList.add('open');$('#fuelLogMealModal').setAttribute('aria-hidden','false');logMealSlot=nextLogSlot();renderLogMealSlot();}
    else if(key==='settings'){$('#settingsBackdrop').classList.add('open');$('#settingsBackdrop').setAttribute('aria-hidden','false');syncSettingsControls();if(!aiModuleReady)loadAiModule(true);}
-   else if(key==='mealHistory'){$('#mealHistoryBackdrop').classList.add('open');$('#mealHistoryBackdrop').setAttribute('aria-hidden','false');}
    else if(key==='customExercise'){$('#customExerciseModal').classList.add('open');$('#customExerciseModal').setAttribute('aria-hidden','false');}
    else if(key==='clearData'){$('#clearDataModal').classList.add('open');$('#clearDataModal').setAttribute('aria-hidden','false');updateSelectAllClearCheckbox();}
 
@@ -2616,13 +2619,14 @@ function closeOverlay(key,restoreFocus=true){
   else if(key==='modal'){$('#modalBackdrop').classList.remove('open');$('#modalBackdrop').setAttribute('aria-hidden','true');}
    else if(key==='logMeal'){resetMealSelection();$('#fuelLogMealModal').classList.remove('open');$('#fuelLogMealModal').setAttribute('aria-hidden','true');}
    else if(key==='settings'){$('#settingsBackdrop').classList.remove('open');$('#settingsBackdrop').setAttribute('aria-hidden','true');}
-   else if(key==='mealHistory'){$('#mealHistoryBackdrop').classList.remove('open');$('#mealHistoryBackdrop').setAttribute('aria-hidden','true');}
    else if(key==='customExercise'){$('#customExerciseModal').classList.remove('open');$('#customExerciseModal').setAttribute('aria-hidden','true');}
    else if(key==='mealManager'){
     if(state.mobileTab==='plan'&&state.planSection==='meals'){setMobileTab('workout');return;}
     $('#fuelSettingsBackdrop').classList.remove('open');$('#fuelSettingsBackdrop').setAttribute('aria-hidden','true');
   }
-  else if(key==='clearData'){$('#clearDataModal').classList.remove('open');$('#clearDataModal').setAttribute('aria-hidden','true');}
+  else if(key==='clearData'){$('#clearDataModal').classList.remove('open');$('#clearDataModal').setAttribute('aria-hidden','true');
+  if(state.overlay.under==='settings'){state.overlay.under=null;state.overlay.active='settings';} /* stack: modal closed, settings was never closed */
+  }
 
   syncPageState();
   syncAiActionButtonsVisibility();
@@ -2969,7 +2973,7 @@ function renderRoutineDrawer(){
         const unit=routineItemUnit(item);
         const supersetLinked=Boolean(item.superset);
         const modeRow=`<div class="routine-mode-row"><div class="mode-switch mode-switch--compact"><button type="button" data-mode="reps" aria-pressed="${timed?'false':'true'}">Reps</button><button type="button" data-mode="timed" aria-pressed="${timed?'true':'false'}">Timed</button></div>${timed?`<div class="mode-switch mode-switch--compact" role="group" aria-label="Duration unit"><button type="button" data-unit-toggle data-unit="min" aria-pressed="${unit==='min'?'true':'false'}">min</button><button type="button" data-unit-toggle data-unit="sec" aria-pressed="${unit==='sec'?'true':'false'}">sec</button></div>`:''}${timed?`<div class="mode-switch mode-switch--compact routine-tail"><button type="button" data-distance-toggle aria-pressed="${routineItemDistance(item)?'true':'false'}" aria-label="Toggle distance tracking">Distance</button></div>`:''}<div class="mode-switch mode-switch--compact${timed?'':' routine-tail'}"><button type="button" data-weight-toggle aria-pressed="${routineItemWeighted(item)?'true':'false'}" aria-label="Toggle weight tracking">Weight</button></div></div>`;
-        return`<div class="routine-item${supersetLinked?' superset':''}" data-exercise-id="${esc(item.exerciseId)}"><div class="routine-item-head">${exercise.custom?`<button type="button" class="aw-media aw-media-custom" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon">${icon('movement')}</span></button>`:`<button type="button" class="aw-media" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon" aria-hidden="true">${icon('movement')}</span><img src="${esc(exercise.image)}" alt="" loading="lazy" data-aw-media data-aw-exercise="${esc(exercise.id)}"></button>`}<button type="button" class="routine-item-copy" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="aw-name">${esc(exercise.name)}</span><span class="aw-target">${esc(title(exercise.target))} · ${esc(title(exercise.equipment))}</span></button><button type="button" class="routine-link-btn card-action${state.supersetLinking===item.exerciseId?' linking':''}" data-superset-toggle aria-pressed="${supersetLinked?'true':'false'}" aria-label="${supersetLinked?'Remove superset pairing':'Pair in a superset'}">${icon('link')}</button><button class="routine-drag card-action" type="button" aria-label="Hold and drag to reorder ${esc(exercise.name)}">${icon('sort')}</button><button class="routine-remove card-action" type="button" aria-label="Remove ${esc(exercise.name)}">${icon('close')}</button></div><div class="routine-fields">${modeRow}<div class="routine-field"><label>${timed?'Intervals':'Sets'}</label><div class="routine-stepper"><button class="routine-step routine-decrease" type="button" data-field="sets" aria-label="Decrease ${timed?'intervals':'sets'} for ${esc(exercise.name)}">${icon('minus')}</button><input class="routine-sets" value="${item.sets}" readonly tabindex="-1" aria-label="${timed?'Intervals':'Sets'} for ${esc(exercise.name)}"><button class="routine-step routine-increase" type="button" data-field="sets" aria-label="Increase ${timed?'intervals':'sets'} for ${esc(exercise.name)}">${icon('plus')}</button></div></div><div class="routine-field routine-field-reps"><label>${timed?(unit==='sec'?'Seconds per interval':'Minutes per interval'):'Reps'}</label><div class="routine-stepper"><button class="routine-step routine-decrease" type="button" data-field="reps" data-step="${timed?(unit==='sec'?5:1):1}" aria-label="Decrease ${timed?(unit==='sec'?'seconds':'minutes'):'reps'} for ${esc(exercise.name)}">${icon('minus')}</button><input class="routine-reps" value="${timed?Math.round((Number(item.reps)||0)*100)/100:item.reps}" readonly tabindex="-1" aria-label="${timed?(unit==='sec'?'Seconds per interval':'Minutes per interval'):'Reps'} for ${esc(exercise.name)}"><button class="routine-step routine-increase" type="button" data-field="reps" data-step="${timed?(unit==='sec'?5:1):1}" aria-label="Increase ${timed?(unit==='sec'?'seconds':'minutes'):'reps'} for ${esc(exercise.name)}">${icon('plus')}</button></div></div></div></div>`;
+        return`<div class="routine-item${supersetLinked?' superset':''}" data-exercise-id="${esc(item.exerciseId)}"><div class="routine-item-head">${exercise.custom?`<button type="button" class="aw-media aw-media-custom" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon">${icon('movement')}</span></button>`:`<button type="button" class="aw-media" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon" aria-hidden="true">${icon('movement')}</span><img src="${esc(exercise.image)}" alt="" loading="lazy" data-aw-media data-aw-exercise="${esc(exercise.id)}"></button>`}<button type="button" class="routine-item-copy" data-open-exercise="${esc(exercise.id)}" aria-label="Open ${esc(exercise.name)} details"><span class="aw-name">${esc(exercise.name)}</span><span class="aw-target">${esc(title(exercise.target))} · ${esc(title(exercise.equipment))}</span></button><button type="button" class="routine-link-btn card-action${state.supersetLinking===item.exerciseId?' linking':''}" data-superset-toggle aria-pressed="${supersetLinked?'true':'false'}" aria-label="${supersetLinked?'Remove superset pairing':'Pair in a superset'}">${icon('link')}</button><button class="routine-drag card-action" type="button" aria-label="Hold and drag to reorder ${esc(exercise.name)}">${icon('sort')}</button><button class="routine-remove card-action" type="button" aria-label="Remove ${esc(exercise.name)}">${icon('close')}</button></div><div class="routine-fields">${modeRow}<div class="routine-field"><label>${timed?'Intervals':'Sets'}</label><div class="routine-stepper"><button class="routine-step routine-decrease" type="button" data-field="sets" aria-label="Decrease ${timed?'intervals':'sets'} for ${esc(exercise.name)}">${icon('minus')}</button><input class="routine-sets" value="${item.sets}" readonly tabindex="-1" aria-label="${timed?'Intervals':'Sets'} for ${esc(exercise.name)}"><button class="routine-step routine-increase" type="button" data-field="sets" aria-label="Increase ${timed?'intervals':'sets'} for ${esc(exercise.name)}">${icon('plus')}</button></div></div><div class="routine-field routine-field-reps"><label>${timed?(unit==='sec'?'Seconds per interval':'Minutes per interval'):'Reps'}</label><div class="routine-stepper"><button class="routine-step routine-decrease" type="button" data-field="reps" data-step="${timed?(unit==='sec'?5:1):1}" aria-label="Decrease ${timed?(unit==='sec'?'seconds':'minutes'):'reps'} for ${esc(exercise.name)}">${icon('minus')}</button><input class="routine-reps" value="${timed?Math.round(Number(item.reps)||0):item.reps}" readonly tabindex="-1" aria-label="${timed?(unit==='sec'?'Seconds per interval':'Minutes per interval'):'Reps'} for ${esc(exercise.name)}"><button class="routine-step routine-increase" type="button" data-field="reps" data-step="${timed?(unit==='sec'?5:1):1}" aria-label="Increase ${timed?(unit==='sec'?'seconds':'minutes'):'reps'} for ${esc(exercise.name)}">${icon('plus')}</button></div></div></div></div>`;
       }).join('');
       itemsContainer.querySelectorAll('img[data-aw-media]').forEach(image=>{
         image.addEventListener('error',()=>awMediaFallback(image,image.dataset.awExercise));
@@ -3107,7 +3111,7 @@ function seedAwSets(routine){
     if(timed){
       const unitLog=lastTimedLogForUnit(item.exerciseId,unitSec?'sec':'min');
       const durations=Array.isArray(unitLog?.setDurations)&&unitLog.setDurations.length?unitLog.setDurations:[];
-      const lastDuration=durations.length?(unitSec?Math.round((clamp(Number(durations[durations.length-1])||0,0,1)*60)*100)/100:clamp(Math.round(Number(durations[durations.length-1])*100)/100||0,0,60)):(Number(item.reps)||0);
+      const lastDuration=durations.length?(unitSec?Math.round(clamp(Number(durations[durations.length-1])||0,0,1)*60):clamp(Math.round(Number(durations[durations.length-1])||0)||0,0,60)):Math.round(Number(item.reps)||0);
       const lastDistance=routineItemDistance(item)?(lastLoggedDistanceFor(item.exerciseId)??0):0;
       const weighted=routineItemWeighted(item);
       const lastWeight=weighted?lastLoggedWeightFor(item.exerciseId,true):null;
@@ -3512,7 +3516,7 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
     if(!timed||!rows[index])return;
     const unitSec=routineItemUnit(item)==='sec';
     const durDelta=unitSec?5:1;
-    rows[index].duration=Math.round(clamp((Number(rows[index].duration)||0)+(action==='dur-inc'?durDelta:-durDelta),0,60)*10000)/10000;
+    rows[index].duration=Math.round(clamp((Number(rows[index].duration)||0)+(action==='dur-inc'?durDelta:-durDelta),0,60));
     if(index===0)propagateAwFirstRow(rows,'duration');
     changed=true;
   }else if(action==='dist-inc'||action==='dist-dec'){
@@ -3562,7 +3566,7 @@ function awSetsBlockHtml(exercise,item,skipped=awSkipped(exercise.id)){
         <span class="aw-num">${index+1}</span>
         ${timed?`<div class="routine-stepper" role="group" aria-label="Duration for interval ${index+1} of ${esc(exercise.name)}">
           <button class="routine-step" type="button" data-aw-action="dur-dec" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="Decrease duration"${skipped?' disabled':''}>${icon('minus')}</button>
-          <output aria-live="polite">${formatWeightValue(clamp(Number(set.duration)||0,0,LIMITS.duration))} ${routineItemUnit(item)==='sec'?'sec':'min'}</output>
+          <output aria-live="polite">${Math.round(clamp(Number(set.duration)||0,0,LIMITS.duration))} ${routineItemUnit(item)==='sec'?'sec':'min'}</output>
           <button class="routine-step" type="button" data-aw-action="dur-inc" data-exercise="${exercise.id}" data-aw-index="${index}" aria-label="Increase duration"${skipped?' disabled':''}>${icon('plus')}</button>
         </div>
         ${showDistance?`<div class="routine-stepper" role="group" aria-label="Distance for interval ${index+1} of ${esc(exercise.name)}">
@@ -3625,7 +3629,7 @@ function renderActiveWorkout(){
       <div class="aw-row-top">
         <div class="aw-main">
           ${exercise.custom?`<button type="button" class="aw-media aw-media-custom" data-aw-action="open" data-exercise="${exercise.id}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon">${icon('movement')}</span></button>`:`<button type="button" class="aw-media" data-aw-action="open" data-exercise="${exercise.id}" aria-label="Open ${esc(exercise.name)} details"><span class="custom-icon" aria-hidden="true">${icon('movement')}</span><img src="${mediaSrc}" alt="" loading="lazy" data-aw-media data-aw-exercise="${exercise.id}"></button>`}
-          <div class="aw-name-wrap"><span class="aw-name">${esc(exercise.name)}</span><span class="aw-target">${timed?`${item.sets} intervals · ${Math.round((Number(item.reps)||0)*100)/100} ${routineItemUnit(item)==='min'?'min':'sec'} each · ${esc(title(exercise.target))}`:`${item.sets} sets × ${item.reps} reps · ${esc(title(exercise.target))}`}</span></div>
+          <div class="aw-name-wrap"><span class="aw-name">${esc(exercise.name)}</span><span class="aw-target">${timed?`${item.sets} intervals · ${Math.round(Number(item.reps)||0)} ${routineItemUnit(item)==='min'?'min':'sec'} each · ${esc(title(exercise.target))}`:`${item.sets} sets × ${item.reps} reps · ${esc(title(exercise.target))}`}</span></div>
         </div>
         <div class="aw-row-badges">${item.superset?`<span class="aw-superset-badge">${icon('link')} Superset</span>`:''}${skipped?`<span class="aw-skipped-badge">Skipped</span>`:''}</div>
         <div class="aw-row-tools">${!complete&&!skipped?`<button type="button" class="aw-icon-btn" data-aw-action="replace" data-exercise="${exercise.id}" aria-label="Replace ${esc(exercise.name)}">${icon('swap')}</button>`:''}</div>
@@ -3951,6 +3955,14 @@ $('#awRestFullscreen').addEventListener('click',event=>{
   else if(action==='skip')skipAwRest();
   else if(action==='log-set')awRingActivate();
   else if(action==='minimize')setAwRestMaximized(false);
+  else if(action==='view-exercise'){
+    const row=awActiveRestRow();
+    if(row?.exercise){
+      openModal(row.exercise);
+      /* Opened from the fullscreen timer: cover both the rest overlay (130) and nav (120) */
+      document.getElementById('modalBackdrop')?.classList.add('rest-modal');
+    }
+  }
   else{
     const awButton=event.target.closest('[data-aw-action]');
     if(!awButton)return;
@@ -4164,6 +4176,7 @@ $('#modalInstructionsToggle')?.addEventListener('click', () => {
 
 function closeModal(restoreFocus = true) {
   hideTagMenu();
+  document.getElementById('modalBackdrop')?.classList.remove('rest-modal');
   document.querySelector('.modal-visual')?.classList.remove('media-tall');
   document.getElementById('modalExpandBtn')?.querySelector('use')?.setAttribute('href', '#icon-expand');
   const modal = $('#modalBackdrop .modal');
@@ -4182,7 +4195,7 @@ function seedProgressTimedDraft(fallbackSets) {
   draft.durationUnit = lastLoggedDurUnitFor(state.progress.activeExerciseId) ?? 'sec';
   const seedIntervals = clamp(timed?.intervals || fallbackSets || 1, 1, LIMITS.sets);
   const latestMinutes = lastLoggedDurationFor(state.progress.activeExerciseId);
-  const seedDuration = latestMinutes != null ? (draft.durationUnit === 'sec' ? Math.max(10, Math.round(latestMinutes * 60)) : Math.max(1, latestMinutes)) : (draft.durationUnit === 'sec' ? 10 : 1);
+  const seedDuration = latestMinutes != null ? (draft.durationUnit === 'sec' ? Math.max(10, Math.round(latestMinutes * 60)) : Math.max(1, Math.round(latestMinutes))) : (draft.durationUnit === 'sec' ? 10 : 1);
   const lastDistance = lastLoggedDistanceFor(state.progress.activeExerciseId);
   const lastWeight = lastLoggedWeightFor(state.progress.activeExerciseId, true);
   const seedDistance = lastDistance ?? DEFAULTS.distance;
@@ -4707,7 +4720,7 @@ function syncProgressDraft() {
   const durationStep = sec ? 5 : 1;
   const durationFallback = sec ? 10 : 1;
   if (timed) {
-    draft.setDurations = fitList(draft.setDurations, draft.sets, (value) => clamp(Math.round((Number(value) || 0) * 100) / 100, 0, durationMax), durationFallback);
+    draft.setDurations = fitList(draft.setDurations, draft.sets, (value) => clamp(Math.round(Number(value) || 0), 0, durationMax), durationFallback);
     draft.setDistances = fitList(draft.setDistances, draft.sets, (value) => Math.round(clamp(Number(value) || 0, 0, LIMITS.distance) * 10) / 10, DEFAULTS.distance);
     draft.setWeights = fitList(draft.setWeights, draft.sets, (value) => value, DEFAULTS.weight);
   } else {
@@ -4760,7 +4773,7 @@ function syncProgressDraft() {
         <span class="aw-num">${index + 1}</span>
         <div class="routine-stepper" role="group" aria-label="Duration for interval ${index + 1}">
           <button class="routine-step progress-step" type="button" data-field="duration" data-set-index="${index}" data-delta="-${durationStep}" aria-label="Decrease duration in ${unitLabel} for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('minus')}</button>
-          <output aria-live="polite">${draft.setDurations[index]} ${unitLabel}</output>
+          <output aria-live="polite">${Math.round(Number(draft.setDurations[index]) || 0)} ${unitLabel}</output>
           <button class="routine-step progress-step" type="button" data-field="duration" data-set-index="${index}" data-delta="${durationStep}" aria-label="Increase duration in ${unitLabel} for interval ${index + 1}"${enabled ? '' : ' disabled'}>${icon('plus')}</button>
         </div>
         ${showDistance ? `<div class="routine-stepper" role="group" aria-label="Distance for interval ${index + 1}">
@@ -5344,7 +5357,8 @@ function setMobileTab(tab) {
   if (!tabs.includes(tab)) return;
   closeProgressSettings();
   if (state.mobileTab === 'plan' && tab !== 'plan' && mealEditorLocked()) return;
-  if (state.overlay.active) closeActiveOverlay(false);
+  /* Nav pill (120) sits above every overlay — tapping a tab closes whatever is open, including a settings layer stacked under clear-data. */
+  if (state.overlay.active) { closeActiveOverlay(false); if (state.overlay.active === 'settings') closeOverlay('settings', false); }
 
   const switching = state.mobileTab !== tab;
   if (!switching) { syncMobileTabs(); return; }
@@ -6077,6 +6091,10 @@ $('#modalLogProgress').addEventListener('click', () => {
   const exerciseId = state.activeExercise?.id || '';
   const returnFocus = state.overlay.returnFocus.modal;
   closeModal(false);
+  /* The fullscreen rest (z-index 130) sits above the progress panel's tab-content
+     layer (z-index 90) — collapse it to the pill so Log progress is visible.
+     The rest timer itself keeps running. */
+  if (awRestIsOpen()) setAwRestMaximized(false);
   openProgress(exerciseId, returnFocus);
 });
 $('#mobileProgressBtn').addEventListener('click', () => setMobileTab('dashboard'));
@@ -6268,7 +6286,7 @@ $('#progressDurationUnitSwitch').addEventListener('click', (event) => {
   if (unit === draft.durationUnit) return;
   draft.durationUnit = unit;
   const mins = lastLoggedDurationFor(state.progress.activeExerciseId);
-  const value = mins != null ? (unit === 'sec' ? Math.max(10, Math.round(mins * 60)) : Math.max(1, mins)) : (unit === 'sec' ? 10 : 1);
+  const value = mins != null ? (unit === 'sec' ? Math.max(10, Math.round(mins * 60)) : Math.max(1, Math.round(mins))) : (unit === 'sec' ? 10 : 1);
   draft.setDurations = draft.setDurations.map(() => value);
   syncProgressDraft();
 });
@@ -7607,8 +7625,6 @@ function renderFuelDay() {
   const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
   const formattedDate = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   document.getElementById('dailyBalanceDateEyebrow').innerText = formattedDate;
-  const mealHistoryDate = document.getElementById('mealHistoryDate');
-  if (mealHistoryDate) mealHistoryDate.innerText = formattedDate;
 
   const btnReset = document.getElementById('btnResetToday');
   if (btnReset) btnReset.disabled = isToday;
@@ -7830,12 +7846,19 @@ renderAwRestPill();
 
 /* Handlers previously wired via inline on* attributes */
 document.getElementById('dashboardSettingsBtn')?.addEventListener('click', () => openOverlay('settings'));
-document.getElementById('dailyBalanceEnergy')?.addEventListener('click', () => openOverlay('mealHistory'));
+document.getElementById('settingsGearClose')?.addEventListener('click', () => closeOverlay('settings'));
+/* Meal history: inline expansion inside the daily balance card (no more sliding panel) */
+function toggleMealHistory(){
+  const expand=document.getElementById('mealHistoryExpand');
+  if(!expand)return;
+  expand.hidden=!expand.hidden;
+  document.getElementById('dailyBalanceEnergy')?.setAttribute('aria-expanded',String(!expand.hidden));
+}
+document.getElementById('dailyBalanceEnergy')?.addEventListener('click', toggleMealHistory);
 document.getElementById('dailyBalanceEnergy')?.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openOverlay('mealHistory'); }
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleMealHistory(); }
 });
 $('#settingsBackdrop').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeOverlay('settings'); });
-$('#mealHistoryBackdrop').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeOverlay('mealHistory'); });
 document.getElementById('btnPrevDay')?.addEventListener('click', () => changeDate(-1));
 document.getElementById('btnResetToday')?.addEventListener('click', goToToday);
 document.getElementById('btnNextDay')?.addEventListener('click', () => changeDate(1));

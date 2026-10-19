@@ -441,7 +441,8 @@ html:has(.aw-rest-fullscreen:not([hidden])) body { overflow: hidden; }
 .aw-rest-full-actions { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%); display: flex; gap: 10px; }
 .aw-rest-meta { position: absolute; left: 50%; top: calc(30% + min(43vw, 180px) + 16px); transform: translateX(-50%); width: min(86vw, 360px); max-height: calc(70vh - min(43vw, 180px) - 116px); display: grid; gap: 8px; justify-items: center; overflow-y: auto; overscroll-behavior: contain; }
 .aw-rest-meta[hidden] { display: none; }
-.aw-rest-exercise { width: 100%; text-align: center; color: var(--text); font-family: "Space Grotesk", Roboto, system-ui, sans-serif; font-size: 17px; font-weight: 600; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-rest-exercise { width: 100%; padding: 6px 12px; text-align: center; color: var(--text); background: none; border: 0; border-radius: 999px; appearance: none; cursor: pointer; font-family: "Space Grotesk", Roboto, system-ui, sans-serif; font-size: 17px; font-weight: 600; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-rest-exercise:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .aw-rest-sets { width: 100%; display: grid; gap: 6px; }
 .aw-rest-sets[hidden] { display: none; }
 .aw-rest-full-actions button {
@@ -572,7 +573,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .panel-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 119; /* Modal band: above the pills (118), under the nav pill (120) — every modal lives here; fullscreen rest (130) and rest-modal (140) excepted */
   display: flex;
   justify-content: flex-start;
   background: var(--scrim);
@@ -614,6 +615,9 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 
 /* Exercise detail popup (Desktop: Centered) */
 .modal-backdrop { align-items: center; justify-content: center; }
+/* …except when opened from the fullscreen rest timer: it must cover both the
+   rest overlay (130) and the nav pill (120). Class is added on open, dropped in closeModal(). */
+.modal-backdrop.rest-modal { z-index: 140; }
 .modal {
   position: relative;
   width: min(920px, calc(100vw - 64px));
@@ -1563,21 +1567,26 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 
 /* Meal history — mirrors Stats progress-history layout */
 .meal-history { display: grid; }
+/* Inline meal-history expansion under the daily balance card (replaces the old sliding panel) */
+.meal-history-expand { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--divider); }
+.meal-history-expand[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) { .meal-history-expand:not([hidden]) { animation: fadeUp .18s ease; } }
+.meal-history-expand .progress-entry { margin-top: 6px; }
+.meal-group-head + .progress-entry { margin-top: 0; }
 .settings-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .weight-goal-line { color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .weight-goal-line.positive { color: var(--accent); }
-.meal-group { margin-top: var(--space-4); }
+.meal-group { margin-top: var(--space-2); }
 .meal-group:first-child { margin-top: 0; }
 .meal-group-head {
   width: 100%;
-  min-height: var(--control-size);
+  min-height: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
-  padding: 0 14px;
-  background: var(--surface-container);
-  margin-bottom: var(--space-2);
+  padding: 4px 10px 0;
+  margin-bottom: 2px;
 }
 .meal-group-head h4 { color: var(--text-muted); font-size: 12px; font-weight: var(--weight-semibold); margin: 0; }
 .meal-group-head span { color: var(--text-muted); font-size: 12px; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
@@ -1627,15 +1636,13 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .fuel-overlay {
   position: fixed;
   inset: 0;
-  z-index: 115;
+  z-index: 119; /* Modal band: above the pills (118), under the nav pill (120) */
   background: var(--scrim);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 .fuel-overlay.open { opacity: 1; visibility: visible; }
-/* Confirm dialog sits above all overlays (#planSwitch is 118) but below the bottom bar (.mobile-tab-bar is 120) */
-#confirmDialogBackdrop { z-index: 119; }
 
 /* Body metrics & Clear Data modals */
 .fuel-modal-backdrop { display: none; place-items: center; padding: var(--space-4); }
@@ -2210,13 +2217,14 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   }
 
   .feature-backdrop:not(.mobile-tab-active) .panel-header,
-  .feature-backdrop:not(.mobile-tab-active) .routine-header {
-    padding: var(--space-2) 0 var(--space-3) 0;
-    margin-bottom: var(--space-2);
-    border: none;
-  }
-  #progressBackdrop:not(.mobile-tab-active) .routine-header { padding-top: var(--space-2); }
-  #fuelLogMealModal:not(.mobile-tab-active) .routine-header { padding-top: var(--space-4); margin-bottom: var(--space-3); }
+    .feature-backdrop:not(.mobile-tab-active) .routine-header {
+      /* Match the dashboard/tab header placement exactly: title & header action at
+         16px from the edge (panel 12 + header 4) and 6px from the top. */
+      padding: 6px 4px var(--space-3) 4px;
+      margin-bottom: var(--space-2);
+      border: none;
+    }
+    #fuelLogMealModal:not(.mobile-tab-active) .routine-header { padding-top: var(--space-4); margin-bottom: var(--space-3); }
   .feature-backdrop:not(.mobile-tab-active) .feature-scroll {
     padding: 0 0 calc(var(--bar-clear) + 16px);
   }
@@ -2299,7 +2307,10 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     .fuel-modal-backdrop.open .fuel-modal { animation: sheetUp .25s cubic-bezier(0.32, 0.72, 0, 1); }
   }
 
-  .progress-date-picker-layer { align-items: end; padding: var(--space-3) var(--space-3) calc(var(--bar-clear) + 12px); }
+  /* Settings: no slide-up — panel appears in place, backdrop supplies the fade */
+  #settingsBackdrop:not(.mobile-tab-active) .feature-panel { transform: none; transition: none; animation: none; }
+
+  .progress-date-picker-layer { align-items: center; padding: var(--space-3); }
   .progress-date-picker-card { width: 100%; max-width: 380px; background: var(--surface-container); border: none; border-radius: var(--radius-sheet); }
 
   .fuel-drawer-backdrop {
