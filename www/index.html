@@ -133,7 +133,7 @@
   </section>
 </div>
 
-<div class="modal-backdrop panel-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+<div class="modal-backdrop panel-backdrop sheet" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
   <article class="modal">
     <div class="modal-sheet-handle" aria-hidden="true"></div>
     <div class="modal-grid">
@@ -163,18 +163,17 @@
   </article>
 </div>
 
-<aside class="routine-drawer" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
-  <div class="routine-header panel-header"><div><h2 id="routineTitle">Your routines</h2><span class="panel-summary" id="routineHeaderSummary">Create your first routine</span></div></div>
-  <button class="routine-new-toggle" id="routineNewToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add routine</span></button>
-  <div class="routine-switch"><div class="routine-select-row"><div class="routine-editor-control"><button class="custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Delete routine" disabled>Delete</button></div></div>
+<aside class="routine-drawer screen" id="routineDrawer" role="dialog" aria-modal="true" aria-labelledby="routineTitle" aria-hidden="true">
+  <div class="routine-header panel-header"><div><h2 id="routineTitle">Routines</h2><span class="panel-summary" id="routineHeaderSummary">Create your first routine</span></div><button class="panel-header-action" id="routineNewToggle" type="button" aria-label="Add"><svg class="icon"><use href="#icon-plus"/></svg></button></div>
+  <div class="routine-switch"><button type="button" class="search-icon-btn" aria-haspopup="menu" aria-controls="routineMenu" aria-label="Choose a routine"><svg class="icon"><use href="#icon-search"/></svg><svg class="icon filter-chevron"><use href="#icon-chevron"/></svg></button><div class="routine-select-row"><div class="routine-editor-control"><button class="custom-select-button" id="routineSelectorButton" type="button" aria-haspopup="menu" aria-expanded="false">Select a routine to edit</button><input class="routine-name-editor" id="routineEditName" maxlength="40" placeholder="Routine name" aria-label="Routine name" hidden><button class="routine-2nd" id="secondaryRoutine" type="button" aria-label="Mark as secondary routine" aria-pressed="false" disabled>2nd</button><button class="ai-action-btn" id="aiRoutineToggle" data-ai-action="routine" type="button" aria-label="Generate routine with AI" aria-pressed="false" hidden><svg class="icon"><use href="#icon-sparkle"/></svg></button><div class="routine-menu" id="routineMenu" role="menu" hidden></div></div><button class="routine-like" id="likeRoutine" type="button" aria-label="Like routine" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button><button id="deleteRoutine" type="button" aria-label="Done" disabled><svg class="icon"><use href="#icon-check"/></svg></button></div></div>
   <div class="routine-data-actions" aria-label="Routine export and import tools"><button id="copyRoutine" type="button"><svg class="icon"><use href="#icon-copy"/></svg><span>Export</span></button><button id="copyAllRoutines" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button><button id="pasteRoutineToggle" type="button" aria-expanded="false" aria-controls="routinePastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button></div>
-  <div class="routine-paste-panel" id="routinePastePanel" hidden><label for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="addRoutineText" type="button">Add</button><button id="importRoutineText" type="button">Replace</button></div></div>
+  <div class="routine-paste-panel import-popup" id="routinePastePanel" role="dialog" aria-modal="true" aria-labelledby="routinePasteLabel" hidden><button class="import-popup-scrim" type="button" data-import-close aria-label="Close import"></button><div class="import-popup-card"><label id="routinePasteLabel" for="routinePasteText">Paste routine text</label><textarea id="routinePasteText" spellcheck="false" placeholder="Chest&#10;0003 3 * 10&#10;0001 4 * 12 timed min&#10;0006 3 * 10 weighted&#10;&#10;Arms&#10;0006 3 * 10 unweighted"></textarea><div class="routine-paste-actions"><button id="cancelRoutinePaste" type="button">Cancel</button><button id="importRoutineText" type="button">Replace</button><button id="addRoutineText" type="button">Add</button></div></div></div>
   <div class="routine-schedule" id="routineSchedule"></div>
   <button class="routine-add-exercises" id="routineAddExercises" type="button" hidden>Add exercise</button>
   <div class="routine-items" id="routineItems"></div>
 </aside>
 
-<div class="feature-backdrop panel-backdrop" id="progressBackdrop" role="dialog" aria-modal="true" aria-labelledby="progressTitle" aria-hidden="true">
+<div class="feature-backdrop panel-backdrop screen" id="progressBackdrop" role="dialog" aria-modal="true" aria-labelledby="progressTitle" aria-hidden="true">
   <section class="feature-panel progress-panel">
     <div class="routine-header panel-header"><div><h2 id="progressTitle" class="phone-title">Dashboard</h2><span class="panel-summary" id="progressSubtitle">Daily balance, macros, hydration, and training.</span></div><button class="panel-header-action" id="dashboardSettingsBtn" type="button" aria-label="Open settings" aria-haspopup="dialog"><svg class="icon"><use href="#icon-settings"/></svg></button></div>
     <div class="feature-scroll">
@@ -310,7 +309,7 @@
 </div>
 
 <!-- FUEL: LOG MEAL PANEL -->
-<div class="feature-backdrop panel-backdrop" id="fuelLogMealModal" role="dialog" aria-modal="true" aria-labelledby="logMealTitle" aria-hidden="true">
+<div class="feature-backdrop panel-backdrop sheet" id="fuelLogMealModal" role="dialog" aria-modal="true" aria-labelledby="logMealTitle" aria-hidden="true">
   <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="logMealTitle">Log meal</h2><span class="panel-summary">Search saved meals, describe or enter macros manually.</span></div>
@@ -382,7 +381,7 @@
 </div>
 
 <!-- CUSTOM EXERCISES PANEL -->
-<div class="feature-backdrop panel-backdrop" id="customExerciseModal" role="dialog" aria-modal="true" aria-labelledby="customExerciseTitle" aria-hidden="true">
+<div class="feature-backdrop panel-backdrop screen" id="customExerciseModal" role="dialog" aria-modal="true" aria-labelledby="customExerciseTitle" aria-hidden="true">
   <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="customExerciseTitle" class="phone-title">Custom exercises</h2><span class="panel-summary">Create your own exercises and manage them here.</span></div>
@@ -405,22 +404,22 @@
 </div>
 
 <!-- FUEL: SETTINGS & MEAL LIBRARY DRAWER -->
-<div class="fuel-drawer-backdrop fuel-overlay" id="fuelSettingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="fuelSettingsTitle" aria-hidden="true">
+<div class="fuel-drawer-backdrop fuel-overlay screen" id="fuelSettingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="fuelSettingsTitle" aria-hidden="true">
   <aside class="fuel-drawer fuel-manager-drawer">
     <div class="routine-header panel-header">
-      <div><h2 id="fuelSettingsTitle">Your meals</h2><span class="panel-summary" id="fuelHeaderSummary">Create your first meal</span></div>
+      <div><h2 id="fuelSettingsTitle">Meals</h2><span class="panel-summary" id="fuelHeaderSummary">Create your first meal</span></div>
+      <button class="panel-header-action" id="fuelNewMealToggle" type="button" aria-label="Add"><svg class="icon"><use href="#icon-plus"/></svg></button>
     </div>
-    <button class="routine-new-toggle" id="fuelNewMealToggle" type="button"><svg class="icon"><use href="#icon-plus"/></svg><span>Add meal</span></button>
     <div class="routine-switch">
+      <button type="button" class="search-icon-btn" aria-haspopup="menu" aria-controls="menuCustomManageSelect" aria-label="Choose a meal"><svg class="icon"><use href="#icon-search"/></svg><svg class="icon filter-chevron"><use href="#icon-chevron"/></svg></button>
       <div class="routine-select-row">
-        <div class="routine-editor-control">
-          <button class="custom-select-button" id="btnCustomManageSelect" type="button" aria-haspopup="menu" aria-expanded="false">Select a meal to edit</button>
+        <div class="routine-editor-control"><button class="custom-select-button" id="btnCustomManageSelect" type="button" aria-haspopup="menu" aria-expanded="false">Select a meal to edit</button>
           <input class="routine-name-editor" id="manageMealEditName" maxlength="40" placeholder="Meal name" aria-label="Meal name" hidden>
           <div class="routine-menu" id="menuCustomManageSelect" role="menu" hidden><div id="manageMenuList"></div></div>
           <input type="text" class="menu-search-input" id="manageSearchSwap" placeholder="Search meals" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search meals" hidden>
         </div>
         <button class="routine-like" id="btnManageLike" type="button" aria-label="Like meal" aria-pressed="false" disabled><svg class="icon"><use href="#icon-heart"/></svg></button>
-        <button id="btnManageDelete" type="button" aria-label="Delete meal" disabled>Delete</button>
+        <button id="btnManageDelete" type="button" aria-label="Done" disabled><svg class="icon"><use href="#icon-check"/></svg></button>
       </div>
     </div>
     <div class="routine-data-actions" aria-label="Meal library export and import tools">
@@ -428,7 +427,7 @@
       <button id="copyAllMeals" type="button"><svg class="icon"><use href="#icon-copy-all"/></svg><span>Export all</span></button>
       <button id="pasteMealToggle" type="button" aria-expanded="false" aria-controls="mealPastePanel"><svg class="icon"><use href="#icon-clipboard"/></svg><span>Import</span></button>
     </div>
-    <div class="routine-paste-panel" id="mealPastePanel" hidden><label for="mealPasteText">Paste meal text</label><textarea id="mealPasteText" spellcheck="false" placeholder="Chicken Breast, raw / skinless - Poultry (200g)&#10;Per100g 103cal 23.1pro 0carb 1.2fat&#10;&#10;Egg, whole raw (1 large ≈ 50g) - Dairy/Eggs (150g)&#10;Per100g 139cal 12.6pro 0.7carb 9.5fat"></textarea><div class="routine-paste-actions"><button id="cancelMealPaste" type="button">Cancel</button><button id="addMealText" type="button">Add</button><button id="importMealText" type="button">Replace</button></div></div>
+    <div class="routine-paste-panel import-popup" id="mealPastePanel" role="dialog" aria-modal="true" aria-labelledby="mealPasteLabel" hidden><button class="import-popup-scrim" type="button" data-import-close aria-label="Close import"></button><div class="import-popup-card"><label id="mealPasteLabel" for="mealPasteText">Paste meal text</label><textarea id="mealPasteText" spellcheck="false" placeholder="Chicken Breast, raw / skinless - Poultry (200g)&#10;Per100g 103cal 23.1pro 0carb 1.2fat&#10;&#10;Egg, whole raw (1 large ≈ 50g) - Dairy/Eggs (150g)&#10;Per100g 139cal 12.6pro 0.7carb 9.5fat"></textarea><div class="routine-paste-actions"><button id="cancelMealPaste" type="button">Cancel</button><button id="importMealText" type="button">Replace</button><button id="addMealText" type="button">Add</button></div></div></div>
 
     <div class="fuel-manager-scroll">
     <section class="fuel-target-editor" id="fuelTargetEditor" aria-label="Daily target overrides" hidden>
@@ -535,7 +534,7 @@
 </div>
 
 <!-- SETTINGS TAB PANEL -->
-<div class="feature-backdrop panel-backdrop" id="settingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
+<div class="feature-backdrop panel-backdrop screen" id="settingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
   <section class="feature-panel">
     <div class="routine-header panel-header">
       <div><h2 id="settingsTitle">Settings</h2><span class="panel-summary">Preferences, filters, and data tools.</span></div>
@@ -558,7 +557,7 @@
             </div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-movement"/></svg><span>Biological sex</span></span>
-              <div class="seg-control" data-sex-seg role="group" aria-label="Biological sex">
+              <div class="seg-control" role="group" aria-label="Biological sex">
                 <button type="button" data-sex-value="m" aria-pressed="true">Male</button>
                 <button type="button" data-sex-value="f" aria-pressed="false">Female</button>
               </div>
@@ -840,7 +839,7 @@
                 <button type="button" class="pill" id="progressPasteLog" aria-expanded="false" aria-controls="progressLogPaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="progressLogPaste" hidden><label for="progressLogPasteText">Progress log text</label><textarea id="progressLogPasteText" spellcheck="false" placeholder="exercise: &quot;Lever Alternating Narrow Grip Seated Row&quot;&#10;exerciseId: #0571&#10;date: 2026-08-27&#10;int: 3&#10;dur(sec): 15, 15, 15&#10;dist(km): 2, 2, 2&#10;notes:&#10;id: 1787840342296&#10;&#10;exercise: &quot;Cable Lateral Pulldown With V-Bar&quot;&#10;exerciseId: #2616&#10;date: 2026-08-27&#10;sets: 3&#10;weight(kg): 25, 25, 25&#10;reps: 12, 12, 12&#10;notes:&#10;id: 1787840342296"></textarea><div><button id="progressLogPasteCancel" type="button">Cancel</button><button id="progressLogPasteAdd" type="button">Add</button><button id="progressLogPasteImport" type="button">Replace</button></div></div>
+            <div class="progress-log-paste import-popup" id="progressLogPaste" role="dialog" aria-modal="true" aria-labelledby="progressLogPasteLabel" hidden><button class="import-popup-scrim" type="button" data-import-close aria-label="Close import"></button><div class="import-popup-card"><label id="progressLogPasteLabel" for="progressLogPasteText">Progress log text</label><textarea id="progressLogPasteText" spellcheck="false" placeholder="exercise: &quot;Lever Alternating Narrow Grip Seated Row&quot;&#10;exerciseId: #0571&#10;date: 2026-08-27&#10;int: 3&#10;dur(sec): 15, 15, 15&#10;dist(km): 2, 2, 2&#10;notes:&#10;id: 1787840342296&#10;&#10;exercise: &quot;Cable Lateral Pulldown With V-Bar&quot;&#10;exerciseId: #2616&#10;date: 2026-08-27&#10;sets: 3&#10;weight(kg): 25, 25, 25&#10;reps: 12, 12, 12&#10;notes:&#10;id: 1787840342296"></textarea><div><button id="progressLogPasteCancel" type="button">Cancel</button><button id="progressLogPasteImport" type="button">Replace</button><button id="progressLogPasteAdd" type="button">Add</button></div></div></div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-flame"/></svg><span>Meal logs</span></span>
               <div class="settings-io-actions">
@@ -848,7 +847,7 @@
                 <button type="button" class="pill" id="mealPasteLog" aria-expanded="false" aria-controls="mealLogPaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="mealLogPaste" hidden><label for="mealLogPasteText">Meal log text</label><textarea id="mealLogPasteText" spellcheck="false" placeholder='date: 2026-08-11&#10;water: 1000 ml&#10;&#10;date: 2026-08-11&#10;Egg (150g) - Dinner&#10;209cal 18.9pro 1carb 14.3fat&#10;id: 1786473550906'></textarea><div><button id="mealLogPasteCancel" type="button">Cancel</button><button id="mealLogPasteAdd" type="button">Add</button><button id="mealLogPasteImport" type="button">Replace</button></div></div>
+            <div class="progress-log-paste import-popup" id="mealLogPaste" role="dialog" aria-modal="true" aria-labelledby="mealLogPasteLabel" hidden><button class="import-popup-scrim" type="button" data-import-close aria-label="Close import"></button><div class="import-popup-card"><label id="mealLogPasteLabel" for="mealLogPasteText">Meal log text</label><textarea id="mealLogPasteText" spellcheck="false" placeholder='date: 2026-08-11&#10;water: 1000 ml&#10;&#10;date: 2026-08-11&#10;Egg (150g) - Dinner&#10;209cal 18.9pro 1carb 14.3fat&#10;id: 1786473550906'></textarea><div><button id="mealLogPasteCancel" type="button">Cancel</button><button id="mealLogPasteImport" type="button">Replace</button><button id="mealLogPasteAdd" type="button">Add</button></div></div></div>
             <div class="settings-row">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-dumbbell"/></svg><span>Custom exercises</span></span>
               <div class="settings-io-actions">
@@ -856,7 +855,7 @@
                 <button type="button" class="pill" id="customExercisePasteLog" aria-expanded="false" aria-controls="customExercisePaste">Import</button>
               </div>
             </div>
-            <div class="progress-log-paste" id="customExercisePaste" hidden><label for="customExercisePasteText">Custom exercises text</label><textarea id="customExercisePasteText" spellcheck="false" placeholder='## Custom Exercises&#10;- name: Landmine press&#10;  id: c-1750000000-ab12cd&#10;  category: chest&#10;  target: pectorals&#10;  equipment: barbell&#10;  description: Press from angle'></textarea><div><button id="customExercisePasteCancel" type="button">Cancel</button><button id="customExercisePasteAdd" type="button">Add</button><button id="customExercisePasteImport" type="button">Replace</button></div></div>
+            <div class="progress-log-paste import-popup" id="customExercisePaste" role="dialog" aria-modal="true" aria-labelledby="customExercisePasteLabel" hidden><button class="import-popup-scrim" type="button" data-import-close aria-label="Close import"></button><div class="import-popup-card"><label id="customExercisePasteLabel" for="customExercisePasteText">Custom exercises text</label><textarea id="customExercisePasteText" spellcheck="false" placeholder='## Custom Exercises&#10;- name: Landmine press&#10;  id: c-1750000000-ab12cd&#10;  category: chest&#10;  target: pectorals&#10;  equipment: barbell&#10;  description: Press from angle'></textarea><div><button id="customExercisePasteCancel" type="button">Cancel</button><button id="customExercisePasteImport" type="button">Replace</button><button id="customExercisePasteAdd" type="button">Add</button></div></div></div>
             <button type="button" class="settings-row settings-row-danger" id="progressClearDataBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-trash"/></svg><span>Clear data…</span></span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
@@ -869,7 +868,7 @@
           <div class="settings-card">
             <button type="button" class="settings-row" id="checkUpdatesBtn">
               <span class="settings-row-main"><svg class="icon"><use href="#icon-reset"/></svg><span>Check for updates</span></span>
-              <span class="settings-row-value" id="updateStatus">v3.6.1</span>
+              <span class="settings-row-value" id="updateStatus">v3.6.2</span>
               <svg class="icon settings-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </button>
             <a class="settings-row" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Open the Form repository on GitHub">
@@ -890,7 +889,7 @@
 </div>
 
 <!-- CLEAR DATA MODAL DIALOG -->
-<div class="fuel-modal-backdrop fuel-overlay" id="clearDataModal" role="dialog" aria-modal="true" aria-labelledby="clearDataTitle" aria-hidden="true">
+<div class="fuel-modal-backdrop fuel-overlay sheet" id="clearDataModal" role="dialog" aria-modal="true" aria-labelledby="clearDataTitle" aria-hidden="true">
   <div class="fuel-modal">
     <div class="modal-header-row">
       <div>
@@ -919,7 +918,7 @@
 </div>
 
 <!-- APP CONFIRM DIALOG -->
-<div class="fuel-modal-backdrop fuel-overlay" id="confirmDialogBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage" aria-hidden="true">
+<div class="fuel-modal-backdrop fuel-overlay sheet" id="confirmDialogBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage" aria-hidden="true">
   <div class="fuel-modal">
     <div class="modal-header-row">
       <div>

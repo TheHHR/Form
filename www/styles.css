@@ -1,6 +1,10 @@
 ﻿/* Form design system — Gym-dark, layered depth */
 :root {
   color-scheme: dark;
+  /* Page-type system: exactly two motions (fullscreen fade / sheet slide-up) */
+  --ease-page: cubic-bezier(.32, .72, .28, 1);
+  --t-screen: .18s;
+  --t-sheet: .25s;
   --surface: #0a0b0d;
   --surface-container: #15161a;
   --surface-container-high: #1c1d22;
@@ -28,6 +32,7 @@
   --weight-semibold: 500;
   --weight-bold: 700;
   --control-size: 44px;
+  --field-text-x: 58px; /* left text inset of a search-style field, from the capsule edge */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -184,7 +189,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .mobile-nav-button,
 .custom-select-button,
 .load button,
-.routine-new-toggle,
 .routine-switch button,
 .routine-data-actions button,
 .routine-paste-panel textarea,
@@ -206,7 +210,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .progress-entry-date,
 /* M3 filled & tonal buttons are fully rounded */
 .feature-primary,
-.routine-new-toggle,
 .load button,
 .progress-cancel,
 .progress-log-paste button,
@@ -222,7 +225,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   border-radius: 999px;
 }
 .feature-primary,
-.routine-new-toggle,
 .modal-progress button { font-weight: var(--weight-medium); letter-spacing: .01em; }
 
 .mobile-nav-button {
@@ -291,7 +293,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-add-row { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin-top: 2px; padding: 12px var(--space-3); color: var(--accent); background: transparent; border: 1px dashed rgba(var(--accent-rgb), .45); border-radius: var(--radius-control); font-size: 13px; font-weight: var(--weight-semibold); cursor: pointer; appearance: none; transition: background-color .15s ease, border-color .15s ease; }
 .aw-add-row .aw-add-row-icon { display: grid; place-items: center; }
 .aw-add-row .aw-add-row-icon .icon { width: 16px; height: 16px; }
-.aw-add-row:active { background: rgba(var(--accent-rgb), .1); }
 .aw-add-row:focus-visible { border-color: var(--accent); outline: none; }
 .aw-row.collapsed { min-height: 0; gap: 6px; box-shadow: none; }
 .aw-row.collapsed .aw-addremove { margin-top: 0; }
@@ -318,7 +319,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-addremove { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: 2px; }
 .aw-addremove-group { display: flex; gap: var(--space-2); }
 .aw-addremove button { min-height: 28px; padding: 0 14px; color: var(--text-soft); background: var(--surface-container-high); border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: var(--weight-semibold); cursor: pointer; appearance: none; transition: background-color .15s ease, color .15s ease, opacity .15s ease; }
-.aw-addremove button:active:not(:disabled) { background: rgba(var(--accent-rgb), .15); color: var(--accent); }
 .aw-addremove button:disabled { opacity: .35; cursor: default; }
 .aw-addremove button:focus-visible { outline: 2px solid rgba(var(--accent-rgb), .6); outline-offset: 1px; }
 .aw-addremove button.active { color: var(--accent); background: rgba(var(--accent-rgb), .18); border-color: rgba(var(--accent-rgb), .45); }
@@ -329,7 +329,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-row-tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; align-self: center; }
 .aw-icon-btn { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; padding: 0; color: var(--accent); background: transparent; border: none; border-radius: var(--radius-control); cursor: pointer; appearance: none; transition: color .15s ease, background-color .15s ease; }
 .aw-icon-btn .icon { width: 18px; height: 18px; }
-.aw-icon-btn:active { color: var(--text); background: var(--surface-container-high); }
 .aw-icon-btn:disabled { opacity: .35; cursor: not-allowed; }
 .aw-skipped-badge { color: var(--text-muted); font-size: 11px; font-weight: var(--weight-semibold); font-style: italic; }
 .aw-row.skipped { opacity: .55; }
@@ -399,6 +398,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 }
 @media (prefers-reduced-motion: no-preference) {
   .aw-rest-pill:not([hidden]) { animation: planSwitchIn .28s cubic-bezier(.32,.72,.28,1); }
+  /* dismissal mirrors the entrance (sink 8px + fade); app.js flips [hidden] on animationend */
+  .aw-rest-pill.is-exiting { animation: planSwitchOut .2s cubic-bezier(.32,.72,.28,1) forwards; pointer-events: none; }
 }
 
 /* Fullscreen rest timer */
@@ -499,6 +500,10 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+@keyframes planSwitchOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(8px); }
+}
 
 /* Shared micro-entrance animations (subtle, matching planSwitch) */
 @keyframes fadeUp {
@@ -509,20 +514,20 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes sheetUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
 @media (prefers-reduced-motion: no-preference) {
   .routine-menu:not([hidden]) { animation: fadeUp .16s cubic-bezier(.32,.72,.28,1); }
   .filter-pills:not([hidden]) { animation: fadeUp .2s cubic-bezier(.32,.72,.28,1); }
-  .routine-paste-panel:not([hidden]),
-  .progress-log-paste:not([hidden]) { animation: fadeUp .18s cubic-bezier(.32,.72,.28,1); }
+  /* popups: entrance = keyframe while .open, exit = transition (closing removes .open) */
+  .import-popup.open .import-popup-card { animation: fadeUp .22s cubic-bezier(.32,.72,.28,1); }
+  .import-popup.open .import-popup-scrim { animation: fadeIn .2s ease; }
   .progress-date-picker-layer.open .progress-date-picker-card { animation: fadeUp .22s cubic-bezier(.32,.72,.28,1); }
   .progress-date-picker-layer.open .progress-date-picker-scrim { animation: fadeIn .2s ease; }
-  .feature-backdrop.open .feature-panel,
-  .modal-backdrop.open .modal,
-  .fuel-modal-backdrop.open .fuel-modal { animation: fadeIn .2s ease; }
+  .import-popup:not(.open) { transition: visibility 0s linear .2s; }
+  .progress-date-picker-layer:not(.open) { transition: visibility 0s linear .2s; }
+  .import-popup:not(.open) .import-popup-scrim,
+  .progress-date-picker-layer:not(.open) .progress-date-picker-scrim { opacity: 0; transition: opacity .2s ease; }
+  .import-popup:not(.open) .import-popup-card,
+  .progress-date-picker-layer:not(.open) .progress-date-picker-card { opacity: 0; transform: translateY(8px); transition: opacity .22s ease, transform .22s cubic-bezier(.32,.72,.28,1); }
 }
 .plan-scroll-clear.plan-scroll-clear {
   padding-bottom: var(--plan-clear, 118px);
@@ -594,14 +599,14 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   color: var(--text);
   background: var(--surface);
   border-right: 1px solid var(--border);
-  box-shadow: 20px 0 60px rgba(0,0,0,.38);
-  display: none;
+  box-shadow: 20px 0 60px rgba(0, 0, 0, .38);
+  display: flex;
 }
 .routine-drawer { position: fixed; inset: 0 auto auto 0; z-index: 110; height: 100dvh; overflow: hidden; padding: var(--space-5) var(--space-5) 0; }
 .feature-panel { position: relative; height: 100%; padding: var(--space-5) var(--space-5) 0; overflow: hidden; }
 .feature-backdrop.open .feature-panel { display: flex; }
 .panel-header,
-.routine-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: 0 4px; margin-bottom: var(--space-4); }
+.routine-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: 0; margin-bottom: var(--space-4); }
 .panel-header h2,
 .routine-header h2 { margin: 0; color: var(--text); font-size: 32px; font-weight: var(--weight-bold); letter-spacing: -.025em; line-height: 1.15; }
 #progressTitle,
@@ -611,7 +616,7 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .panel-header p,
 .routine-header p { margin: 0; color: var(--text-muted); font-size: 12px; }
 .panel-header .panel-summary,
-.routine-header .panel-summary { display: block; margin-top: 2px; color: var(--text-muted); font-size: 13px; font-weight: 500; }
+.routine-header .panel-summary { display: block; margin-top: 2px; color: var(--text-muted); font-size: 13px; font-weight: 500; line-height: 1.4; /* same line box as .mobile-phone-subtitle, so the field below lands on the same y */ }
 
 /* Exercise detail popup (Desktop: Centered) */
 .modal-backdrop { align-items: center; justify-content: center; }
@@ -786,11 +791,51 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .modal-progress .modal-like[aria-pressed="true"] .icon { fill: currentColor; }
 
 /* Routine drawer */
-.routine-new-toggle { min-height: var(--control-size); display: flex; align-items: center; justify-content: center; gap: var(--space-2); color: var(--accent-ink); background: var(--accent); border: none; font-weight: var(--weight-semibold); }
-.routine-switch { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); align-content: center; }
+/* Selection pill: the capsule look (fill / no border / no shadow / 48px) is
+   NOT restated here — .routine-switch is listed with .mobile-top-search input
+   down in the Phone view section, so both share the search field's own rule. */
+.routine-switch {
+  margin-top: 0; /* header margin-bottom (16px) is the whole gap = the search box's 16px under its subtitle */
+  padding: 2px var(--space-3); /* 44px row + 4 = 48px = the search field's min-height */
+  position: relative; /* anchors the .search-icon-btn at 10px, like .mobile-top-search */
+  align-content: center;
+}
+/* every panel header is flush with its panel content (padding comes from the
+   base .panel-header rule; sheets re-inset themselves further down) */
+/* the Workout search's leading-button markup, reused verbatim; app.js wires it
+   to the same picker handler as the field, so clicking it opens the dropdown */
+/* every field state (idle / renamed / meal search) keeps the search box's text
+   inset — 58px from the pill edge (12px pill padding + 46px control padding).
+   Scoped past .routine-editor-control so it outranks
+   .fuel-overlay input:not([type="checkbox"]) (0-2-1), which would otherwise
+   repaint the meal search field with its own 12px inset and dark fill. */
+.routine-switch .routine-editor-control .custom-select-button,
+.routine-switch .routine-editor-control .routine-name-editor,
+.routine-switch .routine-editor-control .menu-search-input {
+  /* --field-text-x is measured from the capsule edge; the pill's --space-3
+     padding precedes the field box, so subtract it for the same text x */
+  padding-left: calc(var(--field-text-x) - var(--space-3));
+  background: transparent;
+}
+/* chevron / open-state colour is declared once, in the Workout search's own
+   .search-icon-btn[aria-expanded="true"] rules further down, which also list
+   .routine-switch as a source for the open state */
+/* the pill is exactly one line: selector (idle) / rename input (item selected) /
+   search swap (searching) are alternatives that replace one another, so none may
+   stack a second row — this also covers setManageSearchMode(false), which
+   unconditionally re-shows the selector even while an item is selected */
+.routine-switch:has(.routine-name-editor:not([hidden])) .custom-select-button,
+.routine-switch:has(.menu-search-input:not([hidden])) .custom-select-button { display: none; }
+.routine-switch:has(.menu-search-input:not([hidden])) .routine-name-editor { display: none; }
+/* 2nd-chip needs its own fill now that the pill bg matches it — same treatment
+   as the search row's trailing "Start" pill (surface-container on -high) */
+.routine-switch .routine-editor-control .routine-2nd { background: var(--surface-container); }
 .routine-switch:empty { display: none; }
 .routine-switch label, .routine-paste-panel label, .routine-field label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
-.routine-select-row { display: grid; grid-template-columns: minmax(0,1fr) var(--control-size) auto; gap: var(--space-2); align-items: start; }
+/* icon-only buttons sit 2px apart, the same as the app's other icon rows
+   (.aw-row-tools, .week-head-actions); 8px (--space-2) is reserved for
+   labelled text buttons like .routine-data-actions */
+.routine-select-row { display: grid; grid-template-columns: minmax(0,1fr) var(--control-size) auto; gap: 2px; align-items: start; }
 .routine-editor-control { position: relative; width: 100%; min-width: 0; }
 
 .routine-name-editor { width: 100%; min-width: 0; min-height: var(--control-size); padding: 0 12px; color: var(--text); background: var(--surface-container); border: none; border-radius: var(--radius-control); text-align: left; }
@@ -856,7 +901,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 /* Custom Select Floating Unified Component */
 .progress-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .progress-cancel { flex: 1 1 0; min-height: var(--control-size); padding: 0 15px; color: var(--text-soft); background: var(--surface-container-high); border: none; font-weight: var(--weight-semibold); cursor: pointer; }
-.progress-cancel:active { opacity: .7; }
 .progress-actions #progressSave,
 .progress-actions #customExerciseSave { flex: 1 1 0; min-height: var(--control-size); padding: 0 15px; }
 .mode-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-container-high); border-radius: 999px; }
@@ -867,7 +911,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-mode-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .routine-mode-row .routine-tail { margin-left: auto; }
 .modal-expand-btn { position: absolute; top: 10px; right: 10px; z-index: 4; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; color: var(--text); background: rgba(0, 0, 0, .55); border: none; border-radius: 50%; cursor: pointer; appearance: none; }
-.modal-expand-btn:active { background: rgba(0, 0, 0, .75); }
 .modal-expand-btn .icon { width: 13px; height: 13px; }
 .custom-select { position: relative; width: 100%; min-width: 0; }
 .custom-select-native { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; opacity: 0 !important; pointer-events: none !important; }
@@ -918,11 +961,20 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .custom-select-menu button[aria-selected="true"] { color: var(--text); background: var(--surface-container-high); font-weight: var(--weight-semibold); }
 .custom-select-menu button:disabled { opacity: .4; }
 
-.routine-switch > .routine-select-row > button { min-height: var(--control-size); padding: 0 12px; color: var(--danger); background: transparent; border: 1px solid var(--border); font-weight: var(--weight-semibold); }
-.routine-switch > .routine-select-row > button.routine-done { color: var(--accent-ink); background: var(--accent); border: none; }
-.routine-switch > .routine-select-row > button:last-child { min-width: 68px; }
-.routine-switch .routine-like { width: var(--control-size); display: grid; place-items: center; padding: 0; color: var(--accent); }
-.routine-switch .routine-like.liked { color: var(--accent); }
+/* Plans row actions — icon-only accent buttons (like ♥ + done ✓) */
+.routine-switch > .routine-select-row > button.routine-like,
+.routine-switch > .routine-select-row > button.routine-done {
+  width: var(--control-size);
+  min-height: var(--control-size);
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  font-weight: var(--weight-semibold);
+}
 .routine-switch .routine-like.liked .icon { fill: currentColor; }
 #routineEditName { padding-right: 56px; }
 .routine-editor-control .routine-2nd { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-height: 28px; padding: 0 10px; color: var(--text-muted); background: var(--surface-container-high); border: none; outline: none; border-radius: 999px; font-size: 11px; font-weight: var(--weight-semibold); appearance: none; }
@@ -935,9 +987,22 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-editor-control input[hidden] ~ #aiRoutineToggle { display: none; }
 .routine-data-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-2); margin-top: var(--space-3); }
 .routine-data-actions button { min-height: var(--control-size); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; color: var(--text-soft); background: var(--surface-container); border: none; font-size: 12px; font-weight: var(--weight-semibold); }
-.routine-paste-panel { margin-top: var(--space-3); padding: var(--space-3); background: var(--surface-container); border: none; border-radius: var(--radius-surface); }
+/* Import popups — same anatomy as .progress-date-picker-layer/-card (scrim + centered
+   card); fixed to the viewport, visibility is driven by .open so close can animate. */
+.import-popup { position: fixed; inset: 0; z-index: 115; display: grid; place-items: center; padding: var(--space-4); visibility: hidden; }
+.import-popup.open { visibility: visible; }
+/* #planSwitch and .aw-rest-pill are body-level at z 118 — above the screens (90), so above
+   this popup. With a rest running, planSwitch is shoved up 68px (see its [data-rest-active]
+   rule) straight onto the card's buttons. Park both behind the screen while an import
+   popup is open; they resurface the instant it closes (no JS, pure :has()). */
+body:has(.import-popup.open) #planSwitch,
+body:has(.import-popup.open) .aw-rest-pill { z-index: 10; }
+/* .import-popup prefix is load-bearing: `.progress-log-paste button` (0-1-1) would
+   otherwise win and paint the scrim as a solid grey 999px pill from settings */
+.import-popup .import-popup-scrim { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0; background: var(--scrim); border: 0; border-radius: 0; }
+.import-popup-card { position: relative; z-index: 1; width: min(340px, 100%); max-height: calc(100dvh - 48px); overflow: auto; padding: var(--space-3); background: var(--surface-container); border: none; border-radius: var(--radius-surface); box-shadow: 0 18px 50px rgba(0,0,0,.45); }
 .routine-paste-panel textarea { width: 100%; min-height: 130px; padding: 12px; color: var(--text); background: var(--surface-container-high); border: none; resize: none; }
-.routine-paste-actions { display: grid; grid-template-columns: .85fr 1fr 1.25fr; gap: var(--space-2); margin-top: var(--space-2); }
+.routine-paste-actions { display: grid; grid-template-columns: .85fr 1.25fr 1fr; gap: var(--space-2); margin-top: var(--space-2); }
 .routine-paste-actions button { min-height: var(--control-size); background: var(--surface-container-high); border: none; font-weight: var(--weight-semibold); }
 .routine-items { min-height: 0; display: grid; gap: var(--space-2); overflow: auto; margin-top: var(--space-3); padding: 0 2px 0 0; overscroll-behavior: contain; }
 .routine-item { display: grid; gap: 8px; padding: 10px var(--space-3); background: var(--surface-container); border: none; border-radius: var(--radius-control); box-sizing: border-box; align-content: center; }
@@ -952,7 +1017,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-link-btn.linking { color: var(--accent); background: transparent; border: 1px dashed var(--accent); }
 .routine-link-btn + .routine-drag { margin-left: -8px; }
 .routine-drag { touch-action: none; user-select: none; cursor: grab; }
-.routine-drag:active { cursor: grabbing; }
 .routine-drag + .routine-remove { margin-left: -8px; }
 .routine-item.dragging { z-index: 20; user-select: none; background: var(--surface-container-high); box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
 
@@ -1003,8 +1067,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   text-transform: uppercase;
 }
 .schedule-day-row .schedule-today-badge { display: none; }
-.schedule-day-row:active { background: var(--surface-container-high); }
-.schedule-day-row:has(.schedule-today-badge):active { background: rgba(var(--accent-rgb), .13); }
 .schedule-day-row .custom-select {
   position: static;
   width: auto;
@@ -1216,7 +1278,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .settings-stepper { width: 148px; flex: 0 0 148px; }
 .seg-control[aria-disabled="true"] button { opacity: .4; cursor: not-allowed; }
 .settings-row + .settings-row,
-.settings-row + .progress-log-paste,
 .progress-log-paste + .settings-row { border-top: 1px solid var(--divider); }
 .settings-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); color: var(--text); font-size: 13px; font-weight: var(--weight-medium); }
 .settings-row-main .icon { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
@@ -1242,24 +1303,21 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .settings-select-host { flex: 0 0 148px; width: 148px; min-width: 0; }
 .settings-select-host .custom-select { width: 100%; }
 .settings-select-host .custom-select-button { width: 100%; min-height: 38px; padding: 0 12px; text-align: center; background: var(--surface-container-high); }
-.progress-log-paste { padding: var(--space-3) var(--space-3) var(--space-2); border-top: 1px solid var(--divider); }
-.progress-log-paste > label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
+.progress-log-paste label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
 .progress-log-paste textarea { width: 100%; min-height: 140px; padding: 10px; color: var(--text); background: var(--surface-container-high); border: none; resize: none; user-select: text; }
-.progress-log-paste > div { display: grid; grid-template-columns: .85fr 1fr 1.25fr; gap: var(--space-2); margin-top: var(--space-2); }
+.progress-log-paste .import-popup-card > div { display: grid; grid-template-columns: .85fr 1.25fr 1fr; gap: var(--space-2); margin-top: var(--space-2); }
 .progress-log-paste button { min-height: var(--control-size); color: var(--text-soft); background: var(--surface-container-high); border: none; font-weight: var(--weight-semibold); }
 
 .vault-folder-pill { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 46%; padding: 7px 14px; color: var(--text); background: var(--surface-container-high); border: none; border-radius: 999px; font-size: 12px; font-weight: var(--weight-medium); cursor: pointer; appearance: none; }
 .vault-folder-pill .icon { width: 14px; height: 14px; flex: 0 0 auto; }
 .vault-folder-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vault-folder-pill:active { color: var(--text); background: var(--surface-container); }
 .vault-folder-pill.lost { color: var(--accent); }
 .vault-folder-pill.empty { color: var(--text-muted); }
 .vault-folder-pill:disabled { opacity: .55; cursor: default; }
 .vault-reload-btn { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; padding: 0; color: var(--text-muted); background: transparent; border: none; border-radius: 50%; cursor: pointer; appearance: none; }
-.vault-reload-btn:active { color: var(--text); background: var(--surface-container-high); }
 .vault-reload-btn .icon { width: 16px; height: 16px; }
-.panel-header-action { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; margin-top: 4px; padding: 0; color: var(--text-muted); background: var(--surface-container); border: none; border-radius: 50%; cursor: pointer; appearance: none; transition: color .2s ease, background-color .2s ease; }
-.panel-header-action:active { color: var(--text); background: var(--surface-container-high); }
+.panel-header-action { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; margin: 6px 12px 0 0; /* nudge: 12px left of the edge gutter, 2px lower than the title */ padding: 0; color: var(--text-muted); background: var(--surface-container); border: none; border-radius: 50%; cursor: pointer; appearance: none; transition: color .2s ease, background-color .2s ease; }
+.panel-header-action.mode-delete { color: var(--danger); } /* same red as .entry-delete */
 .panel-header-action .icon { width: 18px; height: 18px; }
 
 /* Progress & Meal Logger Unified Forms */
@@ -1311,11 +1369,12 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   position: absolute;
   inset: 0;
   z-index: 40;
-  display: none;
+  display: grid;
   place-items: center;
   padding: var(--space-4);
+  visibility: hidden;
 }
-.progress-date-picker-layer.open { display: grid; }
+.progress-date-picker-layer.open { visibility: visible; }
 .progress-date-picker-scrim { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: var(--scrim); border: 0; border-radius: 0; }
 .progress-date-picker-card {
   position: relative;
@@ -1452,7 +1511,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .fuel-card-head h3 { margin: 0; font-size: 16px; font-weight: var(--weight-semibold); }
 .fuel-card-divider { height: 1px; background: var(--border); margin: var(--space-4) 0 var(--space-3); }
 .energy-grid { border-radius: var(--radius-control); cursor: pointer; transition: opacity .15s ease; }
-.energy-grid:active { opacity: .75; }
 .energy-grid:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
 .bmi-stat-meta { font-size: 10px; color: var(--text-muted); }
@@ -1645,7 +1703,11 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .fuel-overlay.open { opacity: 1; visibility: visible; }
 
 /* Body metrics & Clear Data modals */
-.fuel-modal-backdrop { display: none; place-items: center; padding: var(--space-4); }
+.fuel-modal-backdrop {
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
 .fuel-modal-backdrop.open { display: grid; }
 
 /* Header and form classes inside modals */
@@ -1790,7 +1852,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     flex-shrink: 0;
   }
   .mobile-search-start-btn[hidden] { display: none; }
-  .mobile-search-start-btn:active { filter: brightness(1.25); }
   .mobile-phone-title {
     margin: 0;
     color: var(--text);
@@ -1800,7 +1861,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     letter-spacing: -0.025em;
   }
   .mobile-phone-subtitle {
-    margin: 0 0 16px;
+    margin: 0 0 var(--space-4);
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
@@ -1833,14 +1894,20 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     transform: translateY(-50%);
     pointer-events: none;
   }
-  .mobile-top-search input {
-    width: 100%;
+  /* The capsule field look — single source shared by the Workout search input
+     and the routine/meal switcher pills, so the two can never drift apart. */
+  .mobile-top-search input,
+  .routine-switch {
     min-height: 48px;
-    padding: 0 88px 0 58px;
-    color: var(--text);
     background: var(--surface-container-high);
     border: none !important;
     border-radius: 999px;
+    box-shadow: none;
+  }
+  .mobile-top-search input {
+    width: 100%;
+    padding: 0 88px 0 var(--field-text-x);
+    color: var(--text);
     font-size: 15px;
     outline: none;
     -webkit-appearance: none;
@@ -1871,8 +1938,12 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   }
   .search-icon-btn .icon { width: 17px; height: 17px; }
   .search-icon-btn .filter-chevron { width: 12px; height: 12px; transition: transform .2s ease; }
-  .search-icon-btn[aria-expanded="true"] { color: var(--text); }
-  .search-icon-btn[aria-expanded="true"] .filter-chevron { transform: rotate(180deg); }
+  /* open state — declared once, sourced from either trigger: the Workout filter
+     button's aria-expanded, or a routine/meal picker pill's open menu */
+  .search-icon-btn[aria-expanded="true"],
+  .routine-switch:has(.routine-menu:not([hidden])) .search-icon-btn { color: var(--text); }
+  .search-icon-btn[aria-expanded="true"] .filter-chevron,
+  .routine-switch:has(.routine-menu:not([hidden])) .filter-chevron { transform: rotate(180deg); }
   .filter-pills { display: grid; gap: var(--space-2); padding: var(--space-2) 0 0; }
   .filter-pills[hidden] { display: none; }
   .pill-row { display: flex; align-items: center; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; }
@@ -1902,9 +1973,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     flex-shrink: 0;
   }
   .mobile-search-reset-btn .icon { width: 18px; height: 18px; }
-  .mobile-search-reset-btn:active {
-    color: var(--text);
-  }
   .mobile-search-sort-btn {
     position: absolute;
     right: 12px;
@@ -1923,14 +1991,16 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     cursor: pointer;
   }
   .mobile-search-sort-btn .icon { width: 18px; height: 18px; }
-  .mobile-search-sort-btn[aria-expanded="true"], .mobile-search-sort-btn:active { color: var(--text); }
+  .mobile-search-sort-btn[aria-expanded="true"] { color: var(--text); }
 
   /* Hide underlying workout grid when any other mobile tab is active */
   body[data-mobile-tab="dashboard"] #workoutTabPanel,
   body[data-mobile-tab="plan"] #workoutTabPanel {
-    visibility: hidden;
-    pointer-events: none;
-  }
+      visibility: hidden;
+      /* hide delayed so the plan screen fades in over it; show is immediate */
+      transition: visibility 0s linear var(--t-screen);
+      pointer-events: none;
+    }
 
   .app { padding-bottom: calc(var(--bar-clear) + 12px); }
 
@@ -1974,7 +2044,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     gap: 3px;
     padding: 4px 6px;
     color: var(--text-muted);
-    background: transparent;
     border: 0;
     border-radius: var(--radius-control);
     font-size: 10px;
@@ -2040,7 +2109,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     min-width: 0;
   }
   .card-top {
-    display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
@@ -2059,67 +2127,60 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   }
   .card-actions {
     margin: 0;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
     align-self: center;
   }
   .card-action {
     width: var(--control-size);
     height: var(--control-size);
     flex: 0 0 var(--control-size);
-    display: grid;
-    place-items: center;
     border: none;
   }
 
   .meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
     margin-top: 2px;
     padding-right: 0;
   }
 
-  /* Full-Screen Panels on Phone (Routines, Dashboard, Fuel, Meals) */
-  .routine-drawer.mobile-tab-active {
-    position: fixed;
+  /* ===== Page types: exactly two (fullscreen fade / sheet slide-up) ===== */
+
+  /* Type F — full screens: pure fade in/out, identical both directions */
+  .screen {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--t-screen) var(--ease-page), visibility 0s linear var(--t-screen);
+  }
+  .screen.open,
+  .screen.mobile-tab-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--t-screen) var(--ease-page), visibility 0s linear 0s;
+  }
+  .feature-backdrop.screen { inset: 0 var(--frame-inset); }
+
+  /* Full-screen panels — layout unconditional, only visibility is stateful */
+  .routine-drawer {
     inset: 0 var(--frame-inset) auto;
     z-index: 90;
     width: auto;
     max-width: none;
-    height: 100dvh;
-    overflow: hidden;
     padding: 6px var(--space-3) 0;
     background: var(--surface);
     border: none !important;
     box-shadow: none;
     display: flex;
-    opacity: 1;
-    visibility: visible;
   }
-  .routine-drawer.mobile-tab-active .routine-items,
-  .routine-drawer.mobile-tab-active .routine-schedule,
-  .fuel-drawer-backdrop.mobile-tab-active .fuel-manager-scroll { min-height: 0; }
+  .routine-drawer .routine-items,
+  .routine-drawer .routine-schedule,
+  .fuel-drawer-backdrop .fuel-manager-scroll { min-height: 0; }
 
-  .schedule-day-row {
-    border: none;
-  }
-
-  .feature-backdrop.mobile-tab-active {
-    position: fixed;
-    inset: 0 var(--frame-inset) 0;
+  #progressBackdrop {
     z-index: 90;
-    align-items: stretch;
-    justify-content: stretch;
-    padding: 0;
     background: var(--surface);
-    display: flex;
-    opacity: 1;
-    visibility: visible;
   }
-  .feature-backdrop.mobile-tab-active .feature-scroll { padding-bottom: calc(var(--bar-clear) + 12px); }
-  .feature-backdrop.mobile-tab-active .feature-panel {
+  .feature-backdrop.screen .feature-scroll { padding-bottom: calc(var(--bar-clear) + 12px); }
+  .feature-backdrop.screen .feature-panel {
     position: relative;
     inset: auto;
     width: 100%;
@@ -2130,18 +2191,14 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     border: none !important;
     box-shadow: none;
     display: flex;
-    transform: none !important;
-    transition: none !important;
+    transform: none;
   }
-  .fuel-drawer-backdrop.mobile-tab-active {
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
+  #fuelSettingsBackdrop {
     background: var(--surface);
     z-index: 90;
     display: flex;
   }
-  .fuel-drawer-backdrop.mobile-tab-active .fuel-drawer {
+  #fuelSettingsBackdrop .fuel-drawer {
     position: fixed;
     top: 0;
     right: var(--frame-inset);
@@ -2158,14 +2215,23 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     overflow-y: auto;
   }
 
-  /* Slide-Up Sheets on Phone */
-  .feature-backdrop:not(.mobile-tab-active),
-  .fuel-modal-backdrop {
+  /* Type S — slide-up sheets: scrim fades, panel slides; exits mirror enters */
+  .sheet {
     align-items: flex-end;
     justify-content: center;
     padding: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--t-sheet) var(--ease-page), visibility 0s linear var(--t-sheet);
   }
-  .feature-backdrop:not(.mobile-tab-active) .feature-panel {
+  .sheet.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--t-sheet) var(--ease-page), visibility 0s linear 0s;
+  }
+  .sheet .feature-panel {
     position: fixed;
     top: 0;
     right: var(--frame-inset);
@@ -2180,29 +2246,15 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     box-shadow: 0 -20px 60px rgba(0,0,0,.6);
     overflow: hidden;
     overscroll-behavior: contain;
-    display: none;
+    display: flex;
     padding: 0 var(--space-3) 0;
     transform: translateY(100%);
-    transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform var(--t-sheet) var(--ease-page);
   }
-  .feature-backdrop.open:not(.mobile-tab-active) .feature-panel {
-    display: flex;
-    transform: translateY(0);
-  }
-  #customExerciseModal:not(.mobile-tab-active) .feature-panel {
-    display: flex;
-    transform: none;
-    transition: none;
-    animation: none;
-  }
-  #progressBackdrop:not(.mobile-tab-active) .feature-panel {
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    padding-top: var(--space-3);
-  }
+  .sheet.open .feature-panel { transform: translateY(0); }
 
-  /* Log Meal Bottom Sliding Sheet */
-  #fuelLogMealModal:not(.mobile-tab-active) .feature-panel {
+  /* Log Meal bottom sheet specifics */
+  #fuelLogMealModal.sheet .feature-panel {
     top: auto;
     height: auto;
     max-height: 100dvh;
@@ -2216,16 +2268,16 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     padding: 0;
   }
 
-  .feature-backdrop:not(.mobile-tab-active) .panel-header,
-    .feature-backdrop:not(.mobile-tab-active) .routine-header {
-      /* Match the dashboard/tab header placement exactly: title & header action at
-         16px from the edge (panel 12 + header 4) and 6px from the top. */
-      padding: 6px 4px var(--space-3) 4px;
-      margin-bottom: var(--space-2);
-      border: none;
-    }
-    #fuelLogMealModal:not(.mobile-tab-active) .routine-header { padding-top: var(--space-4); margin-bottom: var(--space-3); }
-  .feature-backdrop:not(.mobile-tab-active) .feature-scroll {
+  .sheet .panel-header,
+  .sheet .routine-header {
+    /* Match the dashboard/tab header placement exactly: title & header action at
+       16px from the edge (panel 12 + header 4) and 6px from the top. */
+    padding: 6px 4px var(--space-3) 4px;
+    margin-bottom: var(--space-2);
+    border: none;
+  }
+  #fuelLogMealModal .routine-header { padding-top: var(--space-4); margin-bottom: var(--space-3); }
+  .sheet .feature-scroll {
     padding: 0 0 calc(var(--bar-clear) + 16px);
   }
 
@@ -2246,15 +2298,12 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     box-shadow: 0 -20px 60px rgba(0,0,0,.6);
     overflow-y: auto;
     overscroll-behavior: contain;
-    display: none;
+    display: block;
     padding: 0 var(--space-3) calc(var(--bar-clear) + 16px);
     transform: translateY(100%);
-    transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform var(--t-sheet) var(--ease-page);
   }
-  .fuel-modal-backdrop.open .fuel-modal {
-    display: block;
-    transform: translateY(0);
-  }
+  .sheet.open .fuel-modal { transform: translateY(0); }
 
   .fuel-modal .modal-header-row {
     padding-top: var(--space-2);
@@ -2270,11 +2319,8 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     flex: 0 0 auto;
   }
 
-  /* Exercise description modal */
-  .modal-backdrop.open {
-    align-items: flex-end;
-  }
-  .modal-backdrop.open .modal {
+  /* Exercise description modal — sheet like the rest */
+  .sheet .modal {
     position: fixed;
     top: auto;
     right: var(--frame-inset);
@@ -2289,29 +2335,19 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     border-top: 1px solid var(--border-strong) !important;
     border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
     box-shadow: 0 -20px 60px rgba(0,0,0,.6);
-    overflow-y: auto;
+    overflow: auto;
     overscroll-behavior: contain;
     display: flex;
     padding: 0 var(--space-3) calc(var(--bar-clear) + 16px);
-    transform: translateY(0);
+    transform: translateY(100%);
     touch-action: pan-y;
     will-change: transform;
-    transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform var(--t-sheet) var(--ease-page);
   }
-  .modal-backdrop:not(.open) .modal {
-    transform: translateY(100%);
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .feature-backdrop.open:not(.mobile-tab-active) .feature-panel,
-    .modal-backdrop.open .modal,
-    .fuel-modal-backdrop.open .fuel-modal { animation: sheetUp .25s cubic-bezier(0.32, 0.72, 0, 1); }
-  }
-
-  /* Settings: no slide-up — panel appears in place, backdrop supplies the fade */
-  #settingsBackdrop:not(.mobile-tab-active) .feature-panel { transform: none; transition: none; animation: none; }
+  .sheet.open .modal { transform: translateY(0); }
 
   .progress-date-picker-layer { align-items: center; padding: var(--space-3); }
-  .progress-date-picker-card { width: 100%; max-width: 380px; background: var(--surface-container); border: none; border-radius: var(--radius-sheet); }
+  .progress-date-picker-card { width: 100%; max-width: 380px; border-radius: var(--radius-sheet); }
 
   .fuel-drawer-backdrop {
     align-items: stretch;
@@ -2327,45 +2363,23 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   .modal { overflow: auto; aspect-ratio: auto; overscroll-behavior: contain; }
   .modal-grid { min-height: 100%; height: auto; display: block; overflow: visible; width: 100%; }
   .modal-visual {
-    width: 100%;
-    min-height: 0;
     height: 160px;
     max-height: 170px;
     aspect-ratio: auto;
     border: none;
     padding: 2px 0 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
     background: transparent;
   }
   .modal-visual.media-tall { height: 320px; max-height: 340px; }
   .modal-visual-card {
-    width: 100%;
-    height: 100%;
     aspect-ratio: auto;
-    background: #ffffff;
     border-radius: 16px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
   }
   .modal-media-pill {
-    position: absolute;
     bottom: 16px;
     right: 10px;
-    z-index: 3;
     background: rgba(0, 0, 0, 0.6);
-    color: var(--text);
-    padding: 4px 10px;
-    border-radius: 20px;
     font-size: 10px;
-    font-weight: var(--weight-medium);
-    display: inline-flex;
-    align-items: center;
     gap: 4px;
   }
   .modal-content {
@@ -2388,12 +2402,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     width: 100%;
     justify-content: flex-start;
     margin: 0 0 10px 0;
-    gap: 5px;
-  }
-  .modal-badge-pill {
-    padding: 4px 8px;
-    font-size: 9.6px;
-    border-radius: 6px;
   }
   .section-title { width: 100%; text-align: left; margin: 18px 0 8px; font-size: 10px; }
   #modalInstructions, .instructions { width: 100%; text-align: left; font-size: 12px; }
@@ -2401,19 +2409,22 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   .step { width: 100%; font-size: 12px; }
   .modal-progress {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
     margin-top: 6px;
     margin-bottom: 12px;
     padding-top: 10px;
-    border-top: 1px solid var(--border);
     text-align: left;
   }
   .modal-progress > span { font-size: 11px; }
   .routine-drawer { padding-bottom: var(--space-4); }
 
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .sheet,
+  .sheet .feature-panel,
+  .sheet .modal,
+  .fuel-modal,
+  #workoutTabPanel { transition: none; }
+}
 @media (max-width: 380px) {
   .progress-form { grid-template-columns: 1fr; }
   .set-cols-toolbar { grid-template-columns: 1fr; }

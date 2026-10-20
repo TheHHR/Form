@@ -29,7 +29,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.6.1';
+const APP_VERSION='3.6.2';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -207,7 +207,7 @@ function showCustomExercisePastePanel(text=''){
   showPastePanel('customExercisePaste','customExercisePasteText',text,{alwaysSet:true});
 }
 function closeCustomExercisePaste(){
-  closePastePanel('customExercisePaste',{textId:'customExercisePasteText',toggleId:'customExercisePasteLog'});
+  closePastePanel('customExercisePaste',{textId:'customExercisePasteText'});
 }
 function mergeCustomExercisesImported(parsed){
   let added=0;
@@ -572,7 +572,7 @@ function setProgressDateValue(value){const next=isValidProgressDate(value)?value
 function renderProgressDatePicker(){const selectedValue=$('#progressDate').value||localDateValue(),todayValue=localDateValue(),todayDate=new Date(),todayYear=todayDate.getFullYear(),todayMonth=todayDate.getMonth(),year=progressDatePickerMonth.getFullYear(),month=progressDatePickerMonth.getMonth(),firstDay=Number(state.progressPreferences.firstDay),weekStart=[0,1,6].includes(firstDay)?firstDay:1,monthStart=new Date(year,month,1,12),offset=(monthStart.getDay()-weekStart+7)%7,start=new Date(year,month,1-offset,12);$('#progressDatePickerTitle').textContent=monthStart.toLocaleDateString(undefined,{month:'long',year:'numeric'});$('#progressDatePickerTitle').disabled=year===todayYear&&month===todayMonth;const weekBase=new Date(2024,0,7+weekStart,12);$('#progressDateWeekdays').innerHTML=Array.from({length:7},(_,index)=>{const day=new Date(weekBase);day.setDate(weekBase.getDate()+index);return `<span>${esc(day.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2))}</span>`}).join('');const cells=Array.from({length:42},(_,index)=>{const date=new Date(start);date.setDate(start.getDate()+index);const value=localDateValue(date),outside=date.getMonth()!==month,selectedDay=value===selectedValue,today=value===todayValue,futureDay=value>todayValue;return `<button class="progress-date-day${outside?' outside-month':''}${selectedDay?' selected':''}${today?' today':''}" type="button" role="gridcell" data-date="${value}" aria-selected="${selectedDay}"${futureDay?' disabled':''} aria-label="${esc(date.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}))}">${date.getDate()}</button>`});
 $('#progressDateGrid').innerHTML=Array.from({length:6},(_,week)=>`<div role="row">${cells.slice(week*7,week*7+7).join('')}</div>`).join('');$('#progressDateNext').disabled=year===todayYear&&month===todayMonth}
 function openProgressDatePicker(returnFocus=document.activeElement){const selected=parseLocalDate($('#progressDate').value||localDateValue());progressDatePickerMonth=new Date(selected.getFullYear(),selected.getMonth(),1,12);progressDatePickerReturnFocus=returnFocus;renderProgressDatePicker();const picker=$('#progressDatePicker');picker.hidden=false;$('#progressDateButton').setAttribute('aria-expanded','true');picker.classList.add('open');picker.querySelector(`[data-date="${$('#progressDate').value}"]`)?.focus({preventScroll:true})}
-function closeProgressDatePicker(restoreFocus=true){const picker=$('#progressDatePicker');if(!picker||picker.hidden)return;picker.classList.remove('open');$('#progressDateButton').setAttribute('aria-expanded','false');picker.hidden=true;if(restoreFocus&&progressDatePickerReturnFocus?.isConnected)progressDatePickerReturnFocus.focus({preventScroll:true});progressDatePickerReturnFocus=null}
+function closeProgressDatePicker(restoreFocus=true){const picker=$('#progressDatePicker');if(!picker||!picker.classList.contains('open'))return;picker.classList.remove('open');$('#progressDateButton').setAttribute('aria-expanded','false');if(restoreFocus&&progressDatePickerReturnFocus?.isConnected)progressDatePickerReturnFocus.focus({preventScroll:true});progressDatePickerReturnFocus=null}
 
 function normalizeRoutine(routine){if(!routine||typeof routine!=='object'||!String(routine.id??''))return null;const seen=new Set();return{id:String(routine.id),name:String(routine.name??'Routine').trim().slice(0,LIMITS.routineName)||'Routine',liked:Boolean(routine.liked),...(routine.secondary?{secondary:true}:{}),items:(Array.isArray(routine.items)?routine.items:[]).filter(item=>item&&VALID_EXERCISE_IDS.has(String(item.exerciseId))&&!seen.has(String(item.exerciseId))&&seen.add(String(item.exerciseId))).map(item=>({exerciseId:String(item.exerciseId),sets:clamp(item.sets,1,LIMITS.sets),reps:clamp(Math.round(Number(item.reps)||0),0,item.mode==='timed'?60:LIMITS.reps),...(item.mode==='timed'?{mode:'timed',...(item.unit==='sec'||item.unit==='min'?{unit:item.unit}:{})}:{}),...(item.unweighted?{unweighted:true}:{}),...((item.distance&&item.mode==='timed')?{distance:true}:{})}))}}
 function sanitizeSetWeights(value){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.min(LIMITS.weight,Math.max(0,Number(entry)||0))).slice(0,LIMITS.sets);return list.length?list:null}
@@ -1951,7 +1951,7 @@ if (window.Capacitor?.isNativePlatform?.()) {
     if (confirmDialogState) { settleAppConfirm(false); return; }
     if (awRestIsOpen()) { setAwRestMaximized(false); return; }
     const datePicker = $('#progressDatePicker');
-    if (datePicker && !datePicker.hidden) { closeProgressDatePicker(); return; }
+    if (datePicker && datePicker.classList.contains('open')) { closeProgressDatePicker(); return; }
     if (state.overlay.active) { closeAllCustomMenus(); closeActiveOverlay(); return; }
     if (state.mobileTab !== 'workout') { setMobileTab('workout'); return; }
     const now = Date.now();
@@ -2070,6 +2070,7 @@ function repositionOpenLegacyMenus(){
     let anchor=document.getElementById(buttonId);
     const swap=swapId?document.getElementById(swapId):null;
     if(anchor&&anchor.hidden&&swap&&!swap.hidden)anchor=swap;
+    if(anchor&&anchor.hidden)anchor=pickerAnchor(anchor);
     positionMenuBetween(menu,anchor,options);
   }
 }
@@ -2553,7 +2554,7 @@ $('#confirmDialogBackdrop').addEventListener('click',event=>{if(event.target===e
 $('.mobile-tab-bar').addEventListener('click',()=>{if(confirmDialogState)settleAppConfirm(false)},true);
 
 const FOCUSABLE_SELECTOR='button:not([disabled]),[href],input:not([disabled]):not([tabindex="-1"]),select:not([disabled]):not([tabindex="-1"]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-function getFocusable(container){return[...container.querySelectorAll(FOCUSABLE_SELECTOR)].filter(element=>element.offsetParent!==null&&!element.hidden)}
+function getFocusable(container){return[...container.querySelectorAll(FOCUSABLE_SELECTOR)].filter(element=>(typeof element.checkVisibility==='function'?element.checkVisibility({checkOpacity:true,checkVisibilityCSS:true,opacityProperty:true,visibilityProperty:true}):element.offsetParent!==null)&&!element.hidden)}
 function trapFocus(event,container){const items=getFocusable(container);if(!items.length)return;const first=items[0],last=items[items.length-1];if(!container.contains(document.activeElement)){event.preventDefault();(event.shiftKey?last:first).focus()}else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}
 
 function overlayContainer(key){
@@ -2579,9 +2580,13 @@ function openOverlay(key,returnFocus=document.activeElement){
   if(state.overlay.active&&state.overlay.active!==key){
     if(key==='clearData'&&state.overlay.active==='settings'){
       state.overlay.under='settings'; /* stack over settings (like appConfirm) — settings stays open beneath */
+    }else if(key==='modal'&&state.overlay.active==='progress'){
+      state.overlay.under='progress'; /* stack exercise modal over the log-progress page */
     }else{
-      if(state.overlay.active==='clearData'&&state.overlay.under==='settings'){state.overlay.under=null;closeActiveOverlay(false);closeOverlay('settings',false);}
-      else closeActiveOverlay(false);
+      const underKey=state.overlay.under;
+      state.overlay.under=null;
+      closeActiveOverlay(false);
+      if(underKey)closeOverlay(underKey,false); /* a third overlay replaces the whole stack */
       if(preserveDashboardDate)state.dashboard.selectedDate=preserveDashboardDate;
     }
   }
@@ -2616,7 +2621,9 @@ function closeOverlay(key,restoreFocus=true){
     if(state.mobileTab==='dashboard')prepareDashboardTab(false);
     syncMobileTabs();
   }
-  else if(key==='modal'){$('#modalBackdrop').classList.remove('open');$('#modalBackdrop').setAttribute('aria-hidden','true');}
+  else if(key==='modal'){$('#modalBackdrop').classList.remove('open');$('#modalBackdrop').setAttribute('aria-hidden','true');
+   if(state.overlay.under==='progress'){state.overlay.under=null;state.overlay.active='progress';} /* stack: modal closed, progress page was never closed */
+  }
    else if(key==='logMeal'){resetMealSelection();$('#fuelLogMealModal').classList.remove('open');$('#fuelLogMealModal').setAttribute('aria-hidden','true');}
    else if(key==='settings'){$('#settingsBackdrop').classList.remove('open');$('#settingsBackdrop').setAttribute('aria-hidden','true');}
    else if(key==='customExercise'){$('#customExerciseModal').classList.remove('open');$('#customExerciseModal').setAttribute('aria-hidden','true');}
@@ -2654,9 +2661,14 @@ document.addEventListener('keydown',event=>{
     return;
   }
   const datePicker=$('#progressDatePicker');
-  if(datePicker&&!datePicker.hidden){
+  if(datePicker&&datePicker.classList.contains('open')){
     if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeProgressDatePicker();return;}
     if(event.key==='Tab'){trapFocus(event,datePicker);return;}
+  }
+  const importPopup=document.querySelector('.import-popup.open');
+  if(importPopup){
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closePastePanel(importPopup.id,{textId:importPopup.querySelector('textarea')?.id||null});return;}
+    if(event.key==='Tab'){trapFocus(event,importPopup);return;}
   }
   if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'&&!state.overlay.active){
     event.preventDefault();$('#search').focus();return;
@@ -2734,7 +2746,7 @@ function saveRoutineEditor(){
   state.routineDraftName='';
   saveRoutines();
   renderRoutineDrawer();
-  toast(`${clean} routine saved`);
+  toast('Routine saved');
 }
 function orderedRoutines(){
   const liked=state.routines.filter(routine=>routine.liked).sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));
@@ -2759,23 +2771,34 @@ function routineToText(routine=currentRoutine()){
   return[routine.name,...routine.items.map(item=>`${item.exerciseId} ${item.sets} * ${item.reps}${item.mode === 'timed' ? (item.unit === 'min' ? ' timed min' : ' timed') : ''}${item.unweighted ? ' unweighted' : ''}${item.distance && item.mode === 'timed' ? ' distance' : ''}${labels.has(item) ? ` ${labels.get(item)}` : ''}`)].join('\n');
 }
 function routinesToText(){return state.routines.map(routineToText).filter(Boolean).join('\n\n')}
-function showPastePanel(panelId,textId,text='',{toggleId=null,alwaysSet=false}={}){
+function pastePanelToggle(panelId){return document.querySelector(`[aria-controls="${panelId}"]`);}
+function showPastePanel(panelId,textId,text='',{alwaysSet=false}={}){
   const panel=document.getElementById(panelId),field=document.getElementById(textId);
   panel.hidden=false;
-  if(toggleId)document.getElementById(toggleId).setAttribute('aria-expanded','true');
+  panel.classList.add('open'); /* CSS plays the entrance; closing removes this and plays the exit */
   if(alwaysSet||text)field.value=text;
+  pastePanelToggle(panelId)?.setAttribute('aria-expanded','true');
   requestAnimationFrame(()=>{field.focus();if(text)field.select();});
 }
-function closePastePanel(panelId,{textId=null,toggleId=null}={}){
-  document.getElementById(panelId).hidden=true;
-  if(toggleId)document.getElementById(toggleId)?.setAttribute('aria-expanded','false');
+function closePastePanel(panelId,{textId=null}={}){
+  const panel=document.getElementById(panelId);
+  if(!panel||!panel.classList.contains('open'))return;
+  panel.classList.remove('open'); /* visibility drops once the .2s exit transition finishes */
+  pastePanelToggle(panelId)?.setAttribute('aria-expanded','false');
   if(textId){const field=document.getElementById(textId);if(field)field.value='';}
 }
+/* clicking the scrim (outside the card) cancels the import */
+document.addEventListener('click',event=>{
+  const scrim=event.target.closest?.('[data-import-close]');
+  if(!scrim)return;
+  const panel=scrim.closest('.import-popup');
+  if(panel)closePastePanel(panel.id,{textId:panel.querySelector('textarea')?.id||null});
+});
 function showRoutinePastePanel(text=''){
-  showPastePanel('routinePastePanel','routinePasteText',text,{toggleId:'pasteRoutineToggle'});
+  showPastePanel('routinePastePanel','routinePasteText',text);
 }
 function closeRoutinePastePanel(){
-  closePastePanel('routinePastePanel',{textId:'routinePasteText',toggleId:'pasteRoutineToggle'});
+  closePastePanel('routinePastePanel',{textId:'routinePasteText'});
 }
 async function copyTextToClipboard(text){
   try{
@@ -2878,7 +2901,7 @@ function createRoutine(name){
   state.routineDraftName=routine.name;
   saveRoutines();
   renderRoutineDrawer();
-  toast(`${routine.name} routine created`);
+  toast('Routine saved');
 }
 function addToRoutine(exerciseId){
   const routine=currentRoutine();
@@ -2892,12 +2915,9 @@ function addToRoutine(exerciseId){
 
 function syncRoutineEditorControls() {
   const clean = String(state.routineDraftName || $('#routineEditName').value || '').trim();
-  const modeButton = $('#routineNewToggle');
   const doneButton = $('#deleteRoutine');
-  if (state.routineCreating) {
+  if (state.routineCreating || currentRoutine()) {
     if (doneButton) doneButton.disabled = !clean;
-  } else if (currentRoutine()) {
-    if (modeButton) modeButton.disabled = !clean;
   }
   if (aiModuleReady) FormAI.syncRoutineAiVisibility();
 }
@@ -2906,38 +2926,31 @@ function renderRoutineDrawer(){
   syncRoutineSort();
   const sortedRoutines=orderedRoutines(),filterOptions='<option value="">All exercises</option>'+sortedRoutines.map(routine=>`<option value="${esc(routine.id)}"${routine.id===state.routineFilter?' selected':''}>${routine.liked?'♥ ':''}${esc(routine.name)}</option>`).join('');
   $('#mainRoutineSelect').innerHTML=filterOptions;
-  const routine=currentRoutine(),editing=Boolean(routine)||state.routineCreating,items=routine?.items||[],totalSets=items.reduce((sum,item)=>sum+item.sets,0),selector=$('#routineSelectorButton'),nameInput=$('#routineEditName'),menu=$('#routineMenu'),modeButton=$('#routineNewToggle'),modeText=modeButton.querySelector('span'),modeIcon=modeButton.querySelector('use'),deleteButton=$('#deleteRoutine'),likeButton=$('#likeRoutine'),secondaryButton=$('#secondaryRoutine');
+  const routine=currentRoutine(),editing=Boolean(routine)||state.routineCreating,items=routine?.items||[],totalSets=items.reduce((sum,item)=>sum+item.sets,0),selector=$('#routineSelectorButton'),nameInput=$('#routineEditName'),menu=$('#routineMenu'),modeButton=$('#routineNewToggle'),modeIcon=modeButton.querySelector('use'),deleteButton=$('#deleteRoutine'),likeButton=$('#likeRoutine'),secondaryButton=$('#secondaryRoutine');
   menu.innerHTML=sortedRoutines.length?sortedRoutines.map(item=>`<button type="button" role="menuitem" data-edit-routine="${esc(item.id)}">${item.liked?'♥ ':''}${esc(item.name)}${item.secondary?'<span class="menu-2nd-badge">2nd</span>':''}</button>`).join(''):'<span class="routine-menu-empty">No routines yet</span>';
   selector.hidden=editing;
   nameInput.hidden=!editing;
   if(state.routineCreating){
     nameInput.value=state.routineDraftName;
-    modeText.textContent='Cancel';
+    modeButton.setAttribute('aria-label','Cancel');
     modeIcon?.setAttribute('href','#icon-close');
-    deleteButton.textContent='Done';
-    deleteButton.setAttribute('aria-label','Create routine');
-    deleteButton.classList.add('routine-done');
-    deleteButton.disabled=false;
+    modeButton.classList.remove('mode-delete');
   }else if(routine){
     nameInput.value=state.routineDraftName;
-    modeText.textContent='Save routine';
-    modeIcon?.setAttribute('href','#icon-check');
-    deleteButton.textContent='Delete';
-    deleteButton.setAttribute('aria-label','Delete routine');
-    deleteButton.classList.remove('routine-done');
-    deleteButton.disabled=false;
+    modeButton.setAttribute('aria-label','Delete');
+    modeIcon?.setAttribute('href','#icon-trash');
+    modeButton.classList.add('mode-delete');
   }else{
     nameInput.value='';
-    modeText.textContent='Add routine';
+    modeButton.setAttribute('aria-label','Add');
     modeIcon?.setAttribute('href','#icon-plus');
-    modeButton.disabled=false;
-    deleteButton.textContent='Delete';
-    deleteButton.setAttribute('aria-label','Delete routine');
-    deleteButton.classList.remove('routine-done');
-    deleteButton.disabled=true;
+    modeButton.classList.remove('mode-delete');
   }
+  modeButton.disabled=false;
+  deleteButton.setAttribute('aria-label','Done');
+  deleteButton.classList.add('routine-done');
+  deleteButton.disabled=!editing;
   syncRoutineEditorControls();
-  selector.textContent='Select a routine to edit';
   selector.setAttribute('aria-expanded',String(!menu.hidden&&!editing));
   likeButton.disabled=!routine;
   const aiRoutineToggle=$('#aiRoutineToggle');
@@ -2955,7 +2968,7 @@ function renderRoutineDrawer(){
   likeButton.setAttribute('aria-pressed',String(Boolean(routine?.liked)));
   likeButton.setAttribute('aria-label',routine?.liked?'Unlike routine':'Like routine');
   const restSegment=routine?routineRestSummary(items,totalSets):'';
-  $('#routineHeaderSummary').textContent=routine?`${routine.name} · ${items.length} exercise${items.length===1?'':'s'} · ${totalSets} set${totalSets===1?'':'s'}${restSegment?` · ${restSegment}`:''}`:state.routineCreating?'Name the new routine, then select Done':state.routines.length?'Select a routine to edit':'Create your first routine';
+  $('#routineHeaderSummary').textContent=routine?`${items.length} exercise${items.length===1?'':'s'} · ${totalSets} set${totalSets===1?'':'s'}${restSegment?` · ${restSegment}`:''}`:state.routineCreating?'Name the new routine, then select Done':state.routines.length?`${state.routines.length} routine${state.routines.length===1?'':'s'} in your library`:'Create your first routine';
 
   const scheduleContainer = $('#routineSchedule');
   const addExercisesButton = $('#routineAddExercises');
@@ -3795,14 +3808,23 @@ function extendAwRest(){
   saveActiveWorkout();
   renderAwRestPill();
 }
+/* Rest pill dismissal: sink 8px + fade (planSwitchOut), then flip [hidden].
+   The is-exiting class is the whole guard — re-showing clears it, so a stale
+   timeout can never hide a pill that came back. */
+function hideAwRestPill(){
+  const pill=$('#awRestPill');
+  if(!pill||pill.hidden||pill.classList.contains('is-exiting'))return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){pill.hidden=true;return;}
+  pill.classList.add('is-exiting');
+  setTimeout(()=>{if(!pill.classList.contains('is-exiting'))return;pill.classList.remove('is-exiting');pill.hidden=true;},240);
+}
 function cancelAwRest(){
   if(state.activeWorkout&&state.activeWorkout.rest){delete state.activeWorkout.rest;saveActiveWorkout();}
   if(state.activeWorkout)state.activeWorkout.restOpen=false;
   stopAwRestTicker();
   const overlay=$('#awRestFullscreen');
   if(overlay)overlay.hidden=true;
-  const pill=$('#awRestPill');
-  if(pill)pill.hidden=true;
+  hideAwRestPill();
   document.body.removeAttribute('data-rest-active');
 }
 function skipAwRest(){
@@ -3902,7 +3924,7 @@ function renderAwRestPill(){
   }
   if(!restActive){
     stopAwRestTicker();
-    if(!pill.hidden)pill.hidden=true;
+    hideAwRestPill();
     if(overlay&&!overlay.hidden)overlay.hidden=true;
     return;
   }
@@ -3927,7 +3949,7 @@ function renderAwRestPill(){
     if(!pill.hidden)pill.hidden=true;
   }else{
     if(overlay&&!overlay.hidden)overlay.hidden=true;
-    pill.hidden=false;
+    pill.classList.remove('is-exiting');pill.hidden=false;   /* clears any pending exit */
   }
   const over=state.activeWorkout?.rest?.over===true;
   pill.toggleAttribute('data-over',over);
@@ -4179,13 +4201,9 @@ function closeModal(restoreFocus = true) {
   document.getElementById('modalBackdrop')?.classList.remove('rest-modal');
   document.querySelector('.modal-visual')?.classList.remove('media-tall');
   document.getElementById('modalExpandBtn')?.querySelector('use')?.setAttribute('href', '#icon-expand');
-  const modal = $('#modalBackdrop .modal');
-  modal.style.transform = 'translateY(100%)';
-  setTimeout(() => {
-    modal.style.transform = '';
-    state.activeExercise = null;
-    closeOverlay('modal', restoreFocus);
-  }, 250);
+  state.activeExercise = null;
+  /* Exit is pure CSS (sheet slide-down + scrim fade) — no JS-timed transform hack. */
+  closeOverlay('modal', restoreFocus);
 }
 
 function seedProgressTimedDraft(fallbackSets) {
@@ -5323,7 +5341,7 @@ function syncMobileTabs() {
   const routineVisible = planSection === 'routines';
   const mealsVisible = planSection === 'meals';
   routine.classList.toggle('mobile-tab-active', routineVisible);
-  const progressOpen = state.overlay.active === 'progress';
+  const progressOpen = state.overlay.active === 'progress' || state.overlay.under === 'progress';
   dashboard.classList.toggle('mobile-tab-active', tab === 'dashboard' || progressOpen);
   meals.classList.toggle('mobile-tab-active', mealsVisible);
   document.body.dataset.mobileTab = tab;
@@ -5357,8 +5375,8 @@ function setMobileTab(tab) {
   if (!tabs.includes(tab)) return;
   closeProgressSettings();
   if (state.mobileTab === 'plan' && tab !== 'plan' && mealEditorLocked()) return;
-  /* Nav pill (120) sits above every overlay — tapping a tab closes whatever is open, including a settings layer stacked under clear-data. */
-  if (state.overlay.active) { closeActiveOverlay(false); if (state.overlay.active === 'settings') closeOverlay('settings', false); }
+  /* Nav pill (120) sits above every overlay — tapping a tab closes whatever is open, unwinding any stacked layers (settings under clear-data, progress under the exercise modal). */
+  if (state.overlay.active) { closeActiveOverlay(false); for (let i = 0; i < 3 && state.overlay.active; i++) closeOverlay(state.overlay.active, false); }
 
   const switching = state.mobileTab !== tab;
   if (!switching) { syncMobileTabs(); return; }
@@ -5714,17 +5732,47 @@ $('#mobileWorkoutBtn').addEventListener('click', (event) => {
 });
 
 $('#routineAddExercises')?.addEventListener('click', () => setMobileTab('workout'));
-$('#routineNewToggle').addEventListener('click', () => {
-  if (state.routineCreating) cancelNewRoutine();
-  else if (currentRoutine()) saveRoutineEditor();
-  else beginNewRoutine();
+$('#routineNewToggle').addEventListener('click', async () => {
+  if (state.routineCreating) return cancelNewRoutine();
+  const routine = currentRoutine();
+  if (!routine) return beginNewRoutine();
+  /* selected → header is the trashcan: confirm + delete (moved from the row) */
+  if (!(await appConfirm(`Delete \"${routine.name}\"?`, { title: 'Delete routine', okLabel: 'Delete' }))) return;
+  const deletedId = routine.id;
+  if (VAULT.loaded) markDeleted('routines', deletedId);
+  state.routines = state.routines.filter((item) => item.id !== deletedId);
+  state.activeRoutineId = null;
+  state.routineCreating = false;
+  state.routineDraftName = '';
+  if (state.routineFilter === deletedId) state.routineFilter = '';
+  for (let i = 0; i < 7; i++) {
+    if (state.schedule[i] === deletedId) state.schedule[i] = '';
+  }
+  if (state.activeWorkout && Array.isArray(state.activeWorkout.secondaryIds)) {
+    state.activeWorkout.secondaryIds = state.activeWorkout.secondaryIds.filter((id) => id !== deletedId);
+    saveActiveWorkout();
+  }
+  const endedSession = endStaleActiveWorkout();
+  syncScheduleState();
+  saveRoutines();
+  renderRoutineDrawer();
+  toast(endedSession ? 'Routine deleted · workout ended' : 'Routine deleted');
 });
-$('#routineSelectorButton').addEventListener('click', (event) => {
-  toggleMenu($('#routineMenu'), event.currentTarget, {
+/* Picker anchor: the editor control carries the field's exact box, even when the
+   field is swapped out for the rename input (routine selected / renaming). */
+const pickerAnchor = el => el.closest('.routine-switch')?.querySelector('.routine-editor-control') || el;
+/* One picker handler for the field and the pill's leading icon: toggleMenu keeps
+   its aria-expanded bookkeeping on the field, the menu is anchored on the control. */
+const openRoutinePicker = (event) => {
+  toggleMenu($('#routineMenu'), $('#routineSelectorButton'), {
     except: () => $('#routineMenu'),
-    open: () => positionMenuBetween($('#routineMenu'), event.currentTarget)
+    open: () => positionMenuBetween($('#routineMenu'), pickerAnchor(event.currentTarget))
   });
-});
+};
+$('#routineSelectorButton').addEventListener('click', openRoutinePicker);
+/* the icon sits outside .routine-editor-control, so it stops the document's
+   "click outside closes menus" handler from closing what it just opened */
+$('#routineDrawer .search-icon-btn').addEventListener('click', (event) => { event.stopPropagation(); openRoutinePicker(event); });
 $('#routineMenu').addEventListener('click', (event) => {
   const option = event.target.closest('[data-edit-routine]');
   if (!option) return;
@@ -5752,33 +5800,12 @@ $('#secondaryRoutine').addEventListener('click',()=>{
   renderRoutineDrawer();
   toast(routine.secondary?'Marked as secondary':'Removed from secondary');
 });
-$('#deleteRoutine').addEventListener('click', async () => {
-  if (state.routineCreating) return saveRoutineEditor();
-  const routine = currentRoutine();
-  if (!routine || !(await appConfirm(`Delete "${routine.name}"?`, { title: 'Delete routine', okLabel: 'Delete' }))) return;
-  const deletedId = routine.id;
-  if (VAULT.loaded) markDeleted('routines', deletedId);
-  state.routines = state.routines.filter((item) => item.id !== deletedId);
-  state.activeRoutineId = null;
-  state.routineCreating = false;
-  state.routineDraftName = '';
-  if (state.routineFilter === deletedId) state.routineFilter = '';
-  for (let i = 0; i < 7; i++) {
-    if (state.schedule[i] === deletedId) state.schedule[i] = '';
-  }
-  if (state.activeWorkout && Array.isArray(state.activeWorkout.secondaryIds)) {
-    state.activeWorkout.secondaryIds = state.activeWorkout.secondaryIds.filter((id) => id !== deletedId);
-    saveActiveWorkout();
-  }
-  const endedSession = endStaleActiveWorkout();
-  syncScheduleState();
-  saveRoutines();
-  renderRoutineDrawer();
-  toast(endedSession ? 'Routine deleted · workout ended' : 'Routine deleted');
+$('#deleteRoutine').addEventListener('click', () => {
+  if (state.routineCreating || currentRoutine()) saveRoutineEditor();
 });
 $('#copyRoutine').addEventListener('click', () => { if(currentRoutine()) copyRoutineValue(routineToText(), 'Routine exported'); });
 $('#copyAllRoutines').addEventListener('click', () => { if(state.routines.length) copyRoutineValue(routinesToText(), 'All routines exported'); });
-$('#pasteRoutineToggle').addEventListener('click', () => $('#routinePastePanel').hidden ? showRoutinePastePanel() : closeRoutinePastePanel());
+$('#pasteRoutineToggle').addEventListener('click', () => showRoutinePastePanel());
 $('#cancelRoutinePaste').addEventListener('click', closeRoutinePastePanel);
 $('#addRoutineText').addEventListener('click', () => importRoutineText('add'));
 $('#importRoutineText').addEventListener('click', () => importRoutineText('replace'));
@@ -5792,7 +5819,6 @@ function liftRoutineDrag(drag) {
     .map((row) => ({ row, rect: row.getBoundingClientRect() }));
   drag.group = entries.map(({ row, rect }) => {
     const placeholder = document.createElement('div');
-    placeholder.className = 'routine-placeholder';
     placeholder.style.height = `${rect.height}px`;
     parent.insertBefore(placeholder, row);
     row.classList.add('dragging');
@@ -6240,26 +6266,17 @@ $('#dashboardWeeklyBars').addEventListener('click',(event)=>{const day=event.tar
 $('#dashboardMonthGrid').addEventListener('click',(event)=>{const day=event.target.closest('.month-day[data-date]');if(!day||day.disabled)return;state.dashboard.selectedDate=state.dashboard.selectedDate===day.dataset.date?null:day.dataset.date;renderProgressHistory();});
 $('#dashboardScopeToggle').addEventListener('click',()=>{state.dashboard.scope=nextDashboardScope(state.dashboard.scope);renderProgressHistory();});
 $('#progressCopyLog').addEventListener('click',copyProgressLog);
-$('#progressPasteLog').addEventListener('click',()=> {
-  if ($('#progressLogPaste').hidden) showProgressLogPaste();
-  else closeProgressLogPaste();
-});
+$('#progressPasteLog').addEventListener('click',()=>{showProgressLogPaste();});
 $('#progressLogPasteCancel').addEventListener('click',closeProgressLogPaste);
 $('#progressLogPasteAdd').addEventListener('click',()=>importProgressLog('add'));
 $('#progressLogPasteImport').addEventListener('click',()=>importProgressLog('replace'));
 $('#mealCopyLog').addEventListener('click',copyMealLog);
-$('#mealPasteLog').addEventListener('click',()=> {
-  if ($('#mealLogPaste').hidden) showMealLogPaste();
-  else closeMealLogPaste();
-});
+$('#mealPasteLog').addEventListener('click',()=>{showMealLogPaste();});
 $('#mealLogPasteCancel').addEventListener('click',closeMealLogPaste);
 $('#mealLogPasteAdd').addEventListener('click',()=>importMealLog('add'));
 $('#mealLogPasteImport').addEventListener('click',()=>importMealLog('replace'));
 $('#customExerciseCopyLog').addEventListener('click',copyCustomExercises);
-$('#customExercisePasteLog').addEventListener('click',()=>{
-  if($('#customExercisePaste').hidden)showCustomExercisePastePanel();
-  else closeCustomExercisePaste();
-});
+$('#customExercisePasteLog').addEventListener('click',()=>{showCustomExercisePastePanel();});
 $('#customExercisePasteCancel').addEventListener('click',closeCustomExercisePaste);
 $('#customExercisePasteAdd').addEventListener('click',()=>importCustomExercises('add'));
 $('#customExercisePasteImport').addEventListener('click',()=>importCustomExercises('replace'));
@@ -6978,7 +6995,7 @@ function saveMealEditor() {
     state.fuel.mealDraftName = '';
     saveFuelState('meals');
     renderFuelDropdowns();
-    toast(`${clean} meal created`);
+    toast('Meal saved');
   } else {
     const meal = state.fuel.foodDb.find(item => String(item.id) === String(state.fuel.selectedManageMealId));
     if (!meal) return;
@@ -6993,7 +7010,7 @@ function saveMealEditor() {
     state.fuel.mealDraftName = '';
     saveFuelState('meals');
     renderFuelDropdowns();
-    toast(`${clean} meal saved`);
+    toast('Meal saved');
   }
 }
 
@@ -7011,12 +7028,9 @@ function renderManageMealMenu() {
 
 function syncMealEditorControls() {
   const clean = String(state.fuel.mealDraftName || $('#manageMealEditName').value || '').trim();
-  const modeButton = $('#fuelNewMealToggle');
-  const deleteButton = $('#btnManageDelete');
-  if (state.fuel.mealCreating) {
-    if (deleteButton) deleteButton.disabled = !clean;
-  } else if (state.fuel.selectedManageMealId) {
-    if (modeButton) modeButton.disabled = !clean;
+  const doneButton = $('#btnManageDelete');
+  if (state.fuel.mealCreating || state.fuel.selectedManageMealId) {
+    if (doneButton) doneButton.disabled = !clean;
   }
 }
 
@@ -7030,7 +7044,6 @@ function renderMealManagerDrawer() {
   const menu = $('#menuCustomManageSelect');
   const searchSwap = $('#manageSearchSwap');
   const modeButton = $('#fuelNewMealToggle');
-  const modeText = modeButton.querySelector('span');
   const modeIcon = modeButton.querySelector('use');
   const deleteButton = $('#btnManageDelete');
   const likeButton = $('#btnManageLike');
@@ -7051,20 +7064,14 @@ function renderMealManagerDrawer() {
 
   if (state.fuel.mealCreating) {
     nameInput.value = state.fuel.mealDraftName;
-    modeText.textContent = 'Cancel';
+    modeButton.setAttribute('aria-label', 'Cancel');
     modeIcon?.setAttribute('href', '#icon-close');
-    deleteButton.textContent = 'Done';
-    deleteButton.setAttribute('aria-label', 'Create meal');
-    deleteButton.classList.add('routine-done');
-    deleteButton.disabled = false;
+    modeButton.classList.remove('mode-delete');
   } else if (meal) {
     nameInput.value = state.fuel.mealDraftName;
-    modeText.textContent = 'Save meal';
-    modeIcon?.setAttribute('href', '#icon-check');
-    deleteButton.textContent = 'Delete';
-    deleteButton.setAttribute('aria-label', 'Delete meal');
-    deleteButton.classList.remove('routine-done');
-    deleteButton.disabled = false;
+    modeButton.setAttribute('aria-label', 'Delete');
+    modeIcon?.setAttribute('href', '#icon-trash');
+    modeButton.classList.add('mode-delete');
 
     $('#editMealDefaultGrams').value = meal.defaultGrams || 100;
     $('#editMealP').value = meal.p100;
@@ -7073,17 +7080,16 @@ function renderMealManagerDrawer() {
     $('#editMealCals').value = meal.cals100 || kcalFromMacros(meal.p100, meal.c100, meal.f100);
   } else {
     nameInput.value = '';
-    modeText.textContent = 'Add meal';
+    modeButton.setAttribute('aria-label', 'Add');
     modeIcon?.setAttribute('href', '#icon-plus');
-    modeButton.disabled = false;
-    deleteButton.textContent = 'Delete';
-    deleteButton.setAttribute('aria-label', 'Delete meal');
-    deleteButton.classList.remove('routine-done');
-    deleteButton.disabled = true;
+    modeButton.classList.remove('mode-delete');
   }
+  modeButton.disabled = false;
+  deleteButton.setAttribute('aria-label', 'Done');
+  deleteButton.classList.add('routine-done');
+  deleteButton.disabled = !editing;
 
   syncMealEditorControls();
-  selector.textContent = 'Select a meal to edit';
   selector.setAttribute('aria-expanded', String(!menu.hidden && !editing));
   likeButton.disabled = !meal;
   likeButton.classList.toggle('liked', Boolean(meal?.liked));
@@ -7092,8 +7098,11 @@ function renderMealManagerDrawer() {
   $('#copyManagedMeal').disabled = !meal;
   $('#copyAllMeals').disabled = !selectable.length;
 
+  /* per-serving line: the meal's Standard Grams, not per 100g — same factor and
+     rounding as recalculateIngredientMacros (cals rounded, macros 1 decimal) */
+  const servingFactor = meal ? (meal.defaultGrams || 100) / 100 : 1;
   $('#fuelHeaderSummary').textContent = meal
-    ? `${meal.name} · ${meal.cals100} kcal/100g`
+    ? `${Math.round((meal.cals100 || 0) * servingFactor)} kcal · ${Math.round((meal.p100 || 0) * servingFactor * 10) / 10} protein · per serving`
     : state.fuel.mealCreating
     ? 'Name the new meal, then select Done'
     : selectable.length
@@ -7165,20 +7174,22 @@ async function deleteManagedMeal() {
 
 $('#fuelNewMealToggle')?.addEventListener('click', () => {
   if (state.fuel.mealCreating) cancelNewMeal();
-  else if (state.fuel.selectedManageMealId) saveMealEditor();
+  else if (state.fuel.selectedManageMealId) deleteManagedMeal();
   else beginNewMeal();
 });
 
-$('#btnCustomManageSelect')?.addEventListener('click', (event) => {
-  toggleMenu($('#menuCustomManageSelect'), event.currentTarget, {
+const openMealPicker = (event) => {
+  toggleMenu($('#menuCustomManageSelect'), $('#btnCustomManageSelect'), {
     except: () => $('#menuCustomManageSelect'),
     open: () => {
-      positionMenuBetween($('#menuCustomManageSelect'), event.currentTarget);
+      positionMenuBetween($('#menuCustomManageSelect'), pickerAnchor(event.currentTarget));
       setManageSearchMode(true);
     },
     close: () => setManageSearchMode(false)
   });
-});
+};
+$('#btnCustomManageSelect')?.addEventListener('click', openMealPicker);
+$('#fuelSettingsBackdrop .search-icon-btn')?.addEventListener('click', (event) => { event.stopPropagation(); openMealPicker(event); });
 
 $('#manageSearchSwap')?.addEventListener('input', renderManageMealMenu);
 $('#ingredientSearchSwap')?.addEventListener('input', handleIngredientSearchInput);
@@ -7224,8 +7235,7 @@ $('#manageMealEditName')?.addEventListener('keydown', (event) => {
 
 $('#btnManageLike')?.addEventListener('click', toggleManageMealLike);
 $('#btnManageDelete')?.addEventListener('click', () => {
-  if (state.fuel.mealCreating) return saveMealEditor();
-  deleteManagedMeal();
+  if (state.fuel.mealCreating || state.fuel.selectedManageMealId) saveMealEditor();
 });
 
 function mealToText(meal) {
@@ -7283,10 +7293,10 @@ function parseMealsText(text) {
 }
 
 function showMealPastePanel(text = '') {
-  showPastePanel('mealPastePanel', 'mealPasteText', text, { toggleId: 'pasteMealToggle' });
+  showPastePanel('mealPastePanel', 'mealPasteText', text);
 }
 function closeMealPastePanel() {
-  closePastePanel('mealPastePanel', { textId: 'mealPasteText', toggleId: 'pasteMealToggle' });
+  closePastePanel('mealPastePanel', { textId: 'mealPasteText' });
 }
 async function importMealsFromText(mode = 'replace') {
   try {
@@ -7320,7 +7330,7 @@ $('#copyAllMeals').addEventListener('click', () => {
   const meals = selectableMeals();
   if (meals.length) copyMealValue(mealsToText(), 'All meals exported');
 });
-$('#pasteMealToggle').addEventListener('click', () => $('#mealPastePanel').hidden ? showMealPastePanel() : closeMealPastePanel());
+$('#pasteMealToggle').addEventListener('click', () => showMealPastePanel());
 $('#cancelMealPaste').addEventListener('click', closeMealPastePanel);
 $('#addMealText').addEventListener('click', () => importMealsFromText('add'));
 $('#importMealText').addEventListener('click', () => importMealsFromText('replace'));
