@@ -93,19 +93,6 @@ public class SafVaultPlugin extends Plugin {
   }
 
   @PluginMethod
-  public void clearFolder(PluginCall call) {
-    Uri treeUri = storedTreeUri();
-    if (treeUri != null) {
-      try {
-        getContext().getContentResolver().releasePersistableUriPermission(treeUri, GRANT_FLAGS);
-      } catch (SecurityException ignored) {
-      }
-      prefs().edit().remove(KEY_TREE_URI).apply();
-    }
-    call.resolve();
-  }
-
-  @PluginMethod
   public void readFile(PluginCall call) {
     String name = call.getString("name", "");
     if (name.isEmpty()) {

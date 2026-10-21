@@ -47,6 +47,7 @@
   --bar-h: 64px;
   --bar-float: 10px;
   --bar-clear: calc(var(--bar-h) + var(--bar-float) + env(safe-area-inset-bottom, 0px));
+  --rest-pill-zone: 55px; /* floating rest pill: 46px tall + the 9px nav-pill gap */
 }
 
 html[data-boot="loading"] body { visibility: hidden; }
@@ -69,7 +70,6 @@ html[data-boot="loading"] body::after { content: ""; visibility: visible; positi
   transition: opacity .22s ease, visibility .22s ease;
 }
 .welcome-backdrop.open { opacity: 1; visibility: visible; }
-.welcome-backdrop[hidden] { display: none; }
 html.welcome-open,
 html.welcome-open body { overflow: hidden; }
 .welcome-card {
@@ -295,6 +295,10 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-add-row .aw-add-row-icon .icon { width: 16px; height: 16px; }
 .aw-add-row:focus-visible { border-color: var(--accent); outline: none; }
 .aw-row.collapsed { min-height: 0; gap: 6px; box-shadow: none; }
+/* JS row height animations (applyGrid→animateAwStateChanges): clip while the
+   row morphs and pin content to the top so it reveals top-down instead of
+   squashing from the centre */
+.aw-row.is-resizing { overflow: hidden; align-content: start; }
 .aw-row.collapsed .aw-addremove { margin-top: 0; }
 .aw-row { display: grid; gap: 8px; min-height: 68px; padding: 10px var(--space-3); background: var(--surface-container); border: 1px solid transparent; border-radius: var(--radius-control); box-sizing: border-box; align-content: center; }
 .aw-row.done { border-color: rgba(var(--accent-rgb), .35); }
@@ -334,12 +338,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .aw-row.skipped { opacity: .55; }
 .aw-row.skipped .aw-name { text-decoration: line-through; }
 .aw-footer { display: grid; grid-template-columns: 1fr; gap: var(--space-2); margin-top: 4px; }
-.aw-secondary-row { display: grid; gap: var(--space-2); }
-.aw-sec-row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--space-2); }
-.aw-secondary-row .pill { min-height: 40px; min-width: 0; }
-.aw-secondary-pill[aria-pressed="true"]:disabled { opacity: 1; cursor: default; }
 .aw-finish { min-height: 44px; }
 .aw-footer-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+/* Cancel | Finish side by side: Finish must not span both columns
+   (base .feature-primary is grid-column: 1 / -1) */
+.aw-footer-secondary .feature-primary { grid-column: auto; }
 .aw-secondary { min-height: 40px; padding: 0 12px; color: var(--text-muted); background: var(--surface-container); border: none; font-size: 12px; font-weight: var(--weight-semibold); cursor: pointer; }
 .aw-cancel { color: var(--danger); }
 
@@ -415,7 +418,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
   gap: 28px;
   background: var(--surface);
 }
-.aw-rest-fullscreen[hidden] { display: none; }
 /* fullscreen rest timer: page behind must not scroll */
 html:has(.aw-rest-fullscreen:not([hidden])),
 html:has(.aw-rest-fullscreen:not([hidden])) body { overflow: hidden; }
@@ -441,11 +443,9 @@ html:has(.aw-rest-fullscreen:not([hidden])) body { overflow: hidden; }
 .aw-rest-circle .circle-label span { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 .aw-rest-full-actions { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%); display: flex; gap: 10px; }
 .aw-rest-meta { position: absolute; left: 50%; top: calc(30% + min(43vw, 180px) + 16px); transform: translateX(-50%); width: min(86vw, 360px); max-height: calc(70vh - min(43vw, 180px) - 116px); display: grid; gap: 8px; justify-items: center; overflow-y: auto; overscroll-behavior: contain; }
-.aw-rest-meta[hidden] { display: none; }
 .aw-rest-exercise { width: 100%; padding: 6px 12px; text-align: center; color: var(--text); background: none; border: 0; border-radius: 999px; appearance: none; cursor: pointer; font-family: "Space Grotesk", Roboto, system-ui, sans-serif; font-size: 17px; font-weight: 600; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aw-rest-exercise:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .aw-rest-sets { width: 100%; display: grid; gap: 6px; }
-.aw-rest-sets[hidden] { display: none; }
 .aw-rest-full-actions button {
   min-height: 40px;
   padding: 0 18px;
@@ -464,6 +464,9 @@ html:has(.aw-rest-fullscreen:not([hidden])) body { overflow: hidden; }
 .aw-rest-fullscreen[data-over] .circle-label span { color: var(--accent); }
 @media (prefers-reduced-motion: no-preference) {
   .aw-rest-fullscreen:not([hidden]) { animation: fadeIn .28s cubic-bezier(.32,.72,.28,1); }
+  /* dismissal mirrors the entrance (plain fade — it's a full page, nothing to
+     sink); app.js keeps [hidden] off until the exit finishes (hideAnimated) */
+  .aw-rest-fullscreen.is-exiting { animation: fadeOut .2s cubic-bezier(.32,.72,.28,1) forwards; pointer-events: none; }
 }
 
 /* Elapsed workout clock */
@@ -490,6 +493,9 @@ body[data-mobile-tab="plan"] #planSwitch:not([hidden]) {
 }
 body[data-mobile-tab="plan"][data-overlay-locked] #planSwitch:not([hidden]) { display: none; }
 body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { bottom: calc(var(--bar-clear) + 68px); }
+/* …and the floating rest pill itself: while a rest runs, the end of the
+   document (AW footer, add-exercise, load-more…) must clear its whole zone */
+body[data-rest-active] .app { padding-bottom: calc(var(--bar-clear) + 12px + var(--rest-pill-zone)); }
 .plan-switch-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 40px; padding: 0 16px; color: var(--text-muted); background: transparent; border: none; border-radius: 999px; font-size: 12px; font-weight: var(--weight-semibold); cursor: pointer; white-space: nowrap; appearance: none; transition: color .2s ease, background-color .2s ease; }
 .plan-switch-btn .icon { width: 16px; height: 16px; }
 .plan-switch-btn[aria-selected="true"] { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
@@ -514,9 +520,22 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .routine-menu:not([hidden]) { animation: fadeUp .16s cubic-bezier(.32,.72,.28,1); }
   .filter-pills:not([hidden]) { animation: fadeUp .2s cubic-bezier(.32,.72,.28,1); }
+  /* Active-workout surfaces (banner, clock chip, search row): entrances only —
+     they live in the flow, so their exit animations held a dead slot and then
+     snapped. They hide instantly (app.js) and rise in when they appear. */
+  #awBanner:not([hidden]) { animation: fadeUp .22s cubic-bezier(.32,.72,.28,1); }
+  #awElapsed:not([hidden]) { animation: fadeIn .2s ease; }
+  .mobile-search-row:not([hidden]) { animation: fadeUp .22s cubic-bezier(.32,.72,.28,1); }
+  /* #grid list<->active-workout swap: paintGrid() paints immediately, then the
+     fresh content rises in — one quick move for start/finish/pause/resume */
+  #grid.is-entering { animation: fadeUp .28s cubic-bezier(.32,.72,.28,1); }
   /* popups: entrance = keyframe while .open, exit = transition (closing removes .open) */
   .import-popup.open .import-popup-card { animation: fadeUp .22s cubic-bezier(.32,.72,.28,1); }
   .import-popup.open .import-popup-scrim { animation: fadeIn .2s ease; }
@@ -561,7 +580,9 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .list-view .media { width: 160px; height: 160px; aspect-ratio: 1 / 1; border-right: 1px solid var(--border); border-bottom: 0; }
 .list-view .card-body { min-height: 160px; display: flex; flex-direction: column; justify-content: center; }
 .list-view .card h3 { min-height: 0; font-size: 16px; }
-.load { display: flex; justify-content: center; padding: var(--space-5); }
+/* 16px above the Load-more button; 8px below it + the fixed 9px nav/timer-pill
+   band = 17px — so top and bottom read as one even gap (was 24 / 33) */
+.load { display: flex; justify-content: center; padding: var(--space-4) var(--space-4) var(--space-2); }
 .load button { min-height: var(--control-size); padding: 0 20px; color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); border: none; font-weight: var(--weight-medium); }
 .empty { grid-column: 1 / -1; min-height: 260px; display: grid; place-content: center; justify-items: center; gap: var(--space-2); color: var(--text-muted); text-align: center; }
 .empty .icon { width: 34px; height: 34px; }
@@ -621,7 +642,8 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 /* Exercise detail popup (Desktop: Centered) */
 .modal-backdrop { align-items: center; justify-content: center; }
 /* …except when opened from the fullscreen rest timer: it must cover both the
-   rest overlay (130) and the nav pill (120). Class is added on open, dropped in closeModal(). */
+   rest overlay (130) and the nav pill (120). Class is added on open, dropped in
+   closeOverlay('modal') — i.e. on every close path, back/Escape included. */
 .modal-backdrop.rest-modal { z-index: 140; }
 .modal {
   position: relative;
@@ -827,9 +849,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-switch:has(.routine-name-editor:not([hidden])) .custom-select-button,
 .routine-switch:has(.menu-search-input:not([hidden])) .custom-select-button { display: none; }
 .routine-switch:has(.menu-search-input:not([hidden])) .routine-name-editor { display: none; }
-/* 2nd-chip needs its own fill now that the pill bg matches it — same treatment
-   as the search row's trailing "Start" pill (surface-container on -high) */
-.routine-switch .routine-editor-control .routine-2nd { background: var(--surface-container); }
 .routine-switch:empty { display: none; }
 .routine-switch label, .routine-paste-panel label, .routine-field label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; }
 /* icon-only buttons sit 2px apart, the same as the app's other icon rows
@@ -873,7 +892,6 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 .routine-menu button:focus-visible { color: var(--text); background: var(--surface-container-high); }
 .routine-menu button[aria-selected="true"] { color: var(--text); background: var(--surface-container-high); font-weight: var(--weight-semibold); }
 .routine-menu-empty { display: block; padding: 10px; color: var(--text-muted); font-size: 12px; }
-.routine-menu .menu-2nd-badge { display: inline-block; margin-left: 6px; padding: 2px 6px; color: var(--accent); background: rgba(var(--accent-rgb), .18); border-radius: 999px; font-size: 9px; font-weight: var(--weight-semibold); letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px; }
 .menu-search-input {
   min-width: 0;
   width: 100%;
@@ -977,13 +995,8 @@ body[data-mobile-tab="plan"][data-rest-active] #planSwitch:not([hidden]) { botto
 }
 .routine-switch .routine-like.liked .icon { fill: currentColor; }
 #routineEditName { padding-right: 56px; }
-.routine-editor-control .routine-2nd { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-height: 28px; padding: 0 10px; color: var(--text-muted); background: var(--surface-container-high); border: none; outline: none; border-radius: 999px; font-size: 11px; font-weight: var(--weight-semibold); appearance: none; }
-.routine-editor-control .routine-2nd:disabled { opacity: .4; }
-.routine-editor-control .routine-2nd.active { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
-.routine-editor-control input[hidden] ~ .routine-2nd { display: none; }
 #aiRoutineToggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; }
 #aiRoutineToggle .icon { width: 18px; height: 18px; }
-#aiRoutineToggle[hidden] { display: none; }
 .routine-editor-control input[hidden] ~ #aiRoutineToggle { display: none; }
 .routine-data-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-2); margin-top: var(--space-3); }
 .routine-data-actions button { min-height: var(--control-size); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px; color: var(--text-soft); background: var(--surface-container); border: none; font-size: 12px; font-weight: var(--weight-semibold); }
@@ -1017,6 +1030,8 @@ body:has(.import-popup.open) .aw-rest-pill { z-index: 10; }
 .routine-link-btn.linking { color: var(--accent); background: transparent; border: 1px dashed var(--accent); }
 .routine-link-btn + .routine-drag { margin-left: -8px; }
 .routine-drag { touch-action: none; user-select: none; cursor: grab; }
+/* press-and-hold feedback while app.js waits out ROUTINE_HOLD_MS */
+.routine-drag.is-holding { color: var(--accent); }
 .routine-drag + .routine-remove { margin-left: -8px; }
 .routine-item.dragging { z-index: 20; user-select: none; background: var(--surface-container-high); box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
 
@@ -1154,7 +1169,7 @@ body:has(.import-popup.open) .aw-rest-pill { z-index: 10; }
 }
 
 /* Progress drawer & Log Progress Form */
-.feature-scroll { min-height: 0; flex: 1; overflow-y: auto; padding: 0; }
+.feature-scroll { min-height: 0; flex: 1; overflow-y: auto; padding: 0; overscroll-behavior: contain; }
 .progress-dashboard { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
 .dashboard-card { padding: var(--space-4); }
 .dashboard-card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); }
@@ -1291,7 +1306,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .seg-control button { min-height: 28px; padding: 4px 10px; color: var(--text-muted); background: transparent; border: none; border-radius: 999px; font-size: 11px; font-weight: var(--weight-semibold); cursor: pointer; white-space: nowrap; appearance: none; transition: color .15s ease, background-color .15s ease; }
 .seg-control button[aria-pressed="true"] { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
 .settings-2nd { min-height: 28px; padding: 4px 10px; color: var(--text-muted); background: var(--surface-container-high); border: none; border-radius: 999px; font-size: 11px; font-weight: var(--weight-semibold); cursor: pointer; white-space: nowrap; flex-shrink: 0; appearance: none; transition: color .15s ease, background-color .15s ease; }
-.settings-2nd[aria-pressed="true"] { color: var(--accent); background: rgba(var(--accent-rgb), .18); }
 .progress-actions .pill-row { flex: 1 1 100%; }
 .progress-actions .pill-row .pill { flex: 1 1 0; min-height: 36px; padding: 0 8px; text-align: center; }
 .settings-row[data-mode="hidden"] .settings-row-main > span { text-decoration: line-through; }
@@ -1417,7 +1431,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .media.media-custom { display: grid; place-items: center; }
 .media-custom .custom-icon .icon, .aw-media .custom-icon .icon { width: 42px; height: 42px; color: var(--text-muted); }
 .modal.custom-exercise { aspect-ratio: auto; }
-.modal.custom-exercise .modal-visual[hidden] { display: none; }
 .feature-primary { grid-column: 1 / -1; }
 
 /* Per-set weight editor */
@@ -1494,7 +1507,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
    ========================================================= */
 
 .fuel-stack { display: grid; gap: var(--space-3); }
-.fuel-stack[hidden] { display: none; }
 
 .fuel-card {
   width: 100%;
@@ -1627,7 +1639,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
 .meal-history { display: grid; }
 /* Inline meal-history expansion under the daily balance card (replaces the old sliding panel) */
 .meal-history-expand { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--divider); }
-.meal-history-expand[hidden] { display: none; }
 @media (prefers-reduced-motion: no-preference) { .meal-history-expand:not([hidden]) { animation: fadeUp .18s ease; } }
 .meal-history-expand .progress-entry { margin-top: 6px; }
 .meal-group-head + .progress-entry { margin-top: 0; }
@@ -1851,7 +1862,6 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     cursor: pointer;
     flex-shrink: 0;
   }
-  .mobile-search-start-btn[hidden] { display: none; }
   .mobile-phone-title {
     margin: 0;
     color: var(--text);
@@ -1945,9 +1955,7 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
   .search-icon-btn[aria-expanded="true"] .filter-chevron,
   .routine-switch:has(.routine-menu:not([hidden])) .filter-chevron { transform: rotate(180deg); }
   .filter-pills { display: grid; gap: var(--space-2); padding: var(--space-2) 0 0; }
-  .filter-pills[hidden] { display: none; }
   .pill-row { display: flex; align-items: center; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; }
-  .pill-row[hidden] { display: none; }
   .pill-row::-webkit-scrollbar { display: none; }
   .pill { flex: 0 0 auto; min-height: 32px; padding: 0 14px; color: var(--text-soft); background: var(--surface-container); border: none; border-radius: 999px; font-size: 12px; font-weight: var(--weight-medium); appearance: none; cursor: pointer; transition: color .15s ease, background-color .15s ease; }
   .pill[aria-pressed="true"] { background: rgba(var(--accent-rgb), .18); color: var(--accent); border-color: transparent; }
@@ -2180,6 +2188,10 @@ button.settings-row-danger:focus-visible { color: var(--danger); }
     background: var(--surface);
   }
   .feature-backdrop.screen .feature-scroll { padding-bottom: calc(var(--bar-clear) + 12px); }
+  /* the rest pill floats over the z-90 dashboard — reserve its zone there only;
+     settings/custom-exercise sit at z-119, ABOVE the pill, so the zone would be
+     dead space behind a hidden timer */
+  body[data-rest-active] #progressBackdrop .feature-scroll { padding-bottom: calc(var(--bar-clear) + 12px + var(--rest-pill-zone)); }
   .feature-backdrop.screen .feature-panel {
     position: relative;
     inset: auto;

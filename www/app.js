@@ -12,7 +12,6 @@ const STORAGE_KEYS=Object.freeze({
   progress:'form-progress-log',
   progressPreferences:'form-progress-preferences',
   workoutReminder:'form-workout-reminder',
-  secondaryPills:'form-secondary-pills',
   restPrefs:'form-rest-prefs',
   pillRowModes:'form-pill-row-modes',
   activeWorkout:'form-active-workout',
@@ -29,7 +28,7 @@ const STORAGE_KEYS=Object.freeze({
 });
 const DEFAULTS=Object.freeze({pageSize:30,sets:3,reps:10,weight:0,duration:30,distance:0});
 const LIMITS=Object.freeze({routineName:40,sets:20,reps:100,weight:2000,duration:600,distance:500,notes:160});
-const APP_VERSION='3.6.2';
+const APP_VERSION='3.6.3';
 const RELEASE_API_URL='https://api.github.com/repos/TheHHR/Form/releases/latest';
 const LB_PER_KG=2.20462, CM_PER_IN=2.54;
 let aiModuleReady=false,aiModuleLoading=null;
@@ -52,11 +51,16 @@ function normalizeAccent(value){return value&&ACCENTS[value]?value:'lime'}
 const ACCENT_COMPLEMENT=Object.freeze({lime:'cyan',cyan:'lime',red:'blue',blue:'red',green:'orange',orange:'green',purple:'pink',pink:'purple'});
 let activeAccent=normalizeAccent(readStorage(STORAGE_KEYS.accent,'lime'));
 function applyAccent(name){
-  const palette=ACCENTS[name]||ACCENTS.lime;
-  const root=document.documentElement.style;
-  root.setProperty('--accent',palette.base);
-  root.setProperty('--accent-ink',palette.ink);
-  root.setProperty('--accent-rgb',palette.rgb);
+  applyPalette(document.documentElement,ACCENTS[name]||ACCENTS.lime);
+}
+/* One place that writes the accent CSS vars onto an element (root, rest pill,
+   fullscreen timer) — previously duplicated in applyAccent and renderAwRestPill. */
+function applyPalette(element,palette){
+  if(!element||!palette)return;
+  element.style.setProperty('--accent',palette.base);
+  element.style.setProperty('--accent-ink',palette.ink);
+  element.style.setProperty('--accent-rgb',palette.rgb);
+  element.style.setProperty('--accent-glow-rgb',palette.rgb);
 }
 applyAccent(activeAccent);
 function applyTabLabels(){document.body.classList.toggle('no-tab-labels',state?state.showTabLabels===false:false)}
@@ -102,7 +106,7 @@ function addCustomExercise(data){
   EXERCISE_BY_ID.set(exercise.id,exercise);
   VALID_EXERCISE_IDS.add(exercise.id);
   persistCustomExercises();
-  if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}
+  markConfigDirty();
   return exercise;
 }
 function updateCustomExercise(exerciseId,data){
@@ -117,7 +121,7 @@ function updateCustomExercise(exerciseId,data){
   CUSTOM_EXERCISES[index]=exercise;
   EXERCISE_BY_ID.set(exerciseId,exercise);
   persistCustomExercises();
-  if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}
+  markConfigDirty();
   return exercise;
 }
 const TAG_LIMITS=Object.freeze({perExercise:12,distinct:100,maxLength:24});
@@ -142,7 +146,7 @@ function tagsIndex(){
   }
   return[...index.values()].sort((a,b)=>b.exercises.size-a.exercises.size||a.label.localeCompare(b.label,undefined,{sensitivity:'base'}));
 }
-function persistExerciseTags(){writeStorage(STORAGE_KEYS.tags,state.exerciseTags);if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}}
+function persistExerciseTags(){writeStorage(STORAGE_KEYS.tags,state.exerciseTags);markConfigDirty();}
 function toggleExerciseTag(exerciseId,tag){
   const id=String(exerciseId),tags=exerciseTagsOf(id),key=tag.toLowerCase();
   const index=tags.findIndex(item=>item.toLowerCase()===key);
@@ -221,7 +225,7 @@ function mergeCustomExercisesImported(parsed){
   }
   if(added){
     persistCustomExercises();
-    if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}
+    markConfigDirty();
     render();
   }
   return added;
@@ -293,7 +297,7 @@ function deleteCustomExercise(exerciseId){
   VALID_EXERCISE_IDS.delete(removed.id);
   deleteExerciseTagEntries([removed.id]);
   persistCustomExercises();
-  if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}
+  markConfigDirty();
   return removed;
 }
 const EXERCISE_BY_ID=new Map(EXERCISES.map(exercise=>[String(exercise.id),exercise]));
@@ -301,12 +305,18 @@ const VALID_EXERCISE_IDS=new Set(EXERCISES.map(exercise=>String(exercise.id)));
 const getExercise=id=>EXERCISE_BY_ID.get(String(id))||null;
 
 function safeParse(raw,fallback,check){try{const value=JSON.parse(raw);return check&&!check(value)?fallback:value??fallback}catch{return fallback}}
-const VAULT_DATA_KEYS=Object.freeze(new Set([STORAGE_KEYS.saved,STORAGE_KEYS.routines,STORAGE_KEYS.schedule,STORAGE_KEYS.progress,STORAGE_KEYS.progressPreferences,STORAGE_KEYS.workoutReminder,STORAGE_KEYS.secondaryPills,STORAGE_KEYS.restPrefs,STORAGE_KEYS.pillRowModes,STORAGE_KEYS.customExercises,STORAGE_KEYS.tags,STORAGE_KEYS.fuel]));
+const VAULT_DATA_KEYS=Object.freeze(new Set([STORAGE_KEYS.saved,STORAGE_KEYS.routines,STORAGE_KEYS.schedule,STORAGE_KEYS.progress,STORAGE_KEYS.progressPreferences,STORAGE_KEYS.workoutReminder,STORAGE_KEYS.restPrefs,STORAGE_KEYS.pillRowModes,STORAGE_KEYS.customExercises,STORAGE_KEYS.tags,STORAGE_KEYS.fuel]));
 function readStorage(key,fallback,check){try{return safeParse(localStorage.getItem(key),fallback,check)}catch{return fallback}}
 function writeStorage(key,value){
   if(VAULT_DATA_KEYS.has(key)&&VAULT.loaded)return;
   try{const serialized=JSON.stringify(value);if(localStorage.getItem(key)!==serialized)localStorage.setItem(key,serialized)}catch(error){console.warn(`Unable to save ${key}`,error)}
 }
+/* removeStorage(): missing sibling of readStorage/writeStorage — call sites
+   were hand-rolling try{localStorage.removeItem(...)}catch{} */
+function removeStorage(key){
+  try{localStorage.removeItem(key)}catch{}
+}
+
 function purgeVaultDataKeys(){
   const keep=new Set([STORAGE_KEYS.accent,'form-vault-saf',STORAGE_KEYS.activeWorkout,STORAGE_KEYS.awBannerDismissed,STORAGE_KEYS.ai,STORAGE_KEYS.aiInsights]);
   const native=FS_ADAPTER.isNative;
@@ -323,6 +333,12 @@ function finishBootGate(){
   setTimeout(()=>{try{document.documentElement.removeAttribute('data-boot')}catch{}},0);
 }
 function clamp(value,minimum,maximum){return Math.min(maximum,Math.max(minimum,Number(value)||minimum))}
+/* Shared one-liners lifted from call sites that repeated them verbatim. */
+function prefersReduced(){return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+function selectedFuelDay(){return state.fuel.history[state.fuelSelectedDate];}
+function progressExercise(){return getExercise(state.progress.activeExerciseId);}
+function numberFromInput(input){return String(input.value).trim().replace(/,/g, '');}
+function stripImportDash(line){return line.startsWith('-')?line.slice(1).trim():line;}
 function localDateValue(date=new Date()){const year=date.getFullYear(),month=String(date.getMonth()+1).padStart(2,'0'),day=String(date.getDate()).padStart(2,'0');return `${year}-${month}-${day}`;}
 function isValidProgressDate(value){const normalized=String(value||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(normalized))return false;const date=new Date(`${normalized}T12:00:00`);return !Number.isNaN(date.getTime())&&localDateValue(date)===normalized}
 function parseLocalDate(value){const [year,month,day]=String(value).split('-').map(Number);return new Date(year,month-1,day,12)}
@@ -397,7 +413,7 @@ const DEFAULT_ROUTINES = [
 const MEAL_SLOTS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 let logMealSlot = 'Breakfast';
 function nextLogSlot() {
-  const day = state.fuel.history[state.fuelSelectedDate];
+  const day = selectedFuelDay();
   const meals = day?.meals || [];
   return MEAL_SLOTS.find(slot => !meals.some(meal => (meal.category || 'Snacks') === slot)) || 'Snacks';
 }
@@ -494,15 +510,14 @@ function loadActiveWorkout(){
   let routine=raw&&typeof raw==='object'?state.routines.find(candidate=>candidate.id===raw.routineId):null;
   if(!routine&&raw&&typeof raw==='object'&&raw.routineName)routine=state.routines.find(candidate=>candidate.name===raw.routineName)||null;
   if(!raw||typeof raw!=='object'||raw.date!==localDateValue()||!routine){
-    try{localStorage.removeItem(STORAGE_KEYS.activeWorkout)}catch{}
+    removeStorage(STORAGE_KEYS.activeWorkout);
     return null;
   }
-  const secondaryIds=Array.isArray(raw.secondaryIds)?[...new Set(raw.secondaryIds.map(String))].filter(id=>state.routines.some(candidate=>candidate.id===id&&candidate.items.length)):[];
-  const extras=Array.isArray(raw.extras)?raw.extras.filter(extra=>extra&&VALID_EXERCISE_IDS.has(String(extra.exerciseId))).map(extra=>({exerciseId:String(extra.exerciseId),sets:clamp(Number(extra.sets)||DEFAULTS.sets,1,LIMITS.sets),reps:clamp(Number.isFinite(Number(extra.reps))?Number(extra.reps):DEFAULTS.reps,0,LIMITS.reps)})):[];
+  const extras=Array.isArray(raw.extras)?raw.extras.filter(extra=>extra&&VALID_EXERCISE_IDS.has(String(extra.exerciseId))).map(extra=>({exerciseId:String(extra.exerciseId),sets:clamp(Number(extra.sets)||DEFAULTS.sets,1,LIMITS.sets),reps:clamp(Number.isFinite(Number(extra.reps))?Number(extra.reps):DEFAULTS.reps,0,LIMITS.reps),...(extra.mode==='timed'?{mode:'timed',...(extra.unit==='min'||extra.unit==='sec'?{unit:extra.unit}:{})}:{}),...(extra.distance?{distance:true}:{})})):[];
   const replacements=raw.replacements&&typeof raw.replacements==='object'
     ?Object.fromEntries(Object.entries(raw.replacements).filter(([from,to])=>VALID_EXERCISE_IDS.has(String(from))&&VALID_EXERCISE_IDS.has(String(to))).map(([from,to])=>[String(from),String(to)]))
     :{};
-  const combined=awSessionItems({secondaryIds,extras,replacements},routine);
+  const combined=awSessionItems({extras,replacements},routine);
   const sets={};
   if(raw.sets&&typeof raw.sets==='object'){
     for(const[key,value]of Object.entries(raw.sets)){
@@ -525,6 +540,7 @@ function loadActiveWorkout(){
       endsAt:Math.max(Number(rawRest.endsAt)||Date.now(),restOvertimeCap),
       total:clamp(Math.round(Number(rawRest.total)),10,600),
       type:rawRest.type==='exercise'?'exercise':'sets',
+      ...(rawRest.remaining!=null&&Number(rawRest.remaining)>=0?{remaining:Number(rawRest.remaining)}:{}),
       ...(rawRest.exerciseId?{exerciseId:String(rawRest.exerciseId)}:{}),
       ...(rawRest.warmup===true?{warmup:true}:{}),
       ...(rawRest.over===true||Number(rawRest.endsAt)<=Date.now()?{over:true}:{away:true})
@@ -538,7 +554,6 @@ function loadActiveWorkout(){
     paused:Boolean(raw.paused),
     sets,
     skipped:raw.skipped&&typeof raw.skipped==='object'?Object.fromEntries(Object.entries(raw.skipped).filter(([,value])=>value===true)):{},
-    secondaryIds,
     extras,
     replacements,
     jumpTo:raw.jumpTo!=null?String(raw.jumpTo):null,
@@ -556,7 +571,7 @@ function clearActiveWorkout(){
   state.activeWorkout=null;
   state.awPick=null;
   stopAwClockTicker();
-  try{localStorage.removeItem(STORAGE_KEYS.activeWorkout)}catch{}
+  removeStorage(STORAGE_KEYS.activeWorkout);
 }
 function endStaleActiveWorkout(){
   if(!state.activeWorkout)return false;
@@ -574,7 +589,7 @@ $('#progressDateGrid').innerHTML=Array.from({length:6},(_,week)=>`<div role="row
 function openProgressDatePicker(returnFocus=document.activeElement){const selected=parseLocalDate($('#progressDate').value||localDateValue());progressDatePickerMonth=new Date(selected.getFullYear(),selected.getMonth(),1,12);progressDatePickerReturnFocus=returnFocus;renderProgressDatePicker();const picker=$('#progressDatePicker');picker.hidden=false;$('#progressDateButton').setAttribute('aria-expanded','true');picker.classList.add('open');picker.querySelector(`[data-date="${$('#progressDate').value}"]`)?.focus({preventScroll:true})}
 function closeProgressDatePicker(restoreFocus=true){const picker=$('#progressDatePicker');if(!picker||!picker.classList.contains('open'))return;picker.classList.remove('open');$('#progressDateButton').setAttribute('aria-expanded','false');if(restoreFocus&&progressDatePickerReturnFocus?.isConnected)progressDatePickerReturnFocus.focus({preventScroll:true});progressDatePickerReturnFocus=null}
 
-function normalizeRoutine(routine){if(!routine||typeof routine!=='object'||!String(routine.id??''))return null;const seen=new Set();return{id:String(routine.id),name:String(routine.name??'Routine').trim().slice(0,LIMITS.routineName)||'Routine',liked:Boolean(routine.liked),...(routine.secondary?{secondary:true}:{}),items:(Array.isArray(routine.items)?routine.items:[]).filter(item=>item&&VALID_EXERCISE_IDS.has(String(item.exerciseId))&&!seen.has(String(item.exerciseId))&&seen.add(String(item.exerciseId))).map(item=>({exerciseId:String(item.exerciseId),sets:clamp(item.sets,1,LIMITS.sets),reps:clamp(Math.round(Number(item.reps)||0),0,item.mode==='timed'?60:LIMITS.reps),...(item.mode==='timed'?{mode:'timed',...(item.unit==='sec'||item.unit==='min'?{unit:item.unit}:{})}:{}),...(item.unweighted?{unweighted:true}:{}),...((item.distance&&item.mode==='timed')?{distance:true}:{})}))}}
+function normalizeRoutine(routine){if(!routine||typeof routine!=='object'||!String(routine.id??''))return null;const seen=new Set();return{id:String(routine.id),name:String(routine.name??'Routine').trim().slice(0,LIMITS.routineName)||'Routine',liked:Boolean(routine.liked),items:(Array.isArray(routine.items)?routine.items:[]).filter(item=>item&&VALID_EXERCISE_IDS.has(String(item.exerciseId))&&!seen.has(String(item.exerciseId))&&seen.add(String(item.exerciseId))).map(item=>({exerciseId:String(item.exerciseId),sets:clamp(item.sets,1,LIMITS.sets),reps:clamp(Math.round(Number(item.reps)||0),0,item.mode==='timed'?60:LIMITS.reps),...(item.mode==='timed'?{mode:'timed',...(item.unit==='sec'||item.unit==='min'?{unit:item.unit}:{})}:{}),...(item.unweighted?{unweighted:true}:{}),...((item.distance&&item.mode==='timed')?{distance:true}:{})}))}}
 function sanitizeSetWeights(value){if(!Array.isArray(value))return null;const list=value.map(entry=>entry===''||entry==null?0:Math.min(LIMITS.weight,Math.max(0,Number(entry)||0))).slice(0,LIMITS.sets);return list.length?list:null}
 function sanitizeSetReps(value,fallbackLength){if(!Array.isArray(value))return null;const list=value.map(entry=>clamp(Number(entry)||1,1,LIMITS.reps)).slice(0,fallbackLength||LIMITS.sets);return list.length?list:null}
 function setRepsFromUniform(reps,count){const value=clamp(Number(reps)||1,1,LIMITS.reps);return count>0?Array.from({length:count},()=>value):null}
@@ -639,7 +654,6 @@ const state={
   showWorkoutReminder:readStorage(STORAGE_KEYS.workoutReminder,true)!==false,
   showTabLabels:readStorage(STORAGE_KEYS.tabLabels,true)!==false,
   units:normalizeUnits(readStorage(STORAGE_KEYS.units,null)),
-  showSecondaryPills:readStorage(STORAGE_KEYS.secondaryPills,false)===true,
   restPrefs:storedRestPrefs,
   progress:{logs:[],activeExerciseId:null,draft:{sets:DEFAULTS.sets,setWeights:[DEFAULTS.weight,DEFAULTS.weight,DEFAULTS.weight],setReps:[DEFAULTS.reps,DEFAULTS.reps,DEFAULTS.reps],setDurations:[],setDistances:[],notes:'',mode:'reps',showWeight:false,durationUnit:'min'}},
   dashboard:{weekOffset:0,monthOffset:0,selectedDate:null,scope:storedProgressPrefs.defaultView},
@@ -858,13 +872,9 @@ function parseRoutinesMd(text) {
       seen = new Set();
       continue;
     }
-    if (line.startsWith('-')) line = line.slice(1).trim();
+    line = stripImportDash(line);
     if (/^liked:\s*true/i.test(line) || /^liked$/i.test(line)) {
       if (routine) routine.liked = true;
-      continue;
-    }
-    if (/^secondary:\s*true/i.test(line) || /^secondary$/i.test(line)) {
-      if (routine) routine.secondary = true;
       continue;
     }
     const idMatch = line.match(/^id:\s*(\S+)$/i);
@@ -911,7 +921,7 @@ function parseMealsMd(text) {
       meals.push(meal);
       continue;
     }
-    if (line.startsWith('-')) line = line.slice(1).trim();
+    line = stripImportDash(line);
     if (/^liked:\s*true/i.test(line) || /^liked$/i.test(line)) { if (meal) meal.liked = true; continue; }
     const mealIdMatch = line.match(/^id:\s*(\S+)$/i);
     if (mealIdMatch && meal) {
@@ -1018,7 +1028,7 @@ function parseTrainingLogsMd(text) {
       currentDate = vaultDate || (isoHeading && isValidProgressDate(isoHeading[1]) ? isoHeading[1] : null);
       continue;
     }
-    if (line.startsWith('-')) line = line.slice(1).trim();
+    line = stripImportDash(line);
     if (!currentDate || !line) continue;
     if (/^water:/i.test(line)) continue;
     const keyMatch = line.match(/^([A-Za-z]+)\s*(?:\(([^)]*)\))?\s*:\s*(.*)$/);
@@ -1085,7 +1095,7 @@ function parseNutritionDiaryMd(text) {
       continue;
     }
     if (!currentDate) continue;
-    if (line.startsWith('-')) line = line.slice(1).trim();
+    line = stripImportDash(line);
     const waterMatch = line.match(/^water:\s*(\d+(?:\.\d+)?)\s*ml/i);
     if (waterMatch) { history[currentDate].water = vClampNum(waterMatch[1], 0, 50000, 0); continue; }
     const idMatch = line.match(/^id\s*:\s*(\S+)\s*$/i);
@@ -1116,7 +1126,7 @@ function parseConfigMd(text) {
   let currentTagName = null;
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
-    if (line.startsWith('-')) line = line.slice(1).trim();
+    line = stripImportDash(line);
     const sectionMatch = line.match(/^#{1,6}\s+(.+)$/);
     if (sectionMatch) { section = sectionMatch[1].trim().toLowerCase(); if (section !== 'exercise tags') currentTagName = null; continue; }
     if (/^key:\s*/i.test(line)) continue;
@@ -1160,21 +1170,9 @@ function parseConfigMd(text) {
     } else if (section === 'custom exercises') {
       if (key === 'name') {
         cfg.customExercises.push({ name: raw });
-      } else if (key === 'id') {
+      } else if (['id', 'category', 'target', 'equipment', 'description'].includes(key)) {
         const last = cfg.customExercises[cfg.customExercises.length - 1];
-        if (last) last.id = raw;
-      } else if (key === 'category') {
-        const last = cfg.customExercises[cfg.customExercises.length - 1];
-        if (last) last.category = raw;
-      } else if (key === 'target') {
-        const last = cfg.customExercises[cfg.customExercises.length - 1];
-        if (last) last.target = raw;
-      } else if (key === 'equipment') {
-        const last = cfg.customExercises[cfg.customExercises.length - 1];
-        if (last) last.equipment = raw;
-      } else if (key === 'description') {
-        const last = cfg.customExercises[cfg.customExercises.length - 1];
-        if (last) last.description = raw.replace(/ \/ /g, '\n');
+        if (last) last[key] = key === 'description' ? raw.replace(/ \/ /g, '\n') : raw;
       }
     } else if (section === 'preferences') {
       if (key === 'accent') cfg.prefs.accent = ['lime','cyan','red','blue','green','orange','purple','pink'].includes(raw) ? raw : 'lime';
@@ -1186,7 +1184,6 @@ function parseConfigMd(text) {
       else if (key === 'rest-between-sets') cfg.prefs.restBetweenSets = vClampNum(raw, 30, 180, 60);
       else if (key === 'rest-between-exercises') cfg.prefs.restBetweenExercises = vClampNum(raw, 30, 180, 90);
       else if (key === 'rest-sound') cfg.prefs.restSound = /^(true|yes|1|on)/i.test(raw);
-      else if (key === 'show-secondary-pills') cfg.prefs.showSecondaryPills = /^(true|yes|1|on)/i.test(raw);
       else if (key === 'pill-routine') cfg.prefs.pillRoutine = ['default','pin','hidden'].includes(raw) ? raw : 'default';
       else if (key === 'pill-category') cfg.prefs.pillCategory = ['default','pin','hidden'].includes(raw) ? raw : 'default';
       else if (key === 'pill-target') cfg.prefs.pillTarget = ['default','pin','hidden'].includes(raw) ? raw : 'default';
@@ -1235,7 +1232,6 @@ function routinesToMd(routines) {
     lines.push(`## ${sanitizeVaultName(r.name)}`);
     if (r.id) lines.push(`- id: ${r.id}`);
     if (r.liked) lines.push('- liked');
-    if (r.secondary) lines.push('- secondary');
     for (const item of r.items) {
       lines.push(`${item.exerciseId} ${item.sets} * ${item.reps}${item.mode === 'timed' ? (item.unit === 'min' ? ' timed min' : ' timed') : ''}${item.unweighted ? ' unweighted' : ''}${item.distance && item.mode === 'timed' ? ' distance' : ''}${labels.has(item) ? ` ${labels.get(item)}` : ''}`);
     }
@@ -1364,7 +1360,6 @@ function configToMd() {
   lines.push(`rest-between-sets: ${state.restPrefs.betweenSets}`);
   lines.push(`rest-between-exercises: ${state.restPrefs.betweenExercise}`);
   lines.push(`rest-sound: ${state.restPrefs.sound!==false}`);
-  lines.push(`show-secondary-pills: ${state.showSecondaryPills}`);
   lines.push(`pill-routine: ${state.pillRowModes.routine}`);
   lines.push(`pill-category: ${state.pillRowModes.category}`);
   lines.push(`pill-target: ${state.pillRowModes.target}`);
@@ -1452,7 +1447,6 @@ function applyConfigToState(cfg) {
     if (cfg.prefs.restBetweenSets !== undefined) state.restPrefs.betweenSets = cfg.prefs.restBetweenSets;
     if (cfg.prefs.restBetweenExercises !== undefined) state.restPrefs.betweenExercise = cfg.prefs.restBetweenExercises;
     if (cfg.prefs.restSound !== undefined) state.restPrefs.sound = cfg.prefs.restSound !== false;
-    if (cfg.prefs.showSecondaryPills !== undefined) state.showSecondaryPills = cfg.prefs.showSecondaryPills;
     if (cfg.prefs.pillRoutine) state.pillRowModes.routine = cfg.prefs.pillRoutine;
     if (cfg.prefs.pillCategory) state.pillRowModes.category = cfg.prefs.pillCategory;
     if (cfg.prefs.pillTarget) state.pillRowModes.target = cfg.prefs.pillTarget;
@@ -1523,7 +1517,6 @@ function mergeRoutinesFromVault(fileText) {
     if (existing) {
       existing.name = fr.name;
       existing.liked = fr.liked;
-      if (fr.secondary) existing.secondary = true; else delete existing.secondary;
       existing.items = fr.items;
     } else {
       fr.id = `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1723,7 +1716,6 @@ function buildDefaultState() {
   state.progressPreferences = normalizeProgressPreferences({ firstDay: 1 });
   state.pillRowModes = normalizePillRowModes({});
   state.showWorkoutReminder = true;
-  state.showSecondaryPills = false;
   activeAccent = normalizeAccent(readStorage(STORAGE_KEYS.accent, 'lime'));
   applyAccent(activeAccent);
 }
@@ -1941,18 +1933,39 @@ function renderEverything() {
 /* --- vault-aware save wrappers --- */
 function saveRoutinesToVault() { markDirty('routines'); scheduleVaultSave('routines'); writeStorage(STORAGE_KEYS.routines, state.routines); }
 function saveTrainingLogsToVault() { markDirty('trainingLogs'); scheduleVaultSave('trainingLogs'); writeStorage(STORAGE_KEYS.progress, state.progress.logs); }
-function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.secondaryPills, state.showSecondaryPills); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); }
+/* vault half of saveConfigToVault() for call sites that already writeStorage
+   the individual config keys themselves and only need the save scheduled */
+function markConfigDirty(){if(VAULT.loaded){markDirty('config');scheduleVaultSave('config');}}
+
+function saveConfigToVault() { markDirty('config'); scheduleVaultSave('config'); writeStorage(STORAGE_KEYS.accent, activeAccent); writeStorage(STORAGE_KEYS.saved, [...state.saved]); writeStorage(STORAGE_KEYS.schedule, state.schedule); writeStorage(STORAGE_KEYS.progressPreferences, state.progressPreferences); writeStorage(STORAGE_KEYS.workoutReminder, state.showWorkoutReminder); writeStorage(STORAGE_KEYS.restPrefs, state.restPrefs); writeStorage(STORAGE_KEYS.pillRowModes, state.pillRowModes); }
 
 let lastBackExitAttempt = 0;
 
+/* Single layer-priority list, shared by the Android back button and the Escape
+   handler. The two used to be maintained separately and had drifted apart (back
+   minimized the fullscreen rest timer while the exercise modal stacked on top of
+   it was still open, and closing the modal through either path skipped
+   closeModal()'s cleanup). Returns true when a layer consumed the key. */
+function closeImportPopupLayer() {
+  const popup = document.querySelector('.import-popup.open');
+  if (!popup) return false;
+  closePastePanel(popup.id, { textId: popup.querySelector('textarea')?.id || null });
+  return true;
+}
+function closeTopLayer() {
+  if (welcomeIsOpen()) return true;
+  if (confirmDialogState) { settleAppConfirm(false); return true; }
+  if (closeImportPopupLayer()) return true;
+  const datePicker = $('#progressDatePicker');
+  if (datePicker && datePicker.classList.contains('open')) { closeProgressDatePicker(); return true; }
+  if (state.overlay.active) { closeAllCustomMenus(); closeActiveOverlay(); return true; }
+  if (awRestIsOpen()) { setAwRestMaximized(false); return true; }
+  return false;
+}
+
 if (window.Capacitor?.isNativePlatform?.()) {
   window.Capacitor?.Plugins?.App?.addListener('backButton', () => {
-    if (welcomeIsOpen()) return;
-    if (confirmDialogState) { settleAppConfirm(false); return; }
-    if (awRestIsOpen()) { setAwRestMaximized(false); return; }
-    const datePicker = $('#progressDatePicker');
-    if (datePicker && datePicker.classList.contains('open')) { closeProgressDatePicker(); return; }
-    if (state.overlay.active) { closeAllCustomMenus(); closeActiveOverlay(); return; }
+    if (closeTopLayer()) return;
     if (state.mobileTab !== 'workout') { setMobileTab('workout'); return; }
     const now = Date.now();
     if (now - lastBackExitAttempt < 2000) {
@@ -2449,26 +2462,15 @@ function render(){
   const awSession=Boolean(state.activeWorkout&&!state.activeWorkout.paused)&&!picking;
   const routine=state.routines.find(item=>item.id===state.routineFilter);
   const all=awSession?[]:getFiltered(),shown=awSession?[]:all.slice(0,state.limit);
-  if(lastAwSession!==null&&lastAwSession!==awSession)window.scrollTo(0,0);
+  const flip=lastAwSession!==null&&lastAwSession!==awSession;
+  if(flip)window.scrollTo(0,0);
   lastAwSession=awSession;
   const searchRow=document.querySelector('.mobile-search-row');
-  if(searchRow)searchRow.hidden=awSession;
+  if(searchRow)(awSession?(searchRow.hidden=true):revealAnimated(searchRow));
   const pickRoutine=picking?state.routines.find(item=>item.id===state.activeWorkout.routineId):null;
   awPickUsedIds=pickRoutine?new Set(awSessionItems(state.activeWorkout,pickRoutine).map(item=>String(item.exerciseId))):null;
   syncFilterPanelVisibility();
-  if(awSession){
-    const banner=$('#awBanner');
-    if(banner){banner.hidden=true;banner.innerHTML='';}
-    $('#grid').className='grid aw-grid';
-    $('#grid').innerHTML=renderActiveWorkout();
-  }else{
-    $('#grid').className='grid list-view';
-    $('#grid').innerHTML=shown.length?shown.map(renderCard).join(''):`<div class="empty-state empty-state--grid">${icon('movement')}<strong>No exercises found</strong><span>Try removing a filter or searching for another movement.</span></div>`;
-  }
-  $('#grid').querySelectorAll('img').forEach(image=>{
-    if(image.dataset.awMedia!==undefined)image.addEventListener('error',()=>awMediaFallback(image,image.dataset.awExercise));
-    else image.addEventListener('error',()=>imageFallback(image),{once:true});
-  });
+  paintGrid({awSession,shown},flip);
   const mobileCount=$('#mobileResultCount');
   const mobileContext=$('#mobileResultContext');
   const mobileSep=$('#mobileResultSep');
@@ -2496,7 +2498,10 @@ function render(){
   }
   renderAwElapsed();
 
-  $('#loadMore').style.display=!awSession&&shown.length<all.length?'block':'none';
+  const loadVisible=!awSession&&shown.length<all.length;
+  $('#loadMore').style.display=loadVisible?'block':'none';
+  const loadWrap=document.querySelector('.load');
+  if(loadWrap)loadWrap.hidden=!loadVisible;   /* empty 48px block at the page end */
   const resetBtn=$('#mobileResetFiltersBtn');
   if(resetBtn)resetBtn.disabled=!hasFilters();
   const startBtn=$('#mobileStartBtn');
@@ -2506,6 +2511,129 @@ function render(){
   }
   renderFilterPills();
   syncCustomSelects();
+}
+/* #grid repaint. Swapping between the exercise list and the active-workout
+   section is a full innerHTML replacement; on a session flip (start, finish,
+   pause, resume) the NEW content rises in. There is deliberately no exit phase
+   and no deferred repaint: the two-way version held the old list for 170ms
+   before swapping, which read as lag, and an exit on a flow element always
+   leaves a dead slot behind it. */
+let gridEnterTimer=0;
+function paintGrid({awSession,shown},flip){
+  applyGrid({awSession,shown});
+  const grid=$('#grid');
+  if(!grid)return;
+  if(!flip||prefersReduced())return;
+  clearTimeout(gridEnterTimer);
+  grid.classList.remove('is-entering');
+  void grid.offsetWidth;                        /* restart the keyframe on the fresh DOM */
+  grid.classList.add('is-entering');
+  gridEnterTimer=setTimeout(()=>{gridEnterTimer=0;grid.classList.remove('is-entering');},300);
+}
+function applyGrid({awSession,shown}){
+  const grid=$('#grid');
+  if(!grid)return;
+  /* Full innerHTML repaints recreate every node, so CSS transitions can never
+     run on AW state changes — snapshot rows first and animate the diff. */
+  const prevRows=new Map();
+  grid.querySelectorAll('.aw-row').forEach(row=>{
+    const list=prevRows.get(row.dataset.exercise)||[];
+    list.push({active:!row.classList.contains('collapsed'),done:row.classList.contains('done'),h:Math.round(row.getBoundingClientRect().height),sets:row.querySelector('.aw-sets'),addTop:row.querySelector('.aw-addremove')?.getBoundingClientRect().top??null});
+    prevRows.set(row.dataset.exercise,list);
+  });
+  if(awSession){
+    grid.classList.toggle('aw-grid',true);
+    grid.classList.toggle('list-view',false);
+    grid.innerHTML=renderActiveWorkout();
+  }else{
+    grid.classList.toggle('aw-grid',false);
+    grid.classList.toggle('list-view',true);
+    grid.innerHTML=shown.length?shown.map(renderCard).join(''):`<div class="empty-state empty-state--grid">${icon('movement')}<strong>No exercises found</strong><span>Try removing a filter or searching for another movement.</span></div>`;
+  }
+  grid.querySelectorAll('img').forEach(image=>{
+    if(image.dataset.awMedia!==undefined)image.addEventListener('error',()=>awMediaFallback(image,image.dataset.awExercise));
+    else image.addEventListener('error',()=>imageFallback(image),{once:true});
+  });
+  if(awSession)animateAwStateChanges(grid,prevRows);
+}
+/* Animate only what changed since the last paint: a row whose active state or
+   height moved (expand / collapse / add-set) morphs its height with the content
+   top-aligned while clipping — rows appearing or leaving are left instant. */
+function animateAwStateChanges(grid,prevRows){
+  if(prefersReduced())return;
+  const ease='cubic-bezier(.32,.72,.28,1)';
+  grid.querySelectorAll('.aw-row').forEach(row=>{
+    const h=Math.round(row.getBoundingClientRect().height);
+    const before=prevRows.get(row.dataset.exercise)?.shift();
+    if(!before)return;   /* row just joined (2nd routine / added exercise): appears instantly */
+    const active=!row.classList.contains('collapsed');
+    const ghosting=!active&&before.active&&before.sets;
+    if(before.h!==h){
+      row.classList.add('is-resizing');
+      const morph=row.animate([{height:`${before.h}px`},{height:`${h}px`}],{duration:200,easing:ease});
+      morph.onfinish=()=>row.classList.remove('is-resizing');
+      /* Mirror of the collapse btnAnim below: by the time this frame paints, the
+         sets block is already IN the layout, so the .aw-addremove buttons sit
+         (h-before.h)px low while the row clip is still the old height — they
+         snap a beat and then get dragged back by the row above collapsing.
+         Lift them by the delta and ease to none on the SAME curve as the height
+         morph: they start on their old spot, stay inside the clip every frame,
+         and land exactly on their natural spot (paired collapse+expand nets to
+         perfectly stationary buttons). Skipped when the ghost path below owns
+         the buttons — two transforms on one box would fight. */
+      if(!ghosting){
+        const delta=h-before.h;
+        row.querySelector('.aw-addremove')?.animate([{transform:`translateY(${-delta}px)`},{transform:'none'}],{duration:200,easing:ease});
+      }
+    }
+    const done=row.classList.contains('done');
+    if(before.done!==done){
+      /* the .aw-row outline lives on a node the render recreates every time, so
+         the border change needs the same treatment: animate it in when the row
+         completes and out when the completion is undone */
+      const rgb=(getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb')||'').trim()||'198,244,50';
+      const outlined=`rgba(${rgb}, .35)`, plain='rgba(0, 0, 0, 0)';
+      row.animate([{borderColor:before.done?outlined:plain},{borderColor:done?outlined:plain}],{duration:200,easing:ease});
+    }
+    if(active&&active!==before.active){
+      row.querySelector('.aw-sets')?.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:200,easing:ease});
+    }else if(ghosting){
+      /* The sets panel left with the old DOM: re-insert it as a ghost that
+         shrinks + dissolves in step with the row's height morph, so the
+         .aw-addremove buttons glide up with the collapse instead of being
+         clipped away and snapping back when the ghost is dropped. */
+      const ghost=before.sets;
+      ghost.setAttribute('aria-hidden','true');
+      ghost.inert=true;
+      ghost.style.pointerEvents='none';
+      ghost.style.overflow='hidden';   /* shrinking box must clip, not spill */
+      row.insertBefore(ghost,row.querySelector('.aw-addremove')||null);
+      const below=row.querySelector('.aw-addremove');
+      let btnAnim=null;
+      if(below&&before.addTop!=null){
+        const flowTop=below.getBoundingClientRect().top;
+        const shift=before.addTop-flowTop;      /* collapsed gaps/margin kick in at frame 0 */
+        /* dropping an EMPTY grid item (the ghost is height 0 by then) costs
+           exactly one row-gap — Chromium floors the item's contribution at 0 */
+        const slotCost=parseFloat(getComputedStyle(row).rowGap)||0;
+        if(shift>0.5||slotCost>0.5){
+          /* one curve covers both offsets: starts where the buttons were, ends
+             exactly where they end up after the slot is gone */
+          btnAnim=below.animate(
+            [{transform:`translateY(${shift}px)`},{transform:`translateY(${-slotCost}px)`}],
+            {duration:200,easing:ease,fill:'forwards'});
+        }
+      }
+      const setsH=Math.round(ghost.getBoundingClientRect().height);
+      ghost.animate([{height:`${setsH}px`,opacity:1},{height:'0px',opacity:0}],
+        {duration:200,easing:ease}).onfinish=()=>{
+          /* same tick as the drop: the transform releases -slotCost while the
+             flow loses the slot (+slotCost) — net visual position doesn't move */
+          btnAnim?.cancel();
+          ghost.remove();
+        };
+    }
+  });
 }
 function hasFilters(){return state.search||state.category||state.target||state.equipment||state.routineFilter||state.savedOnly||state.loggedOnly||state.tags}
 function resetFilters(){
@@ -2594,7 +2722,12 @@ function openOverlay(key,returnFocus=document.activeElement){
   state.overlay.active=key;
 
   if(key==='progress'){$('#progressBackdrop').classList.add('open');$('#progressBackdrop').setAttribute('aria-hidden','false');}
-  else if(key==='modal'){$('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');}
+  else if(key==='modal'){
+    /* a fresh open must not inherit the rest-timer stacking class — the
+       fullscreen path re-adds it right after openModal() returns */
+    $('#modalBackdrop').classList.remove('rest-modal');
+    $('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');
+  }
    else if(key==='logMeal'){$('#fuelLogMealModal').classList.add('open');$('#fuelLogMealModal').setAttribute('aria-hidden','false');logMealSlot=nextLogSlot();renderLogMealSlot();}
    else if(key==='settings'){$('#settingsBackdrop').classList.add('open');$('#settingsBackdrop').setAttribute('aria-hidden','false');syncSettingsControls();if(!aiModuleReady)loadAiModule(true);}
    else if(key==='customExercise'){$('#customExerciseModal').classList.add('open');$('#customExerciseModal').setAttribute('aria-hidden','false');}
@@ -2621,7 +2754,22 @@ function closeOverlay(key,restoreFocus=true){
     if(state.mobileTab==='dashboard')prepareDashboardTab(false);
     syncMobileTabs();
   }
-  else if(key==='modal'){$('#modalBackdrop').classList.remove('open');$('#modalBackdrop').setAttribute('aria-hidden','true');
+  else if(key==='modal'){
+   const backdrop=$('#modalBackdrop');
+   backdrop.classList.remove('open');backdrop.setAttribute('aria-hidden','true');
+   /* Modal teardown lives here rather than in closeModal() so the back button
+      and Escape — which arrive through closeActiveOverlay() — can't leave a
+      stretched GIF or an open tag menu behind.
+      .rest-modal (z-index 140) is dropped only AFTER the .2s exit: removing it
+      on the same frame as .open put the still-fading modal behind the opaque
+      fullscreen timer (130), so back-closing it from the rest timer looked
+      instant even though the transition was running. */
+   if(backdrop.classList.contains('rest-modal')){
+     setTimeout(()=>{if(!backdrop.classList.contains('open'))backdrop.classList.remove('rest-modal');},260);
+   }
+   document.querySelector('.modal-visual')?.classList.remove('media-tall');
+   document.getElementById('modalExpandBtn')?.querySelector('use')?.setAttribute('href','#icon-expand');
+   hideTagMenu();
    if(state.overlay.under==='progress'){state.overlay.under=null;state.overlay.active='progress';} /* stack: modal closed, progress page was never closed */
   }
    else if(key==='logMeal'){resetMealSelection();$('#fuelLogMealModal').classList.remove('open');$('#fuelLogMealModal').setAttribute('aria-hidden','true');}
@@ -2655,32 +2803,22 @@ document.addEventListener('keydown',event=>{
     else if(event.key==='Tab')trapFocus(event,$('#confirmDialogBackdrop'));
     return;
   }
-  if(awRestIsOpen()&&event.key==='Escape'){
-    event.preventDefault();
-    setAwRestMaximized(false);
+  const datePicker=$('#progressDatePicker');
+  const datePickerOpen=datePicker&&datePicker.classList.contains('open');
+  const importPopup=document.querySelector('.import-popup.open');
+  if(event.key==='Escape'){
+    /* same priority list as the Android back button (closeTopLayer) */
+    if(closeTopLayer()){event.preventDefault();event.stopPropagation();}
     return;
   }
-  const datePicker=$('#progressDatePicker');
-  if(datePicker&&datePicker.classList.contains('open')){
-    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeProgressDatePicker();return;}
-    if(event.key==='Tab'){trapFocus(event,datePicker);return;}
-  }
-  const importPopup=document.querySelector('.import-popup.open');
-  if(importPopup){
-    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closePastePanel(importPopup.id,{textId:importPopup.querySelector('textarea')?.id||null});return;}
-    if(event.key==='Tab'){trapFocus(event,importPopup);return;}
+  if(event.key==='Tab'){
+    if(datePickerOpen){event.preventDefault();event.stopPropagation();trapFocus(event,datePicker);return;}
+    if(importPopup){event.preventDefault();event.stopPropagation();trapFocus(event,importPopup);return;}
   }
   if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'&&!state.overlay.active){
     event.preventDefault();$('#search').focus();return;
   }
-  if(!state.overlay.active)return;
-  if(event.key==='Escape'){
-    event.preventDefault();
-    closeAllCustomMenus();
-    closeActiveOverlay();
-  }else if(event.key==='Tab'){
-    trapFocus(event,overlayContainer(state.overlay.active));
-  }
+  if(event.key==='Tab'&&state.overlay.active)trapFocus(event,overlayContainer(state.overlay.active));
 });
 
 function currentRoutine(){return state.routines.find(routine=>routine.id===state.activeRoutineId)||null}
@@ -2701,18 +2839,48 @@ function syncMediaPill(paused){
   if(iconUse)iconUse.setAttribute('href',paused?'#icon-movement':'#icon-pause');
 }
 
-function pauseActiveWorkoutForEdit(){
+/* One implementation of pause/resume — previously written twice (here and in
+   handleAwAction) with the pause half drifting. */
+function pauseAw(){
   const session=state.activeWorkout;
-  if(!session||session.paused)return;
+  if(!session||session.paused)return false;
+  const rest=session.rest;
+  if(rest)rest.remaining=Math.max(0,rest.endsAt-Date.now());   /* freeze the countdown */
   session.paused=true;
   session.pausedAt=Date.now();
   saveActiveWorkout();
+  renderAwRestPill();   /* paused ⇒ restActive false ⇒ pill/fullscreen hide */
   toast('Workout paused');
+  return true;
+}
+function resumeAw(){
+  const session=state.activeWorkout;
+  if(!session||!session.paused)return false;
+  if(session.pausedAt){session.pausedAccum=(Number(session.pausedAccum)||0)+(Date.now()-session.pausedAt);delete session.pausedAt;}
+  session.paused=false;
+  const rest=session.rest;
+  if(rest&&rest.remaining!=null){   /* start the timer again where it froze */
+    rest.endsAt=Date.now()+rest.remaining;
+    delete rest.away;
+    if(rest.remaining>0)delete rest.over;
+    delete rest.remaining;
+  }
+  saveActiveWorkout();
+  renderAwRestPill();   /* restActive again ⇒ pill/fullscreen return + ticker restarts */
+  toast('Workout resumed');
+  return true;
+}
+/* Timer pause (the AW footer only has Cancel + Finish): pauseAw parks the
+   countdown and hides pill + fullscreen (renderAwRestPill sees paused), then
+   render() swaps the session UI — resume brings the timer back running. */
+function pauseAwFromRest(){
+  pauseAw();
+  render();
 }
 function beginRoutineEdit(routineId){
   const routine=state.routines.find(item=>item.id===routineId);
   if(!routine)return;
-  pauseActiveWorkoutForEdit();
+  pauseAw();
   state.activeRoutineId=routine.id;
   state.routineCreating=false;
   state.routineDraftName=routine.name;
@@ -2761,6 +2929,9 @@ function syncRoutineSort(forceCustom=false){
   else if(!hasRoutine&&state.sort==='custom')state.sort='name';
   $('#sortBy').value=state.sort;
 }
+/* the tail shared by five routine-menu handlers */
+function commitRoutineEdit(){saveRoutines();renderRoutineDrawer();}
+
 function saveRoutines(){
   writeStorage(STORAGE_KEYS.routines,state.routines);
   if(VAULT.loaded)saveRoutinesToVault();
@@ -2894,7 +3065,7 @@ function createRoutine(name){
   const clean=String(name||'').trim();
   if(!clean)return;
   const routine={id:`r-${Date.now()}`,name:clean.slice(0,LIMITS.routineName),liked:false,items:[]};
-  pauseActiveWorkoutForEdit();
+  pauseAw();
   state.routines.push(routine);
   state.activeRoutineId=routine.id;
   state.routineCreating=false;
@@ -2926,8 +3097,8 @@ function renderRoutineDrawer(){
   syncRoutineSort();
   const sortedRoutines=orderedRoutines(),filterOptions='<option value="">All exercises</option>'+sortedRoutines.map(routine=>`<option value="${esc(routine.id)}"${routine.id===state.routineFilter?' selected':''}>${routine.liked?'♥ ':''}${esc(routine.name)}</option>`).join('');
   $('#mainRoutineSelect').innerHTML=filterOptions;
-  const routine=currentRoutine(),editing=Boolean(routine)||state.routineCreating,items=routine?.items||[],totalSets=items.reduce((sum,item)=>sum+item.sets,0),selector=$('#routineSelectorButton'),nameInput=$('#routineEditName'),menu=$('#routineMenu'),modeButton=$('#routineNewToggle'),modeIcon=modeButton.querySelector('use'),deleteButton=$('#deleteRoutine'),likeButton=$('#likeRoutine'),secondaryButton=$('#secondaryRoutine');
-  menu.innerHTML=sortedRoutines.length?sortedRoutines.map(item=>`<button type="button" role="menuitem" data-edit-routine="${esc(item.id)}">${item.liked?'♥ ':''}${esc(item.name)}${item.secondary?'<span class="menu-2nd-badge">2nd</span>':''}</button>`).join(''):'<span class="routine-menu-empty">No routines yet</span>';
+  const routine=currentRoutine(),editing=Boolean(routine)||state.routineCreating,items=routine?.items||[],totalSets=items.reduce((sum,item)=>sum+item.sets,0),selector=$('#routineSelectorButton'),nameInput=$('#routineEditName'),menu=$('#routineMenu'),modeButton=$('#routineNewToggle'),modeIcon=modeButton.querySelector('use'),deleteButton=$('#deleteRoutine'),likeButton=$('#likeRoutine');
+  menu.innerHTML=sortedRoutines.length?sortedRoutines.map(item=>`<button type="button" role="menuitem" data-edit-routine="${esc(item.id)}">${item.liked?'♥ ':''}${esc(item.name)}</button>`).join(''):'<span class="routine-menu-empty">No routines yet</span>';
   selector.hidden=editing;
   nameInput.hidden=!editing;
   if(state.routineCreating){
@@ -2956,12 +3127,6 @@ function renderRoutineDrawer(){
   const aiRoutineToggle=$('#aiRoutineToggle');
   if(aiModuleReady)FormAI.syncRoutineAiVisibility();
   else if(aiRoutineToggle)aiRoutineToggle.hidden=true;
-  if(secondaryButton){
-    if(!aiModuleReady)secondaryButton.hidden=false;
-    secondaryButton.disabled=!routine;
-    secondaryButton.setAttribute('aria-pressed',String(Boolean(routine?.secondary)));
-    secondaryButton.classList.toggle('active',Boolean(routine?.secondary));
-  }
   $('#copyRoutine').disabled=!routine;
   $('#copyAllRoutines').disabled=!state.routines.length;
   likeButton.classList.toggle('liked',Boolean(routine?.liked));
@@ -3061,16 +3226,6 @@ function awSessionEntries(session,routine){
   const effective=item=>{const to=replacements[String(item.exerciseId)];return to?{...item,exerciseId:to}:item};
   const entries=routine.items.map(item=>({item:effective(item),secondaryName:null}));
   const seen=new Set(entries.map(entry=>String(entry.item.exerciseId)));
-  for(const secId of session.secondaryIds||[]){
-    const sec=state.routines.find(candidate=>candidate.id===secId);
-    if(!sec)continue;
-    for(const raw of sec.items){
-      const item=effective(raw);
-      if(seen.has(String(item.exerciseId)))continue;
-      seen.add(String(item.exerciseId));
-      entries.push({item,secondaryName:sec.name});
-    }
-  }
   for(const extra of session.extras||[]){
     const item=effective(extra);
     if(seen.has(String(item.exerciseId)))continue;
@@ -3094,6 +3249,11 @@ function syncAwSessionSets(){
   const current=new Set(items.map(item=>String(item.exerciseId)));
   for(const id of Object.keys(session.sets)){if(!current.has(id)){delete session.sets[id];changed=true;}}
   for(const id of Object.keys(session.skipped||{})){if(!current.has(id)){delete session.skipped[id];changed=true;}}
+  /* a jump that already finished (or vanished) must not keep the Jump button
+     stuck active — completing by removing a set bypassed every other clear
+     (check/check-all/skip/log all delete jumpTo themselves) */
+  const jump=session.jumpTo!=null?String(session.jumpTo):null;
+  if(jump&&(!current.has(jump)||awIsComplete(jump)||awSkipped(jump))){delete session.jumpTo;changed=true;}
   return changed;
 }
 function awSessionRoutine(){
@@ -3280,7 +3440,7 @@ function syncAwLog(exercise,item){
 function startRoutineWorkout(routine){
   if(state.activeWorkout){return render();}
   if(!routine||!routine.items.length)return;
-  state.activeWorkout={date:localDateValue(),routineId:routine.id,routineName:routine.name,startedAt:Date.now(),paused:false,sets:seedAwSets(routine),skipped:{},secondaryIds:[],extras:[],replacements:{},jumpTo:null};
+  state.activeWorkout={date:localDateValue(),routineId:routine.id,routineName:routine.name,startedAt:Date.now(),paused:false,sets:seedAwSets(routine),skipped:{},extras:[],replacements:{},jumpTo:null};
   saveActiveWorkout();
   awSetKeepAwake(true);
   startAwRest(600,'sets',routine.items[0]?.exerciseId||null,true,true);
@@ -3405,6 +3565,37 @@ function applyAwReplacement(newId){
   render();
   toast(message);
 }
+/* An exercise added mid-workout seeds from its last logged session — the same
+   history the log screen's draft seeding uses: mode picks up the last log's
+   type (timed vs reps), then sets/intervals, reps or per-interval duration,
+   unit and distance. Row weights/durations/distance are then filled from the
+   same logs by seedAwSets. No log yet -> plain DEFAULTS (3 x 10 reps). */
+function awItemFromLog(exerciseId){
+  const item={exerciseId:String(exerciseId),sets:DEFAULTS.sets,reps:DEFAULTS.reps};
+  const latest=latestLogFor(exerciseId);
+  if(!latest)return item;
+  if(isTimedCardioLog(latest)){
+    const unit=lastLoggedDurUnitFor(exerciseId)==='min'?'min':'sec';
+    const unitLog=lastTimedLogForUnit(exerciseId,unit);
+    const durations=Array.isArray(unitLog?.setDurations)&&unitLog.setDurations.length?unitLog.setDurations:[];
+    const lastMin=durations.length?Number(durations[durations.length-1]):null;
+    const intervals=Number(timedLogTotals(latest).intervals)||Number(latest.sets)||0;
+    item.mode='timed';
+    item.unit=unit;
+    if(intervals>0)item.sets=clamp(intervals,1,LIMITS.sets);
+    /* same conversion seedAwSets applies to the rows, so meta line == steppers */
+    if(lastMin!=null)item.reps=unit==='sec'?Math.round(clamp(lastMin||0,0,1)*60):clamp(Math.round(lastMin)||0,0,60);
+    if(lastLoggedDistanceFor(exerciseId)!=null)item.distance=true;
+    return item;
+  }
+  const strength=lastStrengthLogFor(exerciseId);
+  if(strength){
+    item.sets=clamp(Number(strength.sets)||(Array.isArray(strength.setReps)?strength.setReps.length:0)||item.sets,1,LIMITS.sets);
+    const reps=lastLoggedRepsFor(exerciseId);
+    if(reps!=null)item.reps=reps;
+  }
+  return item;
+}
 function applyAwAdd(newId){
   const pick=state.awPick,session=state.activeWorkout;
   if(!pick||!session)return;
@@ -3414,7 +3605,7 @@ function applyAwAdd(newId){
   if(!routine){cancelAwPick();return render();}
   if(awSessionItems(session,routine).some(item=>String(item.exerciseId)===String(newId))){toast('Already in this workout');return;}
   session.extras=session.extras||[];
-  const extra={exerciseId:String(newId),sets:DEFAULTS.sets,reps:DEFAULTS.reps};
+  const extra=awItemFromLog(newId);
   session.extras.push(extra);
   const seeded=seedAwSets({...routine,items:[extra]});
   if(seeded[newId])session.sets[newId]=seeded[newId];
@@ -3436,22 +3627,7 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
   const session=state.activeWorkout;if(!session)return;
   if(action==='finish')return endActiveWorkout(true);
   if(action==='discard'){if(!await appConfirm('Discard this workout? Completed sets will be lost.',{title:'Discard workout',okLabel:'Discard'}))return;return endActiveWorkout(false);}
-  if(action==='pause'){session.paused=true;session.pausedAt=Date.now();saveActiveWorkout();toast('Workout paused');return render();}
-  if(action==='resume'){if(session.pausedAt){session.pausedAccum=(Number(session.pausedAccum)||0)+(Date.now()-session.pausedAt);delete session.pausedAt;}session.paused=false;saveActiveWorkout();toast('Workout resumed');return render();}
-  if(action==='secondary'){
-    const sec=state.routines.find(candidate=>candidate.id===exerciseId);
-    if(!sec||!sec.items.length||sec.id===session.routineId)return;
-    const ids=session.secondaryIds||(session.secondaryIds=[]);
-    const idx=ids.indexOf(sec.id);
-    if(idx>=0)ids.splice(idx,1);
-    else{
-      ids.push(sec.id);
-      const seeded=seedAwSets(sec);
-      for(const[key,value]of Object.entries(seeded))if(!session.sets[key])session.sets[key]=value;
-    }
-    saveActiveWorkout();
-    return render();
-  }
+  if(action==='resume'){resumeAw();return render();}
   if(action==='pick-cancel'){cancelAwPick();return render();}
   if(action==='jump'){
     const exercise=getExercise(exerciseId);
@@ -3565,7 +3741,6 @@ async function handleAwAction(action,exerciseId,delta,rowIndex){
   render();
   if(restTrigger&&!awNextSetTarget())toast('All done!');
 }
-function secondaryRowChunks(count){if(count<=3)return[count];const rows=[];let remaining=count;while(remaining>4){rows.push(3);remaining-=3;}if(remaining===4)rows.push(2,2);else rows.push(remaining);return rows;}
 function awSetsBlockHtml(exercise,item,skipped=awSkipped(exercise.id)){
   const sets=awSets(exercise.id);
   const timed=routineItemMode(item)==='timed';
@@ -3663,14 +3838,10 @@ function renderActiveWorkout(){
       </div>
     </div>`;
   }).join('');
-  const secondaryRoutines=state.routines.filter(candidate=>candidate.secondary&&candidate.items.length);
-  const chosenSecondaries=session.secondaryIds||[];
-  const secondaryPills=secondaryRoutines.map(candidate=>{const isPrimary=candidate.id===session.routineId;return `<button type="button" class="pill aw-secondary-pill" aria-pressed="${isPrimary||chosenSecondaries.includes(candidate.id)}" data-aw-action="secondary" data-exercise="${esc(candidate.id)}"${isPrimary?' disabled title="Primary routine"':''}>${esc(candidate.name)}</button>`});
-  const secondaryRow=secondaryPills.length?`<div class="aw-secondary-row" role="group" aria-label="Secondary routines">${secondaryRowChunks(secondaryPills.length).map(size=>`<div class="aw-sec-row">${secondaryPills.splice(0,size).join('')}</div>`).join('')}</div>`:'';
   return `<section class="aw-inner" aria-label="Active workout">
     <div class="track aw-progress"><i style="width:${counts.total?Math.round(counts.done/counts.total*100):0}%"></i></div>
     <div class="aw-list">${rowHtml||''}<button type="button" class="aw-add-row" data-aw-action="add-pick"><span class="aw-add-row-icon">${icon('plus')}</span>Add exercise</button></div>
-    <footer class="aw-footer"><button type="button" class="feature-primary aw-finish" data-aw-action="finish">Finish workout</button>${secondaryRow}<div class="aw-footer-secondary"><button type="button" class="aw-secondary" data-aw-action="pause">Pause</button><button type="button" class="aw-secondary aw-cancel" data-aw-action="discard">Cancel</button></div></footer>
+    <footer class="aw-footer"><div class="aw-footer-secondary"><button type="button" class="aw-secondary aw-cancel" data-aw-action="discard">Cancel</button><button type="button" class="feature-primary aw-finish" data-aw-action="finish">Finish workout</button></div></footer>
   </section>`;
 }
 function awBannerHtml(routine,options={}){
@@ -3693,53 +3864,51 @@ function dismissAwBanner(){
   renderFilterPills();
 }
 function restoreAwBanner(){
-  try{localStorage.removeItem(STORAGE_KEYS.awBannerDismissed)}catch{}
+  removeStorage(STORAGE_KEYS.awBannerDismissed);
   renderAwBanner();
 }
 function renderAwBanner(){
   const element=$('#awBanner');
   if(!element)return;
+  /* Show/hide for the in-flow banner. Appearances animate (fadeUp while the
+     space is reserved); hiding is instant — an exit animation on a flow element
+     keeps a 76px dead slot until [hidden] flips and then snaps, which read as a
+     jump, most obviously when the restore-variant rode the filter panel open
+     and closed. */
+  const show=html=>{element.innerHTML=html;revealAnimated(element);};
+  const hide=()=>{element.hidden=true;element.innerHTML='';};
   if(state.awPick&&state.activeWorkout){
     const adding=state.awPick.mode==='add';
     const oldExercise=adding?null:getExercise(state.awPick.exerciseId);
-    element.hidden=false;
-    element.style.display='';
-    element.innerHTML=`<div class="aw-banner aw-pick-banner"><div class="aw-banner-info"><span class="eyebrow">${adding?'Add exercise':'Replace exercise'}</span><strong>${adding?'Pick from the library':esc(oldExercise?oldExercise.name:'')}</strong><span class="aw-banner-meta">${adding?'Tap the + on an exercise':'Tap the swap icon on an exercise'}</span></div><button type="button" class="aw-start" data-aw-action="pick-cancel">Cancel</button></div>`;
+    show(`<div class="aw-banner aw-pick-banner"><div class="aw-banner-info"><span class="eyebrow">${adding?'Add exercise':'Replace exercise'}</span><strong>${adding?'Pick from the library':esc(oldExercise?oldExercise.name:'')}</strong><span class="aw-banner-meta">${adding?'Tap the + on an exercise':'Tap the swap icon on an exercise'}</span></div><button type="button" class="aw-start" data-aw-action="pick-cancel">Cancel</button></div>`);
     return;
   }
   const editRoutine=currentRoutine();
   if(editRoutine){
     const bannerName=String(state.routineDraftName||'').trim()||editRoutine.name;
-    element.hidden=false;
-    element.style.display='';
-    element.innerHTML=`<div class="aw-banner aw-edit-banner"><div class="aw-banner-info"><span class="eyebrow">Editing routine</span><strong>${esc(bannerName)}</strong><span class="aw-banner-meta">${editRoutine.items.length} exercise${editRoutine.items.length===1?'':'s'}</span></div><button type="button" class="aw-start" data-routine-edit-save>Save</button></div>`;
+    show(`<div class="aw-banner aw-edit-banner"><div class="aw-banner-info"><span class="eyebrow">Editing routine</span><strong>${esc(bannerName)}</strong><span class="aw-banner-meta">${editRoutine.items.length} exercise${editRoutine.items.length===1?'':'s'}</span></div><button type="button" class="aw-start" data-routine-edit-save>Save</button></div>`);
     return;
   }
   if(state.activeWorkout&&!state.activeWorkout.paused){
-    element.hidden=true;
-    element.style.display='none';
-    element.innerHTML='';
+    hide();
     return;
   }
-  element.style.display='';
   if(state.activeWorkout){
     const sessionRoutine=state.routines.find(item=>item.id===state.activeWorkout.routineId);
     if(sessionRoutine){
-      element.hidden=false;
-      element.innerHTML=awBannerHtml(sessionRoutine,{paused:true});
+      show(awBannerHtml(sessionRoutine,{paused:true}));
       return;
     }
   }
   const routine=todaysScheduledRoutine();
-  if(!routine||!routine.items.length){element.hidden=true;element.innerHTML='';return;}
-  if(!state.showWorkoutReminder){element.hidden=true;element.innerHTML='';return;}
+  if(!routine||!routine.items.length){hide();return;}
+  if(!state.showWorkoutReminder){hide();return;}
   if(awBannerIsDismissed(routine)){
-    element.hidden=!state.pillRowsExpanded;
-    element.innerHTML=element.hidden?'':awBannerHtml(routine,{dismissed:true});
+    if(state.pillRowsExpanded)show(awBannerHtml(routine,{dismissed:true}));
+    else hide();
     return;
   }
-  element.hidden=false;
-  element.innerHTML=awBannerHtml(routine);
+  show(awBannerHtml(routine));
 }
 
 let awRestTickerId=0;
@@ -3808,22 +3977,41 @@ function extendAwRest(){
   saveActiveWorkout();
   renderAwRestPill();
 }
-/* Rest pill dismissal: sink 8px + fade (planSwitchOut), then flip [hidden].
-   The is-exiting class is the whole guard — re-showing clears it, so a stale
-   timeout can never hide a pill that came back. */
-function hideAwRestPill(){
-  const pill=$('#awRestPill');
-  if(!pill||pill.hidden||pill.classList.contains('is-exiting'))return;
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){pill.hidden=true;return;}
-  pill.classList.add('is-exiting');
-  setTimeout(()=>{if(!pill.classList.contains('is-exiting'))return;pill.classList.remove('is-exiting');pill.hidden=true;},240);
+/* Animated hide for fixed overlays (rest pill, fullscreen timer): play the
+   element's .is-exiting animation, then flip [hidden]. The attribute stays
+   authoritative (a11y, the html:has() scroll-lock, the :not([hidden]) entrance
+   keyframe) and the is-exiting class is the whole guard — re-showing clears it,
+   so a stale timeout can never hide an element that came back; reduced motion
+   hides immediately. Flow elements (banner, clock chip, search row) hide
+   instantly instead: their exit animations held dead space and then snapped. */
+function hideAnimated(element) {
+  if (!element || element.hidden || element.classList.contains('is-exiting')) return;
+  if (prefersReduced()) { element.hidden = true; return; }
+  element.classList.add('is-exiting');
+  setTimeout(() => {
+    if (!element.classList.contains('is-exiting')) return;
+    element.classList.remove('is-exiting');
+    element.hidden = true;
+  }, 240);
 }
+/* Show, clearing any pending exit first (same guard). */
+function revealAnimated(element) {
+  if (!element) return;
+  const wasExiting = element.classList.contains('is-exiting');
+  element.classList.remove('is-exiting');
+  element.hidden = false;
+  if (wasExiting) { /* re-show mid-fade: restart the entrance instead of snapping */
+    element.style.animation = 'none';
+    void element.offsetWidth;
+    element.style.animation = '';
+  }
+}
+function hideAwRestPill(){ hideAnimated($('#awRestPill')); }
 function cancelAwRest(){
   if(state.activeWorkout&&state.activeWorkout.rest){delete state.activeWorkout.rest;saveActiveWorkout();}
   if(state.activeWorkout)state.activeWorkout.restOpen=false;
   stopAwRestTicker();
-  const overlay=$('#awRestFullscreen');
-  if(overlay)overlay.hidden=true;
+  hideAnimated($('#awRestFullscreen'));
   hideAwRestPill();
   document.body.removeAttribute('data-rest-active');
 }
@@ -3893,7 +4081,7 @@ function updateAwRestPill(left){
       meter.style.strokeDashoffset=(282.74-(pct/100)*282.74).toFixed(2);
     }
   }
-  document.querySelectorAll('#awRestPill [data-rest-action="skip"],#awRestFullscreen [data-rest-action="skip"]').forEach(button=>{button.textContent=over?'Stop':'Skip'});
+  document.querySelectorAll('#awRestPill [data-rest-action="skip"],#awRestFullscreen [data-rest-action="skip"]').forEach(button=>{button.textContent=over?'Pause':'Skip'});
 }
 function setAwRestMaximized(on){
   const session=state.activeWorkout;
@@ -3905,10 +4093,11 @@ function setAwRestMaximized(on){
   saveActiveWorkout();
   const overlay=$('#awRestFullscreen');
   if(overlay){
-    overlay.hidden=!on;
     if(on){
+      revealAnimated(overlay);
       overlay.querySelector('[data-rest-action="skip"]')?.focus({preventScroll:true});
     }else{
+      hideAnimated(overlay);   /* plays the .2s fade-out, then flips [hidden] */
       $('#awRestPill [data-rest-action="maximize"]')?.focus({preventScroll:true});
     }
   }
@@ -3917,7 +4106,7 @@ function setAwRestMaximized(on){
 function renderAwRestPill(){
   const pill=$('#awRestPill'),overlay=$('#awRestFullscreen');
   if(!pill)return;
-  const restActive=Boolean(state.activeWorkout?.rest);
+  const restActive=Boolean(state.activeWorkout?.rest)&&!state.activeWorkout.paused;
   if(document.body.hasAttribute('data-rest-active')!==restActive){
     document.body.toggleAttribute('data-rest-active',restActive);
     syncPlanScrollClearance();
@@ -3925,12 +4114,12 @@ function renderAwRestPill(){
   if(!restActive){
     stopAwRestTicker();
     hideAwRestPill();
-    if(overlay&&!overlay.hidden)overlay.hidden=true;
+    if(overlay)hideAnimated(overlay);
     return;
   }
   if(awRestIsOpen()){
     if(overlay){
-      overlay.hidden=false;
+      revealAnimated(overlay);
       const meter=$('#awRestMeter');
       if(meter)meter.style.stroke='var(--accent)';
       const nameEl=overlay.querySelector('#awRestExercise');
@@ -3948,40 +4137,48 @@ function renderAwRestPill(){
     }
     if(!pill.hidden)pill.hidden=true;
   }else{
-    if(overlay&&!overlay.hidden)overlay.hidden=true;
-    pill.classList.remove('is-exiting');pill.hidden=false;   /* clears any pending exit */
+    if(overlay)hideAnimated(overlay);
+    revealAnimated(pill);                             /* clears any pending exit */
   }
   const over=state.activeWorkout?.rest?.over===true;
   pill.toggleAttribute('data-over',over);
   if(overlay)overlay.toggleAttribute('data-over',over);
   const palette=over?(ACCENTS[ACCENT_COMPLEMENT[activeAccent]]||ACCENTS.lime):(ACCENTS[activeAccent]||ACCENTS.lime);
-  [pill,overlay].forEach(el=>{
-    if(!el)return;
-    el.style.setProperty('--accent',palette.base);
-    el.style.setProperty('--accent-ink',palette.ink);
-    el.style.setProperty('--accent-rgb',palette.rgb);
-    el.style.setProperty('--accent-glow-rgb',palette.rgb);
-  });
+  [pill,overlay].forEach(el=>applyPalette(el,palette));
   updateAwRestPill(awRestSecondsLeft());
   ensureAwRestTicker();
 }
+/* extend/skip exist on both the pill and the fullscreen timer — dispatch them
+   once here instead of re-implementing the same branch in each listener.
+   The slot is Skip while counting down; once the timer is done ('set' mode)
+   it becomes Pause: it parks the countdown and pauses the session (the slot
+   that used to say Stop). */
+function dispatchRestAction(action){
+  if(action==='extend'){extendAwRest();return true;}
+  if(action==='skip'){
+    if(state.activeWorkout&&state.activeWorkout.rest&&state.activeWorkout.rest.over===true)pauseAwFromRest();
+    else skipAwRest();
+    return true;
+  }
+  return false;
+}
 $('#awRestPill').addEventListener('click',event=>{
   const action=event.target.closest('[data-rest-action]')?.dataset.restAction;
-  if(action==='extend')extendAwRest();
-  else if(action==='skip')skipAwRest();
-  else if(action==='maximize')setAwRestMaximized(true);
+  if(!action)return;
+  if(dispatchRestAction(action))return;
+  if(action==='maximize')setAwRestMaximized(true);
 });
 $('#awRestFullscreen').addEventListener('click',event=>{
   const action=event.target.closest('[data-rest-action]')?.dataset.restAction;
-  if(action==='extend')extendAwRest();
-  else if(action==='skip')skipAwRest();
-  else if(action==='log-set')awRingActivate();
+  if(action&&dispatchRestAction(action))return;
+  if(action==='log-set')awRingActivate();
   else if(action==='minimize')setAwRestMaximized(false);
   else if(action==='view-exercise'){
     const row=awActiveRestRow();
     if(row?.exercise){
       openModal(row.exercise);
-      /* Opened from the fullscreen timer: cover both the rest overlay (130) and nav (120) */
+      /* Opened from the fullscreen timer: cover both the rest overlay (130) and nav (120);
+         closeOverlay('modal') drops the class again on every close path */
       document.getElementById('modalBackdrop')?.classList.add('rest-modal');
     }
   }
@@ -4024,11 +4221,11 @@ function renderAwElapsed(){
   if(!el)return;
   const session=state.activeWorkout;
   if(!session){
-    el.hidden=true;
+    el.hidden=true;                 /* inline chip: an exit fade would leave a gap in the subtitle line */
     stopAwClockTicker();
     return;
   }
-  el.hidden=false;
+  revealAnimated(el);
   el.textContent=formatAwElapsed(awElapsedMs());
   ensureAwClockTicker();
 }
@@ -4197,12 +4394,10 @@ $('#modalInstructionsToggle')?.addEventListener('click', () => {
 });
 
 function closeModal(restoreFocus = true) {
-  hideTagMenu();
-  document.getElementById('modalBackdrop')?.classList.remove('rest-modal');
-  document.querySelector('.modal-visual')?.classList.remove('media-tall');
-  document.getElementById('modalExpandBtn')?.querySelector('use')?.setAttribute('href', '#icon-expand');
+  /* Exit is pure CSS (sheet slide-down + scrim fade) — no JS-timed transform hack.
+     The rest of the teardown (rest-modal class, media-tall, tag menu) lives in
+     closeOverlay('modal') so every close path runs it exactly once. */
   state.activeExercise = null;
-  /* Exit is pure CSS (sheet slide-down + scrim fade) — no JS-timed transform hack. */
   closeOverlay('modal', restoreFocus);
 }
 
@@ -4419,7 +4614,6 @@ function setRestDuration(key,delta){
 }
 function syncSettingsControls(){
   $('#workoutReminder').setAttribute('aria-checked',String(state.showWorkoutReminder));
-  $('#showSecondaryPills').setAttribute('aria-pressed',String(state.showSecondaryPills));
   $('#restEnabled').setAttribute('aria-checked',String(state.restPrefs.enabled));
   $('#tabLabels').setAttribute('aria-checked',String(state.showTabLabels));
   renderPrefSegs();
@@ -4668,7 +4862,7 @@ async function handleClearDataSubmit(event) {
     }
     CUSTOM_EXERCISES.length = 0;
     persistCustomExercises();
-    if (VAULT.loaded) { markDirty('config'); scheduleVaultSave('config'); }
+    markConfigDirty();
     if (state.saved.size) {
       const before = state.saved.size;
       for (const id of removedIds) state.saved.delete(id);
@@ -4685,7 +4879,7 @@ async function handleClearDataSubmit(event) {
   if (clearTags) {
     state.exerciseTags = {};
     state.tags = '';
-    if (VAULT.loaded) { markDirty('config'); scheduleVaultSave('config'); }
+    markConfigDirty();
     persistExerciseTags();
     renderFilterPills();
   }
@@ -4730,7 +4924,7 @@ $('#chkClearAll')?.addEventListener('change', (e) => {
 });
 
 function syncProgressDraft() {
-  const exercise = getExercise(state.progress.activeExerciseId);
+  const exercise = progressExercise();
   const draft = state.progress.draft;
   const timed = draft.mode === 'timed';
   const sec = timed && draft.durationUnit === 'sec';
@@ -4825,7 +5019,7 @@ function syncProgressDraft() {
     </div>`).join('');
 }
 function renderFixedExercise() {
-  const exercise = getExercise(state.progress.activeExerciseId);
+  const exercise = progressExercise();
   $('.progress-exercise-fixed').classList.toggle('empty', !exercise);
   $('#progressExerciseName').textContent = exercise ? title(exercise.name) : 'Choose an exercise from its details page';
   $('#progressExerciseMeta').textContent = exercise ? `${title(exercise.target)} · ${title(exercise.equipment)} · #${exercise.id}` : 'Open an exercise and select Log progress.';
@@ -5228,7 +5422,7 @@ function closeProgress(restoreFocus = true) {
 }
 function saveProgressLog(event) {
   event.preventDefault();
-  const exercise = getExercise(state.progress.activeExerciseId);
+  const exercise = progressExercise();
   const date = $('#progressDate').value;
   if (!exercise || !date) return;
   const draft = state.progress.draft;
@@ -5406,6 +5600,9 @@ function tagPillChips(){
   chips.sort((a,b)=>Number(a.isDisabled)-Number(b.isDisabled));
   return chips;
 }
+/* re-render only while the panel is on screen */
+function refreshFilterPills(){if(!$('#filterPills').hidden)renderFilterPills();}
+
 function renderFilterPills(){
   const wrap=$('#filterPills');
   if(!wrap||wrap.hidden)return;
@@ -5420,7 +5617,7 @@ function renderFilterPills(){
     let values;
     let available=null;
     if(key==='routine'){
-      values=orderedRoutines().filter(routine=>routine.items.length&&(!routine.secondary||state.showSecondaryPills)).map(routine=>[routine.id,routine.name]);
+      values=orderedRoutines().filter(routine=>routine.items.length).map(routine=>[routine.id,routine.name]);
     }else{
       values=(key==='equipment'?EQUIPMENT_OPTIONS:uniqueValues(key)).map(value=>[value,title(value)]);
     }
@@ -5485,7 +5682,7 @@ $('#filterPillsToggle').addEventListener('click',(event)=>{
   event.preventDefault();
   state.pillRowsExpanded=!state.pillRowsExpanded;
   syncFilterPanelVisibility();
-  if(!$('#filterPills').hidden)renderFilterPills();
+  refreshFilterPills();
 });
 $('#filterPills').addEventListener('click',(event)=>{
   const toggle=event.target.closest('[data-pill-toggle]');
@@ -5555,7 +5752,7 @@ $('#pillRowEditor').addEventListener('click',(event)=>{
     savePillRowModes();
     renderPillRowEditor();
     syncFilterPanelVisibility();
-    if(!$('#filterPills').hidden)renderFilterPills();
+    refreshFilterPills();
     return;
   }
   if(event.target.closest('[data-editor-row="toggles"]')){
@@ -5567,7 +5764,7 @@ $('#pillRowEditor').addEventListener('click',(event)=>{
     savePillRowModes();
     renderPillRowEditor();
     syncFilterPanelVisibility();
-    if(!$('#filterPills').hidden)renderFilterPills();
+    refreshFilterPills();
     return;
   }
   if(event.target.closest('[data-editor-row="tagsHost"]')){
@@ -5577,7 +5774,7 @@ $('#pillRowEditor').addEventListener('click',(event)=>{
     savePillRowModes();
     renderPillRowEditor();
     syncFilterPanelVisibility();
-    if(!$('#filterPills').hidden)renderFilterPills();
+    refreshFilterPills();
     return;
   }
 });
@@ -5748,10 +5945,6 @@ $('#routineNewToggle').addEventListener('click', async () => {
   for (let i = 0; i < 7; i++) {
     if (state.schedule[i] === deletedId) state.schedule[i] = '';
   }
-  if (state.activeWorkout && Array.isArray(state.activeWorkout.secondaryIds)) {
-    state.activeWorkout.secondaryIds = state.activeWorkout.secondaryIds.filter((id) => id !== deletedId);
-    saveActiveWorkout();
-  }
   const endedSession = endStaleActiveWorkout();
   syncScheduleState();
   saveRoutines();
@@ -5792,14 +5985,6 @@ $('#likeRoutine').addEventListener('click',()=>{
   renderRoutineDrawer();
   toast(routine.liked?'Routine liked':'Routine unliked');
 });
-$('#secondaryRoutine').addEventListener('click',()=>{
-  const routine=currentRoutine();
-  if(!routine)return;
-  routine.secondary=!routine.secondary;
-  saveRoutines();
-  renderRoutineDrawer();
-  toast(routine.secondary?'Marked as secondary':'Removed from secondary');
-});
 $('#deleteRoutine').addEventListener('click', () => {
   if (state.routineCreating || currentRoutine()) saveRoutineEditor();
 });
@@ -5811,6 +5996,16 @@ $('#addRoutineText').addEventListener('click', () => importRoutineText('add'));
 $('#importRoutineText').addEventListener('click', () => importRoutineText('replace'));
 let routineDrag = null;
 let routineDragFrame = 0;
+/* Press-and-hold to reorder: the drag handle's aria-label promises "Hold and
+   drag", so the gesture only starts after ROUTINE_HOLD_MS (haptic tick on lift);
+   moving finger first cancels it instead of dragging. */
+const ROUTINE_HOLD_MS = 400;
+const ROUTINE_HOLD_SLOP = 6;
+function clearRoutineHold(drag) {
+  if (!drag) return;
+  if (drag.holdTimer) { clearTimeout(drag.holdTimer); drag.holdTimer = 0; }
+  drag.holdBtn?.classList.remove('is-holding');
+}
 function liftRoutineDrag(drag) {
   drag.lifted = true;
   const parent = drag.row.parentNode;
@@ -5842,7 +6037,7 @@ function liftRoutineDrag(drag) {
 function moveRoutinePlaceholder(drag, to) {
   const others = drag.rows;
   const placeholders = drag.group.map((entry) => entry.placeholder);
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = prefersReduced();
   const before = new Map(others.map((candidate) => [candidate, candidate.getBoundingClientRect().top]));
   if (placeholders.length) {
     if (to >= others.length) {
@@ -5914,8 +6109,9 @@ $('#routineItems').addEventListener('pointerdown', (event) => {
   if (!row || !routine) return;
   const groupIds = routineGroupIds(routine, row.dataset.exerciseId);
   if (!groupIds.length) return;
+  if (routineDrag) finishRoutineDrag(false);   /* a second finger must not orphan the first hold */
   const rect = row.getBoundingClientRect();
-  routineDrag = {
+  const drag = {
     pointerId: event.pointerId,
     row,
     groupIds,
@@ -5929,8 +6125,20 @@ $('#routineItems').addEventListener('pointerdown', (event) => {
     lifted: false,
     rows: [],
     group: [],
+    holdTimer: 0,
+    holdBtn: btn,
   };
+  routineDrag = drag;
   btn.setPointerCapture(event.pointerId);
+  /* hold first, lift second — no reorder from a quick tap or swipe */
+  btn.classList.add('is-holding');
+  drag.holdTimer = setTimeout(() => {
+    drag.holdTimer = 0;
+    btn.classList.remove('is-holding');
+    if (routineDrag !== drag) return;
+    liftRoutineDrag(drag);
+    try { navigator.vibrate && navigator.vibrate(15); } catch {}
+  }, ROUTINE_HOLD_MS);
 });
 $('#routineItems').addEventListener('pointermove', (event) => {
   const drag = routineDrag;
@@ -5938,8 +6146,12 @@ $('#routineItems').addEventListener('pointermove', (event) => {
   drag.lastX = event.clientX;
   drag.lastY = event.clientY;
   if (!drag.lifted) {
-    if (Math.hypot(drag.lastX - drag.startX, drag.lastY - drag.startY) < 4) return;
-    liftRoutineDrag(drag);
+    if (drag.holdTimer) {                       /* still waiting for the hold */
+      if (Math.hypot(drag.lastX - drag.startX, drag.lastY - drag.startY) < ROUTINE_HOLD_SLOP) return;
+      clearRoutineHold(drag);                   /* moved before the hold: cancel, no reorder */
+      finishRoutineDrag(false);
+    }
+    return;
   }
   drag.group.forEach((entry) => {
     entry.row.style.transform = `translate(${drag.lastX - drag.startX}px, ${drag.lastY - drag.startY}px)`;
@@ -5951,6 +6163,7 @@ function finishRoutineDrag(commit) {
   routineDrag = null;
   if (routineDragFrame) { cancelAnimationFrame(routineDragFrame); routineDragFrame = 0; }
   if (!drag) return;
+  clearRoutineHold(drag);
   if (drag.lifted && commit && drag.to !== drag.initialTo) {
     const routine = currentRoutine();
     const group = routine ? routine.items.filter((candidate) => drag.groupIds.includes(candidate.exerciseId)) : [];
@@ -6017,7 +6230,7 @@ $('#routineItems').addEventListener('click', async (event) => {
       delete item.distance;
       item.reps = clamp(Number(item.reps) || DEFAULTS.reps, 1, LIMITS.reps);
     }
-    saveRoutines(); renderRoutineDrawer(); return;
+    return commitRoutineEdit();
   }
   const supersetButton = event.target.closest('[data-superset-toggle]');
   if (supersetButton && item) {
@@ -6060,14 +6273,14 @@ $('#routineItems').addEventListener('click', async (event) => {
   if (weightToggleButton && item) {
     if (routineItemWeighted(item)) { delete item.weighted; item.unweighted = true; }
     else { delete item.unweighted; delete item.weighted; }
-    saveRoutines(); renderRoutineDrawer(); return;
+    return commitRoutineEdit();
   }
   const distanceToggleButton = event.target.closest('[data-distance-toggle]');
   if (distanceToggleButton && item) {
     if (routineItemMode(item) !== 'timed') return;
     if (item.distance) delete item.distance;
     else item.distance = true;
-    saveRoutines(); renderRoutineDrawer(); return;
+    return commitRoutineEdit();
   }
   const unitToggleButton = event.target.closest('[data-unit-toggle]');
   if (unitToggleButton && item) {
@@ -6076,7 +6289,7 @@ $('#routineItems').addEventListener('click', async (event) => {
     if (targetUnit === routineItemUnit(item)) return;
     item.unit = targetUnit;
     item.reps = targetUnit === 'sec' ? DEFAULTS.reps : 1;
-    saveRoutines(); renderRoutineDrawer(); return;
+    return commitRoutineEdit();
   }
   const step = event.target.closest('.routine-step');
   if (step && item) {
@@ -6091,7 +6304,7 @@ $('#routineItems').addEventListener('click', async (event) => {
       const limit = field === 'sets' ? LIMITS.sets : LIMITS.reps;
       item[field] = clamp(item[field] + dir, 1, limit);
     }
-    saveRoutines(); renderRoutineDrawer(); return;
+    return commitRoutineEdit();
   }
   if (event.target.closest('.routine-remove')) {
     const removed = routine.items.find((candidate) => candidate.exerciseId === row.dataset.exerciseId);
@@ -6179,19 +6392,6 @@ $('#settingsBackdrop').addEventListener('click',(event)=>{
   }
 });
 $('#workoutReminder').addEventListener('click',(event)=>{state.showWorkoutReminder=!state.showWorkoutReminder;writeStorage(STORAGE_KEYS.workoutReminder,state.showWorkoutReminder);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.showWorkoutReminder));renderAwBanner();toast(state.showWorkoutReminder?'Workout reminder on':'Workout reminder off');});
-$('#showSecondaryPills').addEventListener('click',(event)=>{
-  state.showSecondaryPills=!state.showSecondaryPills;
-  writeStorage(STORAGE_KEYS.secondaryPills,state.showSecondaryPills);
-  if(VAULT.loaded)saveConfigToVault();
-  event.currentTarget.setAttribute('aria-pressed',String(state.showSecondaryPills));
-  if(!state.showSecondaryPills&&state.routineFilter&&state.routines.find(routine=>routine.id===state.routineFilter)?.secondary){
-    state.routineFilter='';
-    render();
-  }else{
-    renderFilterPills();
-  }
-  toast(state.showSecondaryPills?'2nd routines shown in filters':'2nd routines hidden from filters');
-});
 $('#restEnabled').addEventListener('click',(event)=>{state.restPrefs.enabled=!state.restPrefs.enabled;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.enabled));renderPrefSegs();toast(state.restPrefs.enabled?'Rest timer enabled':'Rest timer disabled');});
 $('#restSound').addEventListener('click',(event)=>{if(!state.restPrefs.enabled)return;state.restPrefs.sound=state.restPrefs.sound===false;writeStorage(STORAGE_KEYS.restPrefs,state.restPrefs);if(VAULT.loaded)saveConfigToVault();event.currentTarget.setAttribute('aria-checked',String(state.restPrefs.sound));unlockRestAudio();toast(state.restPrefs.sound?'Completion sound on':'Completion sound off');});
 $('#tabLabels').addEventListener('click',(event)=>{state.showTabLabels=!state.showTabLabels;writeStorage(STORAGE_KEYS.tabLabels,state.showTabLabels);if(VAULT.loaded)saveConfigToVault();applyTabLabels();event.currentTarget.setAttribute('aria-checked',String(state.showTabLabels));toast(state.showTabLabels?'Tab labels shown':'Tab labels hidden');});
@@ -6334,7 +6534,7 @@ $('#progressForm').addEventListener('click', (event) => {
   const button = event.target.closest('.progress-step');
   if (!button || button.disabled) return;
   const field = button.dataset.field;
-  const exercise = getExercise(state.progress.activeExerciseId);
+  const exercise = progressExercise();
   if (!exercise) return;
 
   const delta = Number(button.dataset.delta);
@@ -6548,7 +6748,7 @@ function commitFuelTargetInput(input) {
   const row = input.closest('[data-fuel-target]');
   const key = row?.dataset.fuelTarget;
   if (!key) return;
-  const raw = String(input.value).trim().replace(/,/g, '');
+  const raw = numberFromInput(input);
   const calcTarget = calculatedFuelTargets()[key];
   const storedIsValue = isFuelTargetOverridden(key);
   let changed = false;
@@ -6573,7 +6773,7 @@ function commitFuelTargetInput(input) {
 const EDITABLE_FOOD_STEPPERS = Object.freeze({ inFoodCals: 0, inFoodP: 1, inFoodC: 1, inFoodF: 1, inPortionGrams: 0 });
 function commitEditableFoodStepper(input) {
   if (input.id === 'inPortionGrams') {
-    const raw = String(input.value).trim().replace(/,/g, '');
+    const raw = numberFromInput(input);
     const num = Number(raw);
     if (!raw || !Number.isFinite(num)) {
       input.value = input.dataset.prev ?? String(ingredientPortionGrams);
@@ -6586,7 +6786,7 @@ function commitEditableFoodStepper(input) {
   }
   const decimals = EDITABLE_FOOD_STEPPERS[input.id];
   if (decimals === undefined) return;
-  const raw = String(input.value).trim().replace(/,/g, '');
+  const raw = numberFromInput(input);
   const num = Number(raw);
   if (!raw || !Number.isFinite(num)) {
     input.value = input.dataset.prev ?? input.value;
@@ -7123,7 +7323,7 @@ const MEAL_EDITOR_STEPPERS = Object.freeze({ editMealDefaultGrams: 0, editMealP:
 function commitMealEditorInput(input) {
   const decimals = MEAL_EDITOR_STEPPERS[input.id];
   if (decimals === undefined) return;
-  const raw = String(input.value).trim().replace(/,/g, '');
+  const raw = numberFromInput(input);
   const num = Number(raw);
   const floor = input.id === 'editMealDefaultGrams' ? 1 : 0;
   if (!raw || !Number.isFinite(num)) {
@@ -7528,7 +7728,7 @@ function saveMealEntry() {
   if (isCustom && !customFoodName.trim()) customFoodName = String(document.getElementById('ingredientSearchSwap')?.value || '').trim();
   const name = isCustom ? customFoodName.trim() : `${selected.name.split(',')[0]} (${ingredientPortionGrams}g)`;
   if (!name) {
-    const day = state.fuel.history[state.fuelSelectedDate];
+    const day = selectedFuelDay();
     const slotTaken = day?.meals.some(meal => (meal.category || 'Snacks') === logMealSlot);
     if (logMealSlot === 'Snacks' || slotTaken) {
       toast('Select a meal first');
@@ -7576,7 +7776,7 @@ function saveMealEntry() {
 
 function skipMealEntry() {
   const category = logMealSlot || nextLogSlot();
-  const day = state.fuel.history[state.fuelSelectedDate];
+  const day = selectedFuelDay();
   if (day?.meals.some(meal => meal.name === 'Skipped' && (meal.category || 'Snacks') === category)) {
     closeOverlay('logMeal');
     return true;
@@ -7627,7 +7827,7 @@ function resetWater() {
 
 function renderFuelDay() {
   ensureDateRecord(state.fuelSelectedDate);
-  const day = state.fuel.history[state.fuelSelectedDate];
+  const day = selectedFuelDay();
 
   const today = localDateValue();
   const isToday = state.fuelSelectedDate === today;
