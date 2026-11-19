@@ -1,3 +1,5 @@
+import javax.inject.Inject
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -57,26 +59,33 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures { compose = true; resValues = true; buildConfig = true }
-    sourceSets {
-        getByName("main").assets.srcDir("build/generated/formAssets/main")
-        getByName("prod").assets.srcDir("build/generated/formAssets/prod")
-    }
 }
 
-
-// Exercise catalogue + stills come from the web app's www/ (single source until the web app is retired).
-val copyCatalog by tasks.registering(Copy::class) {
-    from("../../www") { include("data/exercises.js", "images/**") }
-    into(layout.buildDirectory.dir("generated/formAssets/main"))
+/** Copies part of the web app's www/ into generated assets (single source until the web app is retired). */
+abstract class WwwAssets @Inject constructor(private val fs: FileSystemOperations) : DefaultTask() {
+    @get:InputFiles abstract val files: ConfigurableFileCollection
+    @get:Internal abstract val www: DirectoryProperty
+    @get:Input abstract val includes: ListProperty<String>
+    @get:OutputDirectory abstract val out: DirectoryProperty
+    @TaskAction fun run() { val t = this; fs.sync { from(t.www) { include(t.includes.get()) }; into(t.out) } }
 }
+
+fun wwwAssets(name: String, vararg patterns: String) = tasks.register<WwwAssets>(name) {
+    val root = rootProject.layout.projectDirectory.dir("../www")
+    www.set(root)
+    includes.set(patterns.toList())
+    files.from(root.asFileTree.matching { include(*patterns) })
+    out.set(layout.buildDirectory.dir("generated/$name"))
+}
+val catalogAssets = wwwAssets("catalogAssets", "data/exercises.js", "images/**")
 // Exercise videos ship in prod only; the beta APK stays small.
-val copyVideos by tasks.registering(Copy::class) {
-    from("../../www") { include("videos/**") }
-    into(layout.buildDirectory.dir("generated/formAssets/prod"))
-}
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
-    dependsOn(copyCatalog)
-    if (name.contains("Prod")) dependsOn(copyVideos)
+val videoAssets = wwwAssets("videoAssets", "videos/**")
+
+androidComponents {
+    onVariants { v ->
+        v.sources.assets?.addGeneratedSourceDirectory(catalogAssets, WwwAssets::out)
+        if (v.flavorName == "prod") v.sources.assets?.addGeneratedSourceDirectory(videoAssets, WwwAssets::out)
+    }
 }
 
 dependencies {
@@ -89,7 +98,6 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.1")
-    implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-gif:3.6.3")
     debugImplementation("androidx.compose.ui:ui-tooling")

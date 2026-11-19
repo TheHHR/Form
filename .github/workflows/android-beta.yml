@@ -22,34 +22,30 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      # Native Kotlin/Compose app in native/ (the Capacitor web app in android/ + www/ is no longer built here).
+      # Beta ships without exercise videos; www/images and www/data are bundled by the Gradle build.
+      - name: Decode beta keystore
+        env:
+          FORM_KEYSTORE_BASE64: ${{ secrets.FORM_KEYSTORE_BASE64 }}
+        run: echo "$FORM_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/form-beta.jks"
 
-      - run: npm ci
-
-      - name: Sync version into web app
-        run: sed -i "s/const APP_VERSION='[^']*'/const APP_VERSION='$(cat version.properties)-beta'/" www/app.js
-
-      # Beta APK ships without exercise videos to stay small; the app falls back to the still images.
-      - name: Strip videos
-        run: rm -rf www/videos
-
-      - run: npx cap sync android
-
-      # Signed with the committed debug keystore (no FORM_KEYSTORE), so beta builds upgrade each other.
-      # Installs as com.thehhr.form.beta next to the real app; it never touches prod data.
-      - name: Build beta APK
+      - name: Test and build beta APK
+        env:
+          FORM_KEYSTORE: ${{ runner.temp }}/form-beta.jks
+          FORM_KEYSTORE_PASSWORD: ${{ secrets.FORM_KEYSTORE_PASSWORD }}
+          FORM_KEY_ALIAS: ${{ secrets.FORM_KEY_ALIAS }}
+          FORM_KEY_PASSWORD: ${{ secrets.FORM_KEY_PASSWORD }}
+          # versionCode = 40000 + run number, so every beta upgrades the previous one (and the 3.x web beta).
+          FORM_BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          chmod +x android/gradlew
-          cd android
-          ./gradlew assembleBetaRelease --no-daemon
+          cd native
+          chmod +x gradlew
+          ./gradlew testBetaDebugUnitTest assembleBetaRelease --no-daemon
 
       - id: ver
-        run: echo "version=$(cat version.properties)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(cat native/version.properties)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - run: cp android/app/build/outputs/apk/beta/release/app-beta-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
+      - run: cp native/app/build/outputs/apk/beta/release/app-beta-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -57,4 +53,9 @@ jobs:
           name: Form ${{ steps.ver.outputs.version }}
           prerelease: false
           make_latest: true
+          body: |
+            **Native Android app** (Kotlin + Jetpack Compose, Material 3 Expressive). No WebView.
+            Installs as "Form Beta" next to the real Form app; upgrades the 3.x web beta in place.
+            Point it at a **copy** of your Form folder while testing.
+            Not in this build yet: AI features, text import/export, tags editor, custom-exercise editor, muscle map, month/all-time dashboard.
           files: Form-${{ steps.ver.outputs.version }}.apk
