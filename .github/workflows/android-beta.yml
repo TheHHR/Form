@@ -55,6 +55,6 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: Form ${{ steps.ver.outputs.version }}
-          prerelease: true
-          make_latest: false
+          prerelease: false
+          make_latest: true
           files: Form-${{ steps.ver.outputs.version }}.apk
