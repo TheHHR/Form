@@ -4341,7 +4341,8 @@ function openModal(exercise, returnFocus = document.activeElement) {
     fallback.style.display = 'none';
     image.src = exercise.gif_url || exercise.image;
     image.alt = `Demonstration of ${exercise.name}`;
-    image.onerror = () => imageFallback(image);
+    // Beta APK ships without videos/: fall back to the still before "Media unavailable".
+    image.onerror = () => { if (exercise.image && image.getAttribute('src') !== exercise.image) image.src = exercise.image; else imageFallback(image); };
   }
 
   syncMediaPill(false);

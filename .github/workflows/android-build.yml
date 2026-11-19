@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'TheHHR/Form'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

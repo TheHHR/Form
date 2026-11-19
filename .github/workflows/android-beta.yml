@@ -1,0 +1,60 @@
+name: Android Beta APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.repository == 'TheHHR/Form-Beta'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync version into web app
+        run: sed -i "s/const APP_VERSION='[^']*'/const APP_VERSION='$(cat version.properties)-beta'/" www/app.js
+
+      # Beta APK ships without exercise videos to stay small; the app falls back to the still images.
+      - name: Strip videos
+        run: rm -rf www/videos
+
+      - run: npx cap sync android
+
+      # Signed with the committed debug keystore (no FORM_KEYSTORE), so beta builds upgrade each other.
+      # Installs as com.thehhr.form.beta next to the real app; it never touches prod data.
+      - name: Build beta APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleBetaRelease --no-daemon
+
+      - id: ver
+        run: echo "version=$(cat version.properties)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - run: cp android/app/build/outputs/apk/beta/release/app-beta-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: Form ${{ steps.ver.outputs.version }}
+          prerelease: true
+          make_latest: false
+          files: Form-${{ steps.ver.outputs.version }}.apk
