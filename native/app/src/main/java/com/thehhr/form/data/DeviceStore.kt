@@ -46,7 +46,7 @@ class DeviceStore(context: Context) {
         w.rest?.let { r ->
             put("rest", JSONObject().apply {
                 put("endsAt", r.endsAt); put("total", r.total); put("type", r.type); r.exerciseId?.let { put("exerciseId", it) }
-                put("warmup", r.warmup); r.pausedRemaining?.let { put("pausedRemaining", it) }
+                put("warmup", r.warmup); r.pausedRemaining?.let { put("pausedRemaining", it) }; r.setIndex?.let { put("setIndex", it) }
             })
         }
     }
@@ -76,7 +76,8 @@ class DeviceStore(context: Context) {
         val skippedArr = o.optJSONArray("skipped") ?: JSONArray()
         val rest = o.optJSONObject("rest")?.let { r ->
             Rest(r.getLong("endsAt"), r.getInt("total"), r.optString("type", "sets"), r.optString("exerciseId").ifEmpty { null }, r.optBoolean("warmup"),
-                if (r.has("pausedRemaining")) r.getLong("pausedRemaining") else null)
+                if (r.has("pausedRemaining")) r.getLong("pausedRemaining") else null,
+                if (r.has("setIndex")) r.getInt("setIndex") else null)
         }
         return ActiveWorkout(
             date = o.getString("date"), routineId = o.getString("routineId"), routineName = o.optString("routineName"),

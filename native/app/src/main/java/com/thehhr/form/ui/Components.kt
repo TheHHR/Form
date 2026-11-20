@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -212,33 +215,60 @@ fun NumberDialog(label: String, value: Double, range: ClosedFloatingPointRange<D
 }
 
 /**
- * Inline numeric field for set rows: tap, type, done. Commits valid values on IME done or focus loss.
- * Large emphasized digits in a pill so it reads at arm's length in the gym.
+ * − value + in one pill for set rows and the log form: tap ± to nudge, or tap the number and type.
+ * Typed text commits on IME done or focus loss; a ± tap while typing builds on the typed value.
+ * The unit is announced to screen readers; callers show it visually in a column header.
  */
 @Composable
-fun NumberField(value: Double, unit: String, range: ClosedFloatingPointRange<Double>, onCommit: (Double) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun StepperField(
+    value: Double,
+    unit: String,
+    step: Double,
+    range: ClosedFloatingPointRange<Double>,
+    onCommit: (Double) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
     var text by remember { mutableStateOf(num(value)) }
     LaunchedEffect(value) { if (jsNumber(text) != value) text = num(value) }
     val focus = LocalFocusManager.current
+    fun typedOr(fallback: Double) = jsNumber(text).takeIf { it.isFinite() && it in range } ?: fallback
     fun commit() {
         val n = jsNumber(text)
-        if (n.isFinite() && n in range) onCommit(n) else text = num(value)
+        if (n.isFinite() && n in range) { if (n != value) onCommit(n) } else text = num(value)
     }
-    val color = MaterialTheme.colorScheme.onSurface
+    fun nudge(delta: Double) {
+        val next = (typedOr(value) + delta).coerceIn(range)
+        text = num(next)
+        onCommit(next)
+    }
     Row(
-        modifier.heightIn(min = 48.dp).clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(horizontal = 10.dp),
+        modifier.height(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        StepButton(Icons.Rounded.Remove, "Decrease $unit", enabled && typedOr(value) > range.start) { nudge(-step) }
         BasicTextField(
-            value = text, onValueChange = { text = it.take(7) }, enabled = enabled, singleLine = true,
-            textStyle = MaterialTheme.typography.titleMediumEmphasized.merge(TextStyle(color = color, textAlign = TextAlign.End)),
+            value = text, onValueChange = { text = it.take(6) }, enabled = enabled, singleLine = true,
+            textStyle = MaterialTheme.typography.titleMediumEmphasized.merge(TextStyle(color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { commit(); focus.clearFocus() }),
-            modifier = Modifier.weight(1f).onFocusChanged { if (!it.isFocused) commit() }.semantics { contentDescription = unit },
+            modifier = Modifier.weight(1f).onFocusChanged { if (!it.isFocused) commit() }.semantics { contentDescription = "$unit ${num(value)}" },
         )
-        Text(" $unit", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        StepButton(Icons.Rounded.Add, "Increase $unit", enabled && typedOr(value) < range.endInclusive) { nudge(step) }
+    }
+}
+
+/** Full-height (48 dp) tap target inside the stepper pill; 40 dp wide so two steppers fit a 360 dp phone. */
+@Composable
+private fun StepButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.width(40.dp).fillMaxHeight().clip(CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, Modifier.size(18.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
     }
 }
 

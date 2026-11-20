@@ -29,6 +29,7 @@ object RestNotifier {
     const val ACTION_SKIP = "com.thehhr.form.REST_SKIP"
     const val ACTION_LOG = "com.thehhr.form.LOG_SET"
     const val ACTION_ALARM = "com.thehhr.form.REST_ALARM"
+    const val ACTION_SET_DONE = "com.thehhr.form.SET_DONE"
 
     fun channels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
@@ -83,6 +84,13 @@ object RestNotifier {
             .setUsesChronometer(!w.paused)
         when {
             w.paused -> b.setContentText("Paused · $done/${counted.size} exercises").setShowWhen(false)
+            rest != null && rest.endsAt > now && rest.type == "set" -> {
+                val ex = rest.exerciseId?.let { exTitle(store.exercise(it)) } ?: "Set"
+                b.setContentText("Set ${(rest.setIndex ?: 0) + 1} · $ex")
+                    .setWhen(rest.endsAt).setChronometerCountDown(true)
+                    .addAction(Notification.Action.Builder(null, "Done", broadcast(ctx, ACTION_SET_DONE, 5)).build())
+                    .addAction(Notification.Action.Builder(null, "Cancel", broadcast(ctx, ACTION_SKIP, 2)).build())
+            }
             rest != null && rest.endsAt > now -> {
                 val label = when { rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Rest before next exercise"; else -> "Rest" }
                 b.setContentText(label + (nextName?.let { " · next: $it" } ?: ""))
@@ -105,7 +113,7 @@ object RestNotifier {
         }
     }
 
-    fun restOver(ctx: Context, store: FormStore) {
+    fun restOver(ctx: Context, store: FormStore, title: String = "Rest over") {
         val w = store.workout ?: return
         if (AppVisibility.visible) return
         Haptics.restEnd(ctx, store.data.prefs.restSound)
@@ -113,7 +121,7 @@ object RestNotifier {
         val next = routine?.let { WorkoutLogic.nextTarget(w, it) }?.let { exTitle(store.exercise(it.exerciseId)) }
         val n = Notification.Builder(ctx, CH_REST_DONE)
             .setSmallIcon(R.drawable.ic_stat_form)
-            .setContentTitle("Rest over")
+            .setContentTitle(title)
             .setContentText(next?.let { "Up next: $it" } ?: "Back to it")
             .setCategory(Notification.CATEGORY_ALARM)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
@@ -133,7 +141,15 @@ class RestReceiver : BroadcastReceiver() {
         store.launch {
             try {
                 when (intent.action) {
-                    RestNotifier.ACTION_ALARM -> RestNotifier.restOver(ctx, store)
+                    RestNotifier.ACTION_ALARM -> {
+                        val r = store.workout?.rest
+                        if (r?.type == "set") {
+                            // Set timer ran out: check the set (which starts the normal rest), then alert.
+                            store.whenReady { completeSetTimer(r.endsAt) }
+                            RestNotifier.restOver(ctx, store, title = "Set ${(r.setIndex ?: 0) + 1} done")
+                        } else RestNotifier.restOver(ctx, store)
+                    }
+                    RestNotifier.ACTION_SET_DONE -> store.whenReady { completeSetTimer() }
                     RestNotifier.ACTION_EXTEND -> store.whenReady { extendRest(30) }
                     RestNotifier.ACTION_SKIP -> store.whenReady { skipRest() }
                     RestNotifier.ACTION_LOG -> store.whenReady { logNextSet() }

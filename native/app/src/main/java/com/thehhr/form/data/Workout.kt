@@ -21,6 +21,8 @@ data class Rest(
     val warmup: Boolean = false,
     /** Millis left while paused; null when running. */
     val pausedRemaining: Long? = null,
+    /** Set timer (type "set"): which row of [exerciseId] completes when it ends. */
+    val setIndex: Int? = null,
 )
 
 data class ActiveWorkout(

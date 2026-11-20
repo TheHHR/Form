@@ -63,7 +63,8 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
     val units = vm.data.prefs.units
     val dates = byDate.keys.sortedDescending()
 
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // No spacedBy here: grouped rows bring their own 2 dp gap (M3 segmented lists); other items pad themselves.
+    LazyColumn(contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { weekOffset-- }) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous week") }
@@ -73,7 +74,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Stat("Sessions", "$sessions", Modifier.weight(1f))
                 Stat("Sets", "$sets", Modifier.weight(1f))
                 Stat("Volume", "${jsRound(volumes.sum())} ${units.weight}", Modifier.weight(1f))
@@ -107,10 +108,18 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                 }
             }
         }
+        item { SectionTitle("Muscles this week") }
+        item {
+            val heat = androidx.compose.runtime.remember(weekLogs) { com.thehhr.form.data.Muscles.heat(weekLogs, vm::exercise) }
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
+                if (heat.isEmpty()) EmptyNote("Log a workout to see which muscles you trained.")
+                else MuscleMap(heat, vm.data.profile.sex, Modifier.padding(16.dp).height(240.dp))
+            }
+        }
         item { SectionTitle("History") }
         if (dates.isEmpty()) item { EmptyNote("Finish a workout or log progress from an exercise to see it here.") }
         dates.take(shownDays).forEach { date ->
-            item(key = "d-$date") { Text(vaultDateHeading(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
+            item(key = "d-$date") { Text(vaultDateHeading(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp)) }
             val dayLogs = byDate[date].orEmpty().sortedBy(ProgressLog::createdAt)
             itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, dayLogs.size) }
         }

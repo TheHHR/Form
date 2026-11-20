@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -74,6 +75,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.thehhr.form.FormStore
 import com.thehhr.form.data.ActiveWorkout
 import com.thehhr.form.data.RoutineItem
@@ -246,14 +249,25 @@ private fun RestCard(vm: FormStore, w: ActiveWorkout, now: Long) {
                 )
                 Icon(Icons.Rounded.Timer, null, Modifier.size(22.dp))
             }
+            val setTimer = rest.type == "set"
             Column(Modifier.weight(1f)) {
-                val label = when { rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Next exercise"; else -> "Rest" }
-                Text(if (over) "$label · over" else label, style = MaterialTheme.typography.labelLargeEmphasized)
-                Text((if (over) "+" else "") + fmtTime(kotlin.math.abs(left) + if (over) 0 else 999), style = MaterialTheme.typography.displaySmallEmphasized)
+                val label = when {
+                    setTimer -> "Set ${(rest.setIndex ?: 0) + 1} · " + exTitle(rest.exerciseId?.let(vm::exercise))
+                    // Once rest runs out the clock keeps going as the time spent in the set (the web app's "set" mode).
+                    over -> "Set"
+                    rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Next exercise"; else -> "Rest"
+                }
+                Text(label, style = MaterialTheme.typography.labelLargeEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(fmtTime(kotlin.math.abs(left) + if (over) 0 else 999), style = MaterialTheme.typography.displaySmallEmphasized)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                FilledTonalButton(onClick = { vm.extendRest(30) }, shapes = ButtonDefaults.shapes()) { Text("+30s") }
-                IconButton(onClick = vm::skipRest) { Icon(Icons.Rounded.SkipNext, "Skip rest") }
+                if (setTimer) {
+                    FilledTonalButton(onClick = { vm.completeSetTimer() }, shapes = ButtonDefaults.shapes()) { Text("Done") }
+                    IconButton(onClick = vm::skipRest) { Icon(Icons.Rounded.Close, "Cancel set timer") }
+                } else {
+                    FilledTonalButton(onClick = { vm.extendRest(30) }, shapes = ButtonDefaults.shapes()) { Text("+30s") }
+                    IconButton(onClick = vm::skipRest) { Icon(Icons.Rounded.SkipNext, if (over) "Dismiss set clock" else "Skip rest") }
+                }
             }
         }
     }
@@ -271,6 +285,8 @@ private fun RestCue(vm: FormStore, w: ActiveWorkout) {
         delay(wait.coerceAtLeast(0))
         // The notification alarm stays quiet while the app is visible, so this is the only cue then.
         if (com.thehhr.form.AppVisibility.visible) com.thehhr.form.Haptics.restEnd(context, vm.data.prefs.restSound)
+        // A finished set timer checks its set (idempotent if the background alarm got there first).
+        if (rest.type == "set") vm.completeSetTimer(rest.endsAt)
     }
 }
 
@@ -313,7 +329,8 @@ private fun ExerciseCard(
             ) { Icon(Icons.Rounded.Check, "Done", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.surface) }
         }
         AnimatedVisibility(open && !skipped) {
-            Column(Modifier.padding(start = 12.dp, end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(start = 10.dp, end = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SetHeader(item, units.weight, units.distance)
                 rows.forEachIndexed { i, row -> SetRowView(vm, id, i, row, item, units.weight, units.distance) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { vm.addSet(id) }) { Icon(Icons.Rounded.Add, null); Text("Set") }
@@ -336,29 +353,55 @@ private fun ExerciseCard(
 private fun SetRowView(vm: FormStore, exId: String, index: Int, row: SetRow, item: RoutineItem, wUnit: String, dUnit: String) {
     fun set(r: SetRow) = vm.updateRow(exId, index, r)
     val view = LocalView.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(
-            Modifier.size(28.dp).clip(MaterialShapes.Circle.toShape())
-                .background(if (row.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("${index + 1}", style = MaterialTheme.typography.labelLargeEmphasized,
-                color = if (row.done) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    val rest = vm.workout?.rest
+    val timing = rest?.type == "set" && rest.exerciseId == exId && rest.setIndex == index
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         if (item.timed) {
             val sec = item.unitOrDefault == "sec"
-            NumberField(row.duration, if (sec) "sec" else "min", 0.0..(if (sec) 3600.0 else 600.0), { set(row.copy(duration = it)) }, Modifier.weight(1f))
-            if (item.distance) NumberField(row.distance, dUnit, 0.0..500.0, { set(row.copy(distance = it)) }, Modifier.weight(1f))
+            StepperField(row.duration, if (sec) "seconds" else "minutes", if (sec) 5.0 else 1.0, 0.0..(if (sec) 3600.0 else 600.0),
+                { set(row.copy(duration = it)) }, Modifier.weight(1f), enabled = !timing)
+            if (item.distance) StepperField(row.distance, dUnit, if (dUnit == "mi") 0.25 else 0.5, 0.0..500.0, { set(row.copy(distance = it)) }, Modifier.weight(1f))
         } else {
-            NumberField(row.reps.toDouble(), "reps", 1.0..100.0, { set(row.copy(reps = it.toInt())) }, Modifier.weight(1f))
+            StepperField(row.reps.toDouble(), "reps", 1.0, 1.0..100.0, { set(row.copy(reps = it.toInt())) }, Modifier.weight(1f))
         }
         if (item.weighted && !(item.timed && item.distance)) {
-            NumberField(row.weight ?: 0.0, wUnit, 0.0..2000.0, { set(row.copy(weight = it)) }, Modifier.weight(1.2f))
+            StepperField(row.weight ?: 0.0, wUnit, if (wUnit == "lb") 5.0 else 2.5, 0.0..2000.0, { set(row.copy(weight = it)) }, Modifier.weight(1f))
         }
+        // One button per set: shows the set number, ▶ to start a timed set's countdown, ✓ once done.
         FilledIconToggleButton(
-            checked = row.done, onCheckedChange = { if (!row.done) com.thehhr.form.Haptics.setDone(view); vm.toggleRow(exId, index) },
+            checked = row.done || timing,
+            onCheckedChange = {
+                when {
+                    row.done -> vm.toggleRow(exId, index)
+                    timing -> { com.thehhr.form.Haptics.setDone(view); vm.completeSetTimer() }
+                    item.timed -> vm.startSetTimer(exId, index)
+                    else -> { com.thehhr.form.Haptics.setDone(view); vm.toggleRow(exId, index) }
+                }
+            },
             shapes = IconButtonDefaults.toggleableShapes(),
             modifier = Modifier.size(IconButtonDefaults.mediumContainerSize()),
-        ) { Icon(Icons.Rounded.Check, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done") }
+        ) {
+            when {
+                row.done -> Icon(Icons.Rounded.Check, "Set ${index + 1} done")
+                timing -> Icon(Icons.Rounded.Check, "Finish set ${index + 1} now")
+                item.timed -> Icon(Icons.Rounded.PlayArrow, "Start timer for set ${index + 1}")
+                else -> Text("${index + 1}", style = MaterialTheme.typography.titleMediumEmphasized,
+                    modifier = Modifier.semantics { contentDescription = "Mark set ${index + 1} done" })
+            }
+        }
+    }
+}
+
+/** Unit labels once per card, aligned over the stepper columns. */
+@Composable
+private fun SetHeader(item: RoutineItem, wUnit: String, dUnit: String) {
+    val labels = buildList {
+        if (item.timed) { add(if (item.unitOrDefault == "sec") "sec" else "min"); if (item.distance) add(dUnit) } else add("reps")
+        if (item.weighted && !(item.timed && item.distance)) add(wUnit)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        labels.forEach { Text(it, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+        Spacer(Modifier.width(IconButtonDefaults.mediumContainerSize().width))
     }
 }

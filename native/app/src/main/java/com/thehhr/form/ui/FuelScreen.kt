@@ -90,7 +90,8 @@ fun FuelTab(vm: FormStore) {
     val isToday = date == vm.todayKey
     val ld = LocalDate.parse(date)
 
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // No spacedBy: grouped meal rows bring their own 2 dp gap; other items pad themselves.
+    LazyColumn(contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { date = ld.minusDays(1).toString() }) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous day") }
@@ -123,7 +124,7 @@ fun FuelTab(vm: FormStore) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+            Card(Modifier.fillMaxWidth().padding(vertical = 12.dp), shape = MaterialTheme.shapes.large) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs)
                     Spacer(Modifier.width(12.dp))

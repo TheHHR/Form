@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -103,7 +105,7 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
                 Text("Week starts on", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 ChoiceGroup(listOf(1 to "Mon", 6 to "Sat", 0 to "Sun"), prefs.weekStart, { vm.setPrefs(prefs.copy(weekStart = it)) })
             }
-            item { Box(Modifier.padding(top = 12.dp)) }
+            item { Spacer(Modifier.height(12.dp)) }
             item { SwitchItem(0, 4, "Rest timer", "Countdown after each set", prefs.restEnabled) { vm.setPrefs(prefs.copy(restEnabled = it)) } }
             item { SwitchItem(1, 4, "Rest sound", "Beep when rest ends", prefs.restSound) { vm.setPrefs(prefs.copy(restSound = it)) } }
             item { ValueItem(2, 4, "Rest between sets", "${jsRound(prefs.restBetweenSets)} s", prefs.restBetweenSets, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenSets = it)) } }

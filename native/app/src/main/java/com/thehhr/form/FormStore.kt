@@ -145,6 +145,7 @@ class FormStore private constructor(val app: Application) {
             }
             status = Status.Ready
             putWorkout(workout?.takeIf { w -> data.routines.any { it.id == w.routineId } && recent(w) })
+            completeExpiredSetTimer()
         } catch (e: Exception) {
             status = if (e.message == "permission_lost") Status.NeedsFolder else Status.Error(e.message ?: "Vault load failed")
         }
@@ -208,6 +209,7 @@ class FormStore private constructor(val app: Application) {
 
     /** Picks up edits made outside the app (another device syncing the folder, a text editor). */
     fun onResume() {
+        if (status == Status.Ready) completeExpiredSetTimer()
         if (status != Status.Ready || pending.isNotEmpty()) return
         scope.launch {
             val texts = runCatching { withContext(Dispatchers.IO) { VaultFile.entries.associateWith { vault.read(it.fileName) } } }.getOrNull() ?: return@launch
@@ -453,6 +455,39 @@ class FormStore private constructor(val app: Application) {
     }
 
     fun skipRest() { workout?.let { putWorkout(it.copy(rest = null)) } }
+
+    /** Starts a countdown for a timed set; when it ends the set is checked (see [completeSetTimer]). */
+    fun startSetTimer(exerciseId: String, index: Int) {
+        val w = workout ?: return
+        val r = routineOf(w) ?: return
+        val item = WorkoutLogic.entries(w, r).firstOrNull { it.item.exerciseId == exerciseId }?.item ?: return
+        val row = w.rows(exerciseId).getOrNull(index)?.takeIf { !it.done } ?: return
+        val seconds = (if (item.unitOrDefault == "min") row.duration * 60 else row.duration).toInt()
+        if (seconds <= 0) { message = "Set a duration first"; return }
+        if (w.paused) { message = "Resume the workout first"; return }
+        putWorkout(w.copy(rest = Rest(System.currentTimeMillis() + seconds * 1000L, seconds, "set", exerciseId, setIndex = index)))
+    }
+
+    /**
+     * Checks the set a set-timer was counting. Idempotent and never un-checks: the in-app cue and the
+     * background alarm can both fire. [endsAt] (when given) must match the running timer.
+     */
+    fun completeSetTimer(endsAt: Long? = null) {
+        val w = workout ?: return
+        val rest = w.rest?.takeIf { it.type == "set" && (endsAt == null || it.endsAt == endsAt) } ?: return
+        val ex = rest.exerciseId ?: return
+        val idx = rest.setIndex ?: return
+        val row = w.rows(ex).getOrNull(idx)
+        if (row == null || row.done) { putWorkout(w.copy(rest = null)); return }
+        putWorkout(w.copy(rest = null))
+        updateRow(ex, idx, row.copy(done = true)) // logs the set and starts the normal rest
+    }
+
+    /** A set timer that ran out while nothing was listening (inexact alarm, app killed) completes now. */
+    fun completeExpiredSetTimer() {
+        val rest = workout?.rest ?: return
+        if (rest.type == "set" && rest.pausedRemaining == null && rest.endsAt <= System.currentTimeMillis()) completeSetTimer(rest.endsAt)
+    }
 
     fun finishWorkout(): Pair<Int, Int>? {
         val w = workout ?: return null
