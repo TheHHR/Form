@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -125,21 +126,17 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
             item { ValueItem(1, 7, "Height", "${num(profile.heightCm)} $hUnit", profile.heightCm, if (hUnit == "in") 20.0..120.0 else 50.0..300.0) { vm.setProfile(profile.copy(heightCm = it)) } }
             item { ValueItem(2, 7, "Current weight", "${num(profile.currentWeight)} $w", profile.currentWeight, 20.0..1100.0) { vm.setProfile(profile.copy(currentWeight = it)) } }
             item { ValueItem(3, 7, "Goal weight", "${num(profile.goalWeight)} $w", profile.goalWeight, 20.0..1100.0) { vm.setProfile(profile.copy(goalWeight = it)) } }
-            item { ValueItem(4, 7, "Activity level", num(profile.activity), profile.activity, 1.0..3.0) { vm.setProfile(profile.copy(activity = it)) } }
-            item { ValueItem(5, 7, "Calorie strategy", "${if (profile.strategy > 0) "+" else ""}${jsRound(profile.strategy)} kcal", profile.strategy, -1000.0..1000.0) { vm.setProfile(profile.copy(strategy = it)) } }
-            item { ValueItem(6, 7, "Protein", "${num(profile.proteinRate)} g per kg", profile.proteinRate, 0.5..5.0) { vm.setProfile(profile.copy(proteinRate = it)) } }
-            item {
-                val t = Fuel.effective(profile, prefs.units)
-                Card(Modifier.fillMaxWidth().padding(top = 12.dp), shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Column(Modifier.padding(20.dp)) {
-                        Text("Daily targets", style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary)
-                        Text("${jsRound(t.cals)} kcal", style = MaterialTheme.typography.headlineMediumEmphasized)
-                        Text("${jsRound(t.p)} g protein · ${jsRound(t.c)} g carbs · ${jsRound(t.f)} g fat · ${jsRound(t.water)} ml water",
-                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (profile.overrides.isNotEmpty()) TextButton(onClick = { vm.setProfile(profile.copy(overrides = emptyMap())) }) { Text("Reset custom targets") }
-                    }
-                }
+            item { OptionItem(4, 7, "Activity level", ACTIVITY, profile.activity) { vm.setProfile(profile.copy(activity = it)) } }
+            item { OptionItem(5, 7, "Calorie goal", STRATEGY, profile.strategy) { vm.setProfile(profile.copy(strategy = it)) } }
+            item { OptionItem(6, 7, "Protein target", PROTEIN, profile.proteinRate) { vm.setProfile(profile.copy(proteinRate = it)) } }
+
+            item { SectionTitle("Daily targets") }
+            val calc = Fuel.calculated(profile, prefs.units)
+            val eff = Fuel.effective(profile, prefs.units)
+            val targets = listOf("cals" to "Calories" to "kcal", "p" to "Protein" to "g", "c" to "Carbs" to "g", "f" to "Fat" to "g", "water" to "Water" to "ml")
+            targets.forEachIndexed { i, (kn, unit) ->
+                val (key, name) = kn
+                item { TargetItem(vm, i, targets.size, key, name, unit, eff[key], calc[key]) }
             }
 
             item { SectionTitle("Data") }
@@ -149,6 +146,82 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
             }
             item { GroupedItem(1, 2, supporting = { Text("Native · Kotlin + Compose") }) { Text("Form ${BuildConfig.VERSION_NAME}") } }
         }
+    }
+}
+
+// The original app's choices (www/index.html).
+private val ACTIVITY = listOf(
+    1.2 to ("Sedentary" to "Desk job, no workouts, <5,000 steps/day"),
+    1.375 to ("Light" to "Desk job + gym 1–3 days/wk or ~7,000 steps"),
+    1.55 to ("Moderate" to "Desk job + gym 3–5 days/wk or ~10,000 steps"),
+    1.725 to ("Heavy" to "Active job + gym 5–6 days/wk or ~13,000 steps"),
+    1.9 to ("Athlete / Extreme" to "Physical job + hard daily training"),
+)
+private val STRATEGY = listOf(
+    -500.0 to ("Cut" to "−500 kcal · ~0.5 kg loss/wk"),
+    -250.0 to ("Mild cut" to "−250 kcal · ~0.25 kg loss/wk"),
+    0.0 to ("Maintain" to "0 kcal · weight maintenance"),
+    250.0 to ("Lean bulk" to "+250 kcal · clean muscle gain"),
+    500.0 to ("Aggressive bulk" to "+500 kcal · maximum growth"),
+)
+private val PROTEIN = listOf(
+    2.0 to ("2.0 g/kg · Muscle growth" to "Optimal hypertrophy"),
+    2.2 to ("2.2 g/kg · Fat loss / cut" to "Preserves muscle in a deficit"),
+    1.8 to ("1.8 g/kg · Maintenance" to "Balanced fitness"),
+    1.6 to ("1.6 g/kg · Baseline / endurance" to "General health"),
+)
+
+/** Grouped row that opens a sheet of choices. A vault value outside the list shows as "Custom" and is left alone. */
+@Composable
+private fun OptionItem(index: Int, count: Int, title: String, options: List<Pair<Double, Pair<String, String>>>, value: Double, onPick: (Double) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val current = options.firstOrNull { it.first == value }?.second?.first ?: "Custom (${num(value)})"
+    GroupedItem(index, count, onClick = { open = true }, supporting = { Text(current) }) { Text(title) }
+    if (open) ModalBottomSheet(onDismissRequest = { open = false }) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMediumEmphasized, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
+            options.forEachIndexed { i, (v, labels) ->
+                val selected = v == value
+                androidx.compose.material3.SegmentedListItem(
+                    selected = selected, onClick = { onPick(v); open = false },
+                    shapes = androidx.compose.material3.ListItemDefaults.segmentedShapes(i, options.size),
+                    modifier = Modifier.padding(bottom = if (i < options.lastIndex) androidx.compose.material3.ListItemDefaults.SegmentedGap else 0.dp),
+                    supportingContent = { Text(labels.second) },
+                    trailingContent = { if (selected) Icon(Icons.Rounded.Check, "Selected") },
+                ) { Text(labels.first) }
+            }
+        }
+    }
+}
+
+/** Daily target row: calculated (Auto) unless overridden (Custom). Tap to set; "Use calculated" clears the override. */
+@Composable
+private fun TargetItem(vm: FormStore, index: Int, count: Int, key: String, name: String, unit: String, value: Double, calculated: Double) {
+    var editing by remember { mutableStateOf(false) }
+    val custom = vm.data.profile.overrides[key] != null
+    GroupedItem(index, count, onClick = { editing = true }, supporting = { Text(if (custom) "Custom · calculated ${jsRound(calculated)} $unit" else "Auto") },
+        trailing = { Text("${jsRound(value)} $unit", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) }) { Text(name) }
+    if (editing) {
+        val range = Fuel.LIMITS.getValue(key)
+        var text by remember { mutableStateOf(jsRound(value).toString()) }
+        val n = com.thehhr.form.data.jsNumber(text)
+        val ok = n.isFinite() && n in range
+        fun set(v: Double?) {
+            val p = vm.data.profile
+            vm.setProfile(p.copy(overrides = if (v == null) p.overrides - key else p.overrides + (key to jsRound(v).toDouble())))
+            editing = false
+        }
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text("$name target") },
+            text = {
+                androidx.compose.material3.OutlinedTextField(text, { text = it }, singleLine = true, isError = !ok, suffix = { Text(unit) },
+                    supportingText = { Text("Calculated: ${jsRound(calculated)} $unit") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+            },
+            confirmButton = { TextButton(onClick = { set(n) }, enabled = ok) { Text("Set") } },
+            dismissButton = { TextButton(onClick = { set(null) }) { Text("Use calculated") } },
+        )
     }
 }
 

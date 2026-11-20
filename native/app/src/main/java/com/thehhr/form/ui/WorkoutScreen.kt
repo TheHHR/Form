@@ -93,7 +93,7 @@ fun WorkoutTab(vm: FormStore, nav: Nav) {
 @Composable
 private fun StartWorkout(vm: FormStore, nav: Nav) {
     val today = vm.todaysRoutine()
-    val routines = vm.data.routines
+    val routines = vm.data.routines.filter { it.liked }
     LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
             Card(
@@ -129,8 +129,8 @@ private fun StartWorkout(vm: FormStore, nav: Nav) {
                 Icon(Icons.Rounded.Search, null); Spacer(Modifier.width(8.dp)); Text("Browse exercises")
             }
         }
-        item { SectionTitle("Routines") }
-        if (routines.isEmpty()) item { EmptyNote("No routines yet. Create one in Plans.") }
+        item { SectionTitle("Liked routines", action = { TextButton(onClick = { nav.push(Route.Plans) }) { Text("All routines") } }) }
+        if (routines.isEmpty()) item { EmptyNote("Like a routine (♥) in Routines & week to pin it here.") }
         itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
             GroupedItem(
                 i, routines.size,
@@ -252,10 +252,10 @@ private fun RestCard(vm: FormStore, w: ActiveWorkout, now: Long) {
             val setTimer = rest.type == "set"
             Column(Modifier.weight(1f)) {
                 val label = when {
-                    setTimer -> "Set ${(rest.setIndex ?: 0) + 1} · " + exTitle(rest.exerciseId?.let(vm::exercise))
+                    setTimer -> "Set ${(rest.setIndex ?: 0) + 1}"
                     // Once rest runs out the clock keeps going as the time spent in the set (the web app's "set" mode).
                     over -> "Set"
-                    rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Next exercise"; else -> "Rest"
+                    rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Next"; else -> "Rest"
                 }
                 Text(label, style = MaterialTheme.typography.labelLargeEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(fmtTime(kotlin.math.abs(left) + if (over) 0 else 999), style = MaterialTheme.typography.displaySmallEmphasized)

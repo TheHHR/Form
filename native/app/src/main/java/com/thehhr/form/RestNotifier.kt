@@ -92,7 +92,7 @@ object RestNotifier {
                     .addAction(Notification.Action.Builder(null, "Cancel", broadcast(ctx, ACTION_SKIP, 2)).build())
             }
             rest != null && rest.endsAt > now -> {
-                val label = when { rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Rest before next exercise"; else -> "Rest" }
+                val label = when { rest.warmup -> "Warm-up"; else -> "Rest" }
                 b.setContentText(label + (nextName?.let { " · next: $it" } ?: ""))
                     .setWhen(rest.endsAt).setChronometerCountDown(true)
                     .addAction(Notification.Action.Builder(null, "+30s", broadcast(ctx, ACTION_EXTEND, 1)).build())

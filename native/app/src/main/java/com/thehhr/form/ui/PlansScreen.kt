@@ -72,16 +72,25 @@ import com.thehhr.form.data.RoutineItem
 import com.thehhr.form.data.jsNum
 import com.thehhr.form.data.jsNumber
 
+/** Routines and the weekly schedule (opened from the Workout tab). */
 @Composable
-fun PlansTab(vm: FormStore, nav: Nav) {
+fun PlansScreen(vm: FormStore, nav: Nav) {
     var section by rememberSaveable { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        ChoiceGroup(listOf(0 to "Routines", 1 to "Week", 2 to "Meals"), section, { section = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-        when (section) {
-            0 -> RoutineList(vm, nav)
-            1 -> WeekSchedule(vm)
-            else -> MealLibrary(vm)
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    Scaffold(modifier = Modifier.nestedScroll(scroll.nestedScrollConnection), topBar = { FormTopBar("Routines & week", scroll, onBack = nav::pop) }) { pad ->
+        Column(Modifier.padding(pad).fillMaxSize()) {
+            ChoiceGroup(listOf(0 to "Routines", 1 to "Week"), section, { section = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            if (section == 0) RoutineList(vm, nav) else WeekSchedule(vm)
         }
+    }
+}
+
+/** Meal library (opened from the Fuel tab). */
+@Composable
+fun MealsScreen(vm: FormStore, nav: Nav) {
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    Scaffold(modifier = Modifier.nestedScroll(scroll.nestedScrollConnection), topBar = { FormTopBar("Meal library", scroll, onBack = nav::pop) }) { pad ->
+        Box(Modifier.padding(pad)) { MealLibrary(vm) }
     }
 }
 

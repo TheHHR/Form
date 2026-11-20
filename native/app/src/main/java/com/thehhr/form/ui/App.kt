@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Insights
@@ -74,13 +76,16 @@ sealed interface Route {
     data class Detail(val id: String) : Route
     data class RoutineEdit(val id: String) : Route
     data object Settings : Route
+    data object Plans : Route
+    data object Meals : Route
 }
 
 enum class Tab(val label: String, val icon: ImageVector) {
-    Workout("Workout", Icons.Rounded.FitnessCenter),
-    Plans("Plans", Icons.Rounded.CalendarMonth),
-    Fuel("Fuel", Icons.Rounded.Restaurant),
     Progress("Progress", Icons.Rounded.Insights),
+    Fuel("Fuel", Icons.Rounded.Restaurant),
+    Workout("Workout", Icons.Rounded.FitnessCenter),
+    Ai("AI", Icons.Rounded.AutoAwesome),
+
 }
 
 /** Simple back stack of full-screen routes above the tabs. */
@@ -171,6 +176,8 @@ private fun MainScreen(vm: FormStore) {
                     is Route.Detail -> ExerciseDetailScreen(vm, nav, top.id)
                     is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
                     Route.Settings -> SettingsScreen(vm, nav)
+                    Route.Plans -> PlansScreen(vm, nav)
+                    Route.Meals -> MealsScreen(vm, nav)
                 }
                 SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
             }
@@ -187,9 +194,15 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
         topBar = {
             FormTopBar(
                 title = if (tab == Tab.Workout && w != null) w.routineName else tab.label,
-                subtitle = if (tab == Tab.Workout && w != null) "Workout in progress" else null,
                 scroll = scroll,
-                actions = { IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") } },
+                actions = {
+                    when (tab) {
+                        Tab.Workout -> IconButton(onClick = { nav.push(Route.Plans) }) { Icon(Icons.Rounded.CalendarMonth, "Routines and week") }
+                        Tab.Fuel -> IconButton(onClick = { nav.push(Route.Meals) }) { Icon(Icons.AutoMirrored.Rounded.MenuBook, "Meal library") }
+                        else -> {}
+                    }
+                    IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") }
+                },
             )
         },
         bottomBar = {
@@ -207,7 +220,7 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
         Crossfade(tab, Modifier.padding(pad).fillMaxSize(), animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tab") { t ->
             when (t) {
                 Tab.Workout -> WorkoutTab(vm, nav)
-                Tab.Plans -> PlansTab(vm, nav)
+                Tab.Ai -> AiTab(vm, nav)
                 Tab.Fuel -> FuelTab(vm)
                 Tab.Progress -> ProgressTab(vm, nav)
             }

@@ -19,6 +19,10 @@ class DeviceStore(context: Context) {
     var healthEnabled: Boolean
         get() = prefs.getBoolean("health_enabled", false)
         set(v) = prefs.edit().putBoolean("health_enabled", v).apply()
+    /** AI provider + keys (device-only; allowBackup=false keeps them out of cloud backups). */
+    var aiConfig: AiConfig
+        get() = AiConfig.fromJson(prefs.getString("ai_config", null))
+        set(v) = prefs.edit().putString("ai_config", v.toJson()).apply()
     var notificationsAsked: Boolean
         get() = prefs.getBoolean("notifications_asked", false)
         set(v) = prefs.edit().putBoolean("notifications_asked", v).apply()

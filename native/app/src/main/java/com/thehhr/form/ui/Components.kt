@@ -36,7 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
@@ -111,14 +111,12 @@ fun FormTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    MediumFlexibleTopAppBar(
-        title = { Text(title, maxLines = 1) },
-        subtitle = subtitle?.let { { Text(it, maxLines = 1) } },
-        navigationIcon = { if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-        actions = actions,
-        scrollBehavior = scroll,
-        colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
-    )
+    // Single row: the title shares the line with back/actions, no tall empty header.
+    val nav: @Composable () -> Unit = { if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } }
+    val colors = TopAppBarDefaults.topAppBarColors(scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer)
+    val titleText: @Composable () -> Unit = { Text(title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLargeEmphasized) }
+    if (subtitle != null) TopAppBar(title = titleText, subtitle = { Text(subtitle, maxLines = 1) }, navigationIcon = nav, actions = actions, scrollBehavior = scroll, colors = colors)
+    else TopAppBar(title = titleText, navigationIcon = nav, actions = actions, scrollBehavior = scroll, colors = colors)
 }
 
 /** Single-choice connected button group (replaces segmented buttons in M3 Expressive). */

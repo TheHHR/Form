@@ -101,7 +101,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             item {
                 // Short, wide hero like the web app; the demo itself stays square in the middle.
                 Box(
-                    Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.extraLarge).background(Color.White),
+                    Modifier.fillMaxWidth().height(154.dp).clip(MaterialTheme.shapes.extraLarge).background(Color.White),
                     contentAlignment = Alignment.Center,
                 ) { ExerciseImage(e, Modifier.fillMaxHeight().aspectRatio(1f), animated = true) }
             }
@@ -234,20 +234,25 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Log ${exTitle(e)}", style = MaterialTheme.typography.titleLargeEmphasized)
-            OutlinedButton(onClick = { pickingDate = true }, shapes = ButtonDefaults.shapes()) {
-                Icon(Icons.Rounded.CalendarMonth, null); Spacer(Modifier.width(8.dp))
-                Text(if (date == LocalDate.now()) "Today" else date.format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy")))
+            Text(exTitle(e), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { pickingDate = true }, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 12.dp)) {
+                    Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                    Text(if (date == LocalDate.now()) "Today" else date.format(DateTimeFormatter.ofPattern("MMM d")), maxLines = 1)
+                }
+                ChoiceGroup(listOf(false to "Reps", true to "Timed"), timed, { timed = it }, Modifier.weight(1f))
             }
-            ChoiceGroup(listOf(false to "Reps", true to "Timed"), timed, { timed = it })
             if (timed) ChoiceGroup(listOf(true to "Seconds", false to "Minutes"), sec, { new ->
                 if (new != sec) durations = durations.map { if (new) round1(it * 60) else round1(it / 60) }
                 sec = new
             })
-            Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
+                Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
                 FilterChip(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
                 if (timed) FilterChip(showDistance, { showDistance = !showDistance }, label = { Text("Distance") })
             }
@@ -277,11 +282,10 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
                     }
                 }
             }
-            OutlinedTextField(notes, { notes = it.take(Limits.NOTES) }, Modifier.fillMaxWidth(), label = { Text("Note") },
-                supportingText = { Text("${notes.length}/${Limits.NOTES}") })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onClose, modifier = Modifier.weight(1f)) { Text("Cancel") }
-                Button(onClick = ::save, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) { Text("Save") }
+            OutlinedTextField(notes, { notes = it.take(Limits.NOTES) }, Modifier.fillMaxWidth(), placeholder = { Text("Note (optional)") }, singleLine = true)
+            // Dismissing the sheet cancels, so one full-width action is enough.
+            Button(onClick = ::save, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(ButtonDefaults.MediumContainerHeight)) {
+                Text("Save", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
             }
         }
     }

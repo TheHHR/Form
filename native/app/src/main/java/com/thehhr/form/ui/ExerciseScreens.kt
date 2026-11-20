@@ -155,6 +155,7 @@ fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Bo
     var confirm by remember { mutableStateOf(false) }
     GroupedItem(
         index, count,
+        leading = if (showName) ({ ExerciseImage(vm.exercise(log.exerciseId), size = 48.dp) }) else null,
         supporting = { Text(WorkoutLogic.formatLog(log, vm.data.prefs.units) + if (log.notes.isNotEmpty()) " · ${log.notes}" else "") },
         trailing = { IconButton(onClick = { confirm = true }) { Icon(Icons.Rounded.Delete, "Delete log") } },
     ) { Text(if (showName) exTitle(vm.exercise(log.exerciseId)) else log.date, style = MaterialTheme.typography.titleSmall) }
