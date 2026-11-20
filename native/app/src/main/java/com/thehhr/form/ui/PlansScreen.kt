@@ -1,59 +1,66 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 
 package com.thehhr.form.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,13 +74,9 @@ import com.thehhr.form.data.jsNumber
 
 @Composable
 fun PlansTab(vm: AppViewModel, nav: Nav) {
-    var section by rememberSaveable { mutableStateOf(0) }
+    var section by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            listOf("Routines", "Week", "Meals").forEachIndexed { i, label ->
-                SegmentedButton(selected = section == i, onClick = { section = i }, shape = SegmentedButtonDefaults.itemShape(i, 3)) { Text(label) }
-            }
-        }
+        ChoiceGroup(listOf(0 to "Routines", 1 to "Week", 2 to "Meals"), section, { section = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         when (section) {
             0 -> RoutineList(vm, nav)
             1 -> WeekSchedule(vm)
@@ -85,29 +88,38 @@ fun PlansTab(vm: AppViewModel, nav: Nav) {
 @Composable
 private fun RoutineList(vm: AppViewModel, nav: Nav) {
     var creating by remember { mutableStateOf(false) }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val routines = vm.data.routines
+    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
-            FilledTonalButton(onClick = { creating = true }, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = { creating = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("New routine")
             }
         }
-        if (vm.data.routines.isEmpty()) item {
-            OutlinedButton(onClick = vm::loadDefaultRoutines, modifier = Modifier.fillMaxWidth()) { Text("Load Push / Pull / Legs") }
+        if (routines.isEmpty()) item {
+            OutlinedButton(onClick = vm::loadDefaultRoutines, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load Push / Pull / Legs") }
         }
-        items(vm.data.routines, key = { it.id }) { r ->
-            Card(Modifier.fillMaxWidth().clickable { nav.push(Route.RoutineEdit(r.id)) }) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(r.name, style = MaterialTheme.typography.titleMedium)
-                        Text(r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                    if (r.liked) Icon(Icons.Rounded.Favorite, "Liked", tint = MaterialTheme.colorScheme.primary)
-                }
-            }
+        itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
+            GroupedItem(
+                i, routines.size, onClick = { nav.push(Route.RoutineEdit(r.id)) },
+                leading = { RoutineBadge(r, i) },
+                supporting = {
+                    Text(r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                },
+                trailing = { LikeButton(r.liked) { vm.saveRoutine(r.copy(liked = !r.liked)) } },
+            ) { Text(r.name, style = MaterialTheme.typography.titleMedium) }
         }
     }
     if (creating) NameDialog("New routine", "", onDone = { name -> creating = false; if (name != null) nav.push(Route.RoutineEdit(vm.newRoutine(name).id)) })
+}
+
+/** Each routine gets its own expressive shape so the list scans at a glance. */
+@Composable
+private fun RoutineBadge(r: Routine, index: Int) {
+    val shapes = listOf(MaterialShapes.Cookie9Sided, MaterialShapes.Clover4Leaf, MaterialShapes.Sunny, MaterialShapes.Pentagon, MaterialShapes.Gem, MaterialShapes.SoftBurst)
+    Box(Modifier.size(44.dp).clip(shapes[index % shapes.size].toShape()).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+        Text("${r.items.size}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
 }
 
 @Composable
@@ -115,6 +127,7 @@ fun NameDialog(title: String, initial: String, onDone: (String?) -> Unit) {
     var name by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = { onDone(null) },
+        icon = { Icon(Icons.Rounded.Edit, null) },
         title = { Text(title) },
         text = { OutlinedTextField(name, { name = it.take(40) }, singleLine = true, label = { Text("Name") }) },
         confirmButton = { TextButton(onClick = { onDone(name.trim()) }, enabled = name.isNotBlank()) { Text("Save") } },
@@ -127,19 +140,24 @@ private val DAY_NAMES = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thur
 @Composable
 private fun WeekSchedule(vm: AppViewModel) {
     val start = vm.data.prefs.weekStart
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items((0..6).map { (start + it) % 7 }) { day ->
+    val todayDow = java.time.LocalDate.now().dayOfWeek.value % 7
+    val days = (0..6).map { (start + it) % 7 }
+    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
+        itemsIndexed(days) { i, day ->
             var open by remember { mutableStateOf(false) }
             val routine = vm.data.schedule[day]?.let { id -> vm.data.routines.firstOrNull { it.id == id } }
-            Card(Modifier.fillMaxWidth().clickable { open = true }) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(DAY_NAMES[day], Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                    Text(routine?.name ?: "Rest", color = if (routine != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Icon(Icons.Rounded.KeyboardArrowDown, null)
-                    DropdownMenu(open, { open = false }) {
-                        DropdownMenuItem(text = { Text("Rest") }, onClick = { open = false; vm.setSchedule(day, null) })
-                        vm.data.routines.forEach { r -> DropdownMenuItem(text = { Text(r.name) }, onClick = { open = false; vm.setSchedule(day, r.id) }) }
-                    }
+            Box {
+                GroupedItem(
+                    i, 7, onClick = { open = true },
+                    supporting = { Text(routine?.name ?: "Rest", color = if (routine != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailing = { Icon(Icons.Rounded.UnfoldMore, "Change") },
+                ) {
+                    Text(DAY_NAMES[day] + if (day == todayDow) " · today" else "",
+                        style = if (day == todayDow) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleMedium)
+                }
+                DropdownMenu(open, { open = false }) {
+                    DropdownMenuItem(text = { Text("Rest") }, onClick = { open = false; vm.setSchedule(day, null) })
+                    vm.data.routines.forEach { r -> DropdownMenuItem(text = { Text(r.name) }, onClick = { open = false; vm.setSchedule(day, r.id) }) }
                 }
             }
         }
@@ -149,26 +167,26 @@ private fun WeekSchedule(vm: AppViewModel) {
 @Composable
 private fun MealLibrary(vm: AppViewModel) {
     var editing by remember { mutableStateOf<Meal?>(null) }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val meals = vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
+    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
-            FilledTonalButton(onClick = { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("New meal")
             }
         }
-        if (vm.data.meals.isEmpty()) item { OutlinedButton(onClick = vm::loadDefaultMeals, modifier = Modifier.fillMaxWidth()) { Text("Load common foods") } }
-        items(vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() }), key = { it.id }) { m ->
-            ListItem(
-                headlineContent = { Text(m.name) },
-                supportingContent = { Text("${jsNum(m.cals100)} kcal · ${jsNum(m.p100)}p ${jsNum(m.c100)}c ${jsNum(m.f100)}f per 100 g · default ${jsNum(m.defaultGrams)} g") },
-                trailingContent = {
-                    IconButton(onClick = { vm.saveMeal(m.copy(liked = !m.liked)) }) {
-                        Icon(if (m.liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (m.liked) "Unlike" else "Like",
-                            tint = if (m.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        if (meals.isEmpty()) item { OutlinedButton(onClick = vm::loadDefaultMeals, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load common foods") } }
+        itemsIndexed(meals, key = { _, m -> m.id }) { i, m ->
+            GroupedItem(
+                i, meals.size, onClick = { editing = m },
+                supporting = { Text("${jsNum(m.p100)}p · ${jsNum(m.c100)}c · ${jsNum(m.f100)}f per 100 g · ${jsNum(m.defaultGrams)} g serving") },
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(jsNum(m.cals100), style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                        LikeButton(m.liked) { vm.saveMeal(m.copy(liked = !m.liked)) }
                     }
                 },
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.clickable { editing = m },
-            )
+            ) { Text(m.name, style = MaterialTheme.typography.titleMedium) }
         }
     }
     editing?.let { m -> MealEditor(vm, m) { editing = null } }
@@ -191,14 +209,14 @@ private fun MealEditor(vm: AppViewModel, meal: Meal, onClose: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it.take(40) }, label = { Text("Name") }, singleLine = true)
                 val num = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                OutlinedTextField(grams, { grams = it }, label = { Text("Default portion (g)") }, singleLine = true, keyboardOptions = num)
+                OutlinedTextField(grams, { grams = it }, label = { Text("Serving (g)") }, singleLine = true, keyboardOptions = num)
                 Text("Per 100 g", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(p, { p = it }, Modifier.weight(1f), label = { Text("Protein") }, singleLine = true, keyboardOptions = num)
                     OutlinedTextField(c, { c = it }, Modifier.weight(1f), label = { Text("Carbs") }, singleLine = true, keyboardOptions = num)
                     OutlinedTextField(f, { f = it }, Modifier.weight(1f), label = { Text("Fat") }, singleLine = true, keyboardOptions = num)
                 }
-                Text("${jsNum(kcal)} kcal per 100 g", color = MaterialTheme.colorScheme.primary)
+                Text("${jsNum(kcal)} kcal per 100 g", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
             }
         },
         confirmButton = {
@@ -224,37 +242,37 @@ fun RoutineEditorScreen(vm: AppViewModel, nav: Nav, id: String) {
     var deleting by remember { mutableStateOf(false) }
     fun edit(f: (Routine) -> Routine) = vm.saveRoutine(f(routine))
     fun editItem(i: Int, f: (RoutineItem) -> RoutineItem) = edit { r -> r.copy(items = r.items.mapIndexed { j, it -> if (j == i) f(it) else it }) }
-    Scaffold(topBar = {
-        BackBar(routine.name, nav) {
-            IconButton(onClick = { edit { it.copy(liked = !it.liked) } }) {
-                Icon(if (routine.liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (routine.liked) "Unlike" else "Like",
-                    tint = if (routine.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = {
+            FormTopBar(routine.name, scroll, subtitle = "${routine.items.size} exercises", onBack = nav::pop) {
+                LikeButton(routine.liked) { edit { it.copy(liked = !it.liked) } }
+                IconButton(onClick = { renaming = true }) { Icon(Icons.Rounded.Edit, "Rename routine") }
+                IconButton(onClick = { deleting = true }) { Icon(Icons.Rounded.Delete, "Delete routine") }
             }
-            IconButton(onClick = { deleting = true }) { Icon(Icons.Rounded.Delete, "Delete routine") }
-        }
-    }) { pad ->
-        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { renaming = true }) { Text("Rename") }
-                    FilledTonalButton(onClick = { nav.push(Route.Library(Pick.ToRoutine(id))) }) {
-                        Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("Add exercises")
-                    }
-                }
-            }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(onClick = { nav.push(Route.Library(Pick.ToRoutine(id))) }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text("Add exercises") })
+        },
+    ) { pad ->
+        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (routine.items.isEmpty()) item { EmptyNote("No exercises yet") }
             itemsIndexed(routine.items, key = { _, it -> it.exerciseId }) { i, item ->
                 val ex = vm.exercise(item.exerciseId)
                 val partnerIdx = item.superset?.let { tok -> routine.items.indexOfFirst { it.superset == tok && it.exerciseId != item.exerciseId } } ?: -1
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Card(
+                    Modifier.fillMaxWidth().animateItem(), shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = if (partnerIdx >= 0) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            ExerciseImage(ex, size = 48.dp)
+                            ExerciseImage(ex, size = 52.dp)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(exTitle(ex), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(exTitle(ex), style = MaterialTheme.typography.titleSmallEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 if (partnerIdx >= 0) Text("Superset with ${exTitle(vm.exercise(routine.items[partnerIdx].exerciseId))}",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                             }
                             IconButton(onClick = { edit { r -> r.copy(items = r.items.toMutableList().apply { add(i - 1, removeAt(i)) }) } }, enabled = i > 0) {
                                 Icon(Icons.Rounded.KeyboardArrowUp, "Move up")
@@ -263,18 +281,16 @@ fun RoutineEditorScreen(vm: AppViewModel, nav: Nav, id: String) {
                                 Icon(Icons.Rounded.KeyboardArrowDown, "Move down")
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Stepper("sets", "${item.sets}", { editItem(i) { it.copy(sets = (it.sets - 1).coerceAtLeast(1)) } }, { editItem(i) { it.copy(sets = (it.sets + 1).coerceAtMost(20)) } })
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Stepper("sets", item.sets.toDouble(), 1.0, 1.0..20.0, { v -> editItem(i) { it.copy(sets = v.toInt()) } })
                             if (item.timed) {
                                 val sec = item.unitOrDefault == "sec"
-                                Stepper(if (sec) "sec" else "min", "${item.reps}",
-                                    { editItem(i) { it.copy(reps = (it.reps - if (sec) 5 else 1).coerceAtLeast(0)) } },
-                                    { editItem(i) { it.copy(reps = (it.reps + if (sec) 5 else 1).coerceAtMost(60)) } })
+                                Stepper(if (sec) "sec" else "min", item.reps.toDouble(), if (sec) 5.0 else 1.0, 0.0..60.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } })
                             } else {
-                                Stepper("reps", "${item.reps}", { editItem(i) { it.copy(reps = (it.reps - 1).coerceAtLeast(0)) } }, { editItem(i) { it.copy(reps = (it.reps + 1).coerceAtMost(100)) } })
+                                Stepper("reps", item.reps.toDouble(), 1.0, 0.0..100.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } })
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             FilterChip(item.timed, { editItem(i) { it.copy(timed = !it.timed, reps = it.reps.coerceAtMost(60), distance = false) } }, label = { Text("Timed") })
                             if (item.timed) FilterChip(item.unit == "min", { editItem(i) { it.copy(unit = if (it.unit == "min") null else "min") } }, label = { Text("Minutes") })
                             FilterChip(item.weighted, { editItem(i) { it.copy(unweighted = !it.unweighted) } }, label = { Text("Weight") })
@@ -307,6 +323,7 @@ fun RoutineEditorScreen(vm: AppViewModel, nav: Nav, id: String) {
     if (renaming) NameDialog("Rename routine", routine.name) { n -> renaming = false; if (n != null) edit { it.copy(name = n) } }
     if (deleting) AlertDialog(
         onDismissRequest = { deleting = false },
+        icon = { Icon(Icons.Rounded.Delete, null) },
         title = { Text("Delete ${routine.name}?") },
         text = { Text("Logs from past workouts are kept.") },
         confirmButton = { TextButton(onClick = { deleting = false; nav.pop(); vm.deleteRoutine(id) }) { Text("Delete") } },

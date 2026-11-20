@@ -9,6 +9,7 @@ import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,16 +19,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
@@ -41,17 +44,21 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,9 +69,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.thehhr.form.AppViewModel
@@ -83,41 +90,52 @@ fun WorkoutTab(vm: AppViewModel, nav: Nav) {
 @Composable
 private fun StartWorkout(vm: AppViewModel, nav: Nav) {
     val today = vm.todaysRoutine()
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val routines = vm.data.routines
+    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
-            ElevatedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Today", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    if (today != null) {
-                        Text(today.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                        Text("${today.items.size} exercises", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(onClick = { vm.startWorkout(today) }, enabled = today.items.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Rounded.PlayArrow, null); Spacer(Modifier.width(8.dp)); Text("Start workout")
+            Card(
+                Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Today", style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary)
+                            Text(today?.name ?: "Rest day", style = MaterialTheme.typography.headlineMediumEmphasized)
+                            Text(
+                                if (today != null) "${today.items.size} exercises" else "Nothing scheduled. Start any routine, or plan your week.",
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                    } else {
-                        Text("Rest day", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                        Text("Nothing scheduled. Start any routine below, or set your week in Plans.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Box(
+                            Modifier.size(72.dp).clip((if (today != null) MaterialShapes.Cookie9Sided else MaterialShapes.Sunny).toShape())
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(if (today != null) Icons.Rounded.PlayArrow else Icons.Rounded.Timer, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onPrimary) }
                     }
+                    if (today != null) Button(
+                        onClick = { vm.startWorkout(today) }, enabled = today.items.isNotEmpty(), shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                        contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
+                    ) { Text("Start workout", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight)) }
                 }
             }
         }
         item {
-            OutlinedButton(onClick = { nav.push(Route.Library()) }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { nav.push(Route.Library()) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                 Icon(Icons.Rounded.Search, null); Spacer(Modifier.width(8.dp)); Text("Browse exercises")
             }
         }
         item { SectionTitle("Routines") }
-        if (vm.data.routines.isEmpty()) item { EmptyNote("No routines yet. Create one in Plans.") }
-        items(vm.data.routines, key = { it.id }) { r ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(r.name, style = MaterialTheme.typography.titleMedium)
-                        Text("${r.items.size} exercises", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    FilledTonalButton(onClick = { vm.startWorkout(r) }, enabled = r.items.isNotEmpty()) { Text("Start") }
-                }
-            }
+        if (routines.isEmpty()) item { EmptyNote("No routines yet. Create one in Plans.") }
+        itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
+            GroupedItem(
+                i, routines.size,
+                supporting = { Text("${r.items.size} exercises") },
+                trailing = {
+                    FilledTonalButton(onClick = { vm.startWorkout(r) }, enabled = r.items.isNotEmpty(), shapes = ButtonDefaults.shapes()) { Text("Start") }
+                },
+            ) { Text(r.name, style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
@@ -130,81 +148,82 @@ private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
     val counted = entries.filter { it.item.exerciseId !in w.skipped }
     val doneCount = counted.count { w.complete(it.item.exerciseId) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var confirm by remember { mutableStateOf<String?>(null) }
+    var finishing by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(setOf<String>()) }
 
     val view = LocalView.current
     DisposableEffect(Unit) { view.keepScreenOn = true; onDispose { view.keepScreenOn = false } }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(250) } }
-    RestCue(vm, w, now)
+    RestCue(vm, w)
 
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(fmtTime(w.elapsedMs(now)), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                Text("$doneCount of ${counted.size} exercises done" + if (w.paused) " · paused" else "",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            // Room for the floating toolbar so the last card is never hidden behind it.
+            contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 112.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = 4.dp)) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(fmtTime(w.elapsedMs(now)), style = MaterialTheme.typography.displaySmallEmphasized, modifier = Modifier.weight(1f))
+                        Text("$doneCount/${counted.size}", style = MaterialTheme.typography.titleLargeEmphasized, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Text(if (w.paused) "Paused" else "exercises done", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.End))
+                    LinearWavyProgressIndicator(
+                        progress = { if (counted.isEmpty()) 0f else doneCount / counted.size.toFloat() },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
             }
-            FilledIconToggleButton(checked = w.paused, onCheckedChange = { vm.togglePause() }) {
-                Icon(if (w.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (w.paused) "Resume" else "Pause")
-            }
-        }
-        LinearWavyProgressIndicator(progress = { if (counted.isEmpty()) 0f else doneCount / counted.size.toFloat() },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-        AnimatedVisibility(w.rest != null) { w.rest?.let { RestCard(vm, w, now) } }
-
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (w.rest != null) item(key = "rest") { RestCard(vm, w, now) }
             items(entries, key = { it.item.exerciseId }) { entry ->
                 val id = entry.item.exerciseId
                 val isTarget = target?.exerciseId == id
                 ExerciseCard(
                     vm, nav, w, entry.item, entry.added,
-                    open = isTarget || id in expanded,
-                    isTarget = isTarget,
+                    open = isTarget || id in expanded, isTarget = isTarget,
                     onToggleOpen = { expanded = if (id in expanded) expanded - id else expanded + id },
+                    modifier = Modifier.animateItem(),
                 )
             }
-            item {
-                OutlinedButton(onClick = { nav.push(Route.Library(Pick.Extra)) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("Add exercise")
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(onClick = { confirm = "discard" }, modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Discard") }
-                    FilledTonalButton(onClick = { confirm = "finish" }, modifier = Modifier.weight(1f)) { Text("Finish") }
-                }
-            }
         }
-        Button(
-            onClick = { vm.logNextSet() }, enabled = target != null && !w.paused,
-            modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+        HorizontalFloatingToolbar(
+            expanded = true,
+            floatingActionButton = {
+                FloatingToolbarDefaults.VibrantFloatingActionButton(onClick = { if (target != null && !w.paused) vm.logNextSet() }) {
+                    Icon(Icons.Rounded.Check, target?.let { "Log next set of ${exTitle(vm.exercise(it.exerciseId))}" } ?: "All done")
+                }
+            },
+            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
+            modifier = Modifier.align(Alignment.BottomCenter).offset(y = -FloatingToolbarDefaults.ScreenOffset),
         ) {
-            Icon(Icons.Rounded.Check, null); Spacer(Modifier.width(8.dp))
-            Text(target?.let { "Log set · ${exTitle(vm.exercise(it.exerciseId))}" } ?: "All done", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            IconButton(onClick = { nav.push(Route.Library(Pick.Extra)) }) { Icon(Icons.Rounded.Add, "Add exercise") }
+            IconButton(onClick = vm::togglePause) { Icon(if (w.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (w.paused) "Resume" else "Pause") }
+            IconButton(onClick = { finishing = true }) { Icon(Icons.Rounded.Flag, "Finish workout") }
         }
     }
 
-    when (confirm) {
-        "finish" -> AlertDialog(
-            onDismissRequest = { confirm = null },
-            title = { Text("Finish workout?") },
-            text = { Text("Checked sets are saved to your training log.") },
-            confirmButton = { TextButton(onClick = {
-                confirm = null
+    if (finishing) AlertDialog(
+        onDismissRequest = { finishing = false },
+        icon = { Icon(Icons.Rounded.Flag, null) },
+        title = { Text("Finish workout?") },
+        text = { Text("Checked sets are saved to your training log. Discard removes every set from this session.") },
+        confirmButton = {
+            TextButton(onClick = {
+                finishing = false
                 vm.finishWorkout()?.let { (d, t) -> vm.message = "Workout complete $d/$t · ${fmtTime(w.elapsedMs())}" }
-            }) { Text("Finish") } },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Keep going") } },
-        )
-        "discard" -> AlertDialog(
-            onDismissRequest = { confirm = null },
-            title = { Text("Discard workout?") },
-            text = { Text("Removes every set logged in this session.") },
-            confirmButton = { TextButton(onClick = { confirm = null; vm.discardWorkout(); vm.message = "Workout discarded" }) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
-        )
-    }
+            }) { Text("Finish") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { finishing = false; vm.discardWorkout(); vm.message = "Workout discarded" },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Discard") }
+                TextButton(onClick = { finishing = false }) { Text("Keep going") }
+            }
+        },
+    )
 }
 
 @Composable
@@ -213,32 +232,33 @@ private fun RestCard(vm: AppViewModel, w: ActiveWorkout, now: Long) {
     val left = rest.pausedRemaining ?: (rest.endsAt - now)
     if (left < -15 * 60_000) return // forgotten rest: hide the stale overtime
     val over = left < 0
-    Card(
-        Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 0.dp),
-        colors = CardDefaults.cardColors(containerColor = if (over) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val bg = if (over) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val fg = if (over) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                CircularWavyProgressIndicator(progress = { if (over) 1f else (left / (rest.total * 1000f)).coerceIn(0f, 1f) }, modifier = Modifier.size(56.dp))
-                Icon(Icons.Rounded.Timer, null, Modifier.size(20.dp))
+                CircularWavyProgressIndicator(
+                    progress = { if (over) 1f else (left / (rest.total * 1000f)).coerceIn(0f, 1f) },
+                    modifier = Modifier.size(64.dp), color = fg, trackColor = fg.copy(alpha = 0.2f),
+                )
+                Icon(Icons.Rounded.Timer, null, Modifier.size(22.dp))
             }
             Column(Modifier.weight(1f)) {
                 val label = when { rest.warmup -> "Warm-up"; rest.type == "exercise" -> "Next exercise"; else -> "Rest" }
-                Text(if (over) "$label · over" else label, style = MaterialTheme.typography.labelLarge,
-                    color = if (over) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
-                Text((if (over) "+" else "") + fmtTime(kotlin.math.abs(left) + if (over) 0 else 999),
-                    style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
-                    color = if (over) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(if (over) "$label · over" else label, style = MaterialTheme.typography.labelLargeEmphasized)
+                Text((if (over) "+" else "") + fmtTime(kotlin.math.abs(left) + if (over) 0 else 999), style = MaterialTheme.typography.displaySmallEmphasized)
             }
-            TextButton(onClick = { vm.extendRest(30) }) { Text("+30s") }
-            IconButton(onClick = { vm.skipRest() }) { Icon(Icons.Rounded.SkipNext, "Skip rest") }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                FilledTonalButton(onClick = { vm.extendRest(30) }, shapes = ButtonDefaults.shapes()) { Text("+30s") }
+                IconButton(onClick = vm::skipRest) { Icon(Icons.Rounded.SkipNext, "Skip rest") }
+            }
         }
     }
 }
 
 /** Beep + vibrate once when the rest countdown reaches zero. */
 @Composable
-private fun RestCue(vm: AppViewModel, w: ActiveWorkout, now: Long) {
+private fun RestCue(vm: AppViewModel, w: ActiveWorkout) {
     val rest = w.rest
     val context = LocalContext.current
     LaunchedEffect(rest?.endsAt, rest?.pausedRemaining) {
@@ -265,7 +285,7 @@ private fun restAlert(context: Context, sound: Boolean) {
 @Composable
 private fun ExerciseCard(
     vm: AppViewModel, nav: Nav, w: ActiveWorkout, item: RoutineItem, added: Boolean,
-    open: Boolean, isTarget: Boolean, onToggleOpen: () -> Unit,
+    open: Boolean, isTarget: Boolean, onToggleOpen: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val id = item.exerciseId
     val ex = vm.exercise(id)
@@ -274,71 +294,78 @@ private fun ExerciseCard(
     val complete = w.complete(id)
     val units = vm.data.prefs.units
     Card(
-        Modifier.fillMaxWidth().animateContentSize(),
+        modifier.fillMaxWidth().animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (isTarget) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
         Row(Modifier.clickable(onClick = onToggleOpen).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ExerciseImage(ex, size = 56.dp, animated = open)
-            Spacer(Modifier.width(12.dp))
+            ExerciseImage(ex, size = if (open) 72.dp else 52.dp, animated = open)
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(exTitle(ex), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (isTarget) Text("Up next", style = MaterialTheme.typography.labelMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                Text(exTitle(ex), style = if (open) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val status = when {
                     skipped -> "Skipped"
                     complete -> "Done"
-                    else -> "${rows.count { it.done }}/${rows.size} sets" + if (added) " · added" else ""
+                    else -> "${rows.count { it.done }} of ${rows.size} sets" + if (added) " · added" else ""
                 }
                 Text(status, style = MaterialTheme.typography.bodySmall,
                     color = if (complete) FormColors.Positive else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (complete) Icon(Icons.Rounded.Check, "Done", tint = FormColors.Positive)
+            if (complete) Box(
+                Modifier.size(32.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(FormColors.Positive),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Check, "Done", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.surface) }
         }
         AnimatedVisibility(open && !skipped) {
-            Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(start = 12.dp, end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 rows.forEachIndexed { i, row -> SetRowView(vm, id, i, row, item, units.weight, units.distance) }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { vm.addSet(id) }) { Icon(Icons.Rounded.Add, null); Text("Set") }
                     TextButton(onClick = { vm.removeSet(id) }, enabled = rows.size > 1 && rows.any { !it.done }) { Icon(Icons.Rounded.Remove, null); Text("Set") }
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { nav.push(Route.Library(Pick.Replace(id))) }) { Icon(Icons.Rounded.SwapHoriz, "Replace exercise") }
-                    if (!isTarget && !complete) TextButton(onClick = { vm.jumpTo(id) }) { Text("Do next") }
                 }
             }
         }
-        if (open || skipped) Row(Modifier.padding(start = 4.dp, bottom = 4.dp)) {
+        if (open || skipped) Row(Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp)) {
             TextButton(onClick = { vm.toggleSkip(id) }) { Text(if (skipped) "Unskip" else "Skip") }
             TextButton(onClick = { nav.push(Route.Detail(id)) }) { Text("Details") }
+            Spacer(Modifier.weight(1f))
+            if (!isTarget && !complete && !skipped) TextButton(onClick = { vm.jumpTo(id) }) { Text("Do next") }
         }
     }
 }
 
 @Composable
 private fun SetRowView(vm: AppViewModel, exId: String, index: Int, row: SetRow, item: RoutineItem, wUnit: String, dUnit: String) {
-    val wStep = if (wUnit == "lb") 5.0 else 2.5
-    val dStep = if (dUnit == "mi") 0.25 else 0.5
     fun set(r: SetRow) = vm.updateRow(exId, index, r)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("${index + 1}", Modifier.width(20.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (item.timed) {
-                val sec = item.unitOrDefault == "sec"
-                val step = if (sec) 5.0 else 1.0
-                Stepper(if (sec) "sec" else "min", num(row.duration),
-                    { set(row.copy(duration = (row.duration - step).coerceAtLeast(0.0))) },
-                    { set(row.copy(duration = (row.duration + step).coerceAtMost(if (sec) 3600.0 else 600.0))) })
-                if (item.distance) Stepper(dUnit, num(row.distance),
-                    { set(row.copy(distance = (row.distance - dStep).coerceAtLeast(0.0))) },
-                    { set(row.copy(distance = (row.distance + dStep).coerceAtMost(500.0))) })
-            } else {
-                Stepper("reps", "${row.reps}", { set(row.copy(reps = (row.reps - 1).coerceAtLeast(1))) }, { set(row.copy(reps = (row.reps + 1).coerceAtMost(100))) })
-            }
-            if (item.weighted && !(item.timed && item.distance)) Stepper(wUnit, num(row.weight ?: 0.0),
-                { set(row.copy(weight = ((row.weight ?: 0.0) - wStep).coerceAtLeast(0.0))) },
-                { set(row.copy(weight = ((row.weight ?: 0.0) + wStep).coerceAtMost(2000.0))) })
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            Modifier.size(28.dp).clip(MaterialShapes.Circle.toShape())
+                .background(if (row.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("${index + 1}", style = MaterialTheme.typography.labelLargeEmphasized,
+                color = if (row.done) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        FilledIconToggleButton(checked = row.done, onCheckedChange = { vm.toggleRow(exId, index) }) {
-            Icon(Icons.Rounded.Check, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done")
+        if (item.timed) {
+            val sec = item.unitOrDefault == "sec"
+            NumberField(row.duration, if (sec) "sec" else "min", 0.0..(if (sec) 3600.0 else 600.0), { set(row.copy(duration = it)) }, Modifier.weight(1f))
+            if (item.distance) NumberField(row.distance, dUnit, 0.0..500.0, { set(row.copy(distance = it)) }, Modifier.weight(1f))
+        } else {
+            NumberField(row.reps.toDouble(), "reps", 1.0..100.0, { set(row.copy(reps = it.toInt())) }, Modifier.weight(1f))
         }
+        if (item.weighted && !(item.timed && item.distance)) {
+            NumberField(row.weight ?: 0.0, wUnit, 0.0..2000.0, { set(row.copy(weight = it)) }, Modifier.weight(1.2f))
+        }
+        FilledIconToggleButton(
+            checked = row.done, onCheckedChange = { vm.toggleRow(exId, index) },
+            shapes = IconButtonDefaults.toggleableShapes(),
+            modifier = Modifier.size(IconButtonDefaults.mediumContainerSize()),
+        ) { Icon(Icons.Rounded.Check, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done") }
     }
 }

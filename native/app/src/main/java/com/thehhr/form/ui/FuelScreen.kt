@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
@@ -33,6 +35,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -87,13 +90,17 @@ fun FuelTab(vm: AppViewModel) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
                 Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        CircularWavyProgressIndicator(progress = { (cals / targets.cals).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.size(112.dp))
+                        CircularWavyProgressIndicator(
+                            progress = { (cals / targets.cals).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.size(128.dp),
+                            stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f * androidx.compose.ui.platform.LocalDensity.current.density, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                            trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f * androidx.compose.ui.platform.LocalDensity.current.density, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                        )
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(jsNum(jsRound(cals).toDouble()), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                            Text("of ${jsRound(targets.cals)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(jsNum(jsRound(cals).toDouble()), style = MaterialTheme.typography.headlineMediumEmphasized)
+                            Text("of ${jsRound(targets.cals)} kcal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -105,8 +112,8 @@ fun FuelTab(vm: AppViewModel) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -119,20 +126,28 @@ fun FuelTab(vm: AppViewModel) {
             }
         }
         item {
-            Button(onClick = { logging = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("Log meal") }
+            Button(
+                onClick = { logging = true }, shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
+                contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight),
+            ) { Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("Log meal", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight)) }
         }
         val cats = Fuel.SLOTS + day.meals.map { it.category }.distinct().filter { it !in Fuel.SLOTS }
         cats.forEach { cat ->
             val meals = day.meals.filter { it.category == cat }
             if (meals.isNotEmpty()) {
                 item(key = "h-$cat") { SectionTitle("$cat · ${jsRound(meals.sumOf { it.cals })} kcal") }
-                items(meals, key = { "m-${it.id}-${it.name}" }) { m ->
-                    ListItem(
-                        headlineContent = { Text(m.name) },
-                        supportingContent = { Text("${jsRound(m.cals)} kcal · ${jsNum(m.p)}p · ${jsNum(m.c)}c · ${jsNum(m.f)}f") },
-                        trailingContent = { IconButton(onClick = { vm.deleteMealEntry(date, m.id) }) { Icon(Icons.Rounded.Close, "Remove ${m.name}") } },
-                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                    )
+                itemsIndexed(meals, key = { _, m -> "m-${m.id}-${m.name}" }) { i, m ->
+                    GroupedItem(
+                        i, meals.size,
+                        supporting = { Text("${jsNum(m.p)}p · ${jsNum(m.c)}c · ${jsNum(m.f)}f") },
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("${jsRound(m.cals)}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                                IconButton(onClick = { vm.deleteMealEntry(date, m.id) }) { Icon(Icons.Rounded.Close, "Remove ${m.name}") }
+                            }
+                        },
+                    ) { Text(m.name) }
                 }
             }
         }
@@ -145,7 +160,7 @@ fun FuelTab(vm: AppViewModel) {
 private fun Macro(label: String, value: Double, target: Double, color: Color) {
     Column {
         Row { Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge); Text("${jsRound(value)} / ${jsRound(target)} g", style = MaterialTheme.typography.labelMedium) }
-        LinearProgressIndicator(progress = { (value / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(top = 4.dp), color = color)
+        LinearWavyProgressIndicator(progress = { (value / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(top = 6.dp), color = color)
     }
 }
 

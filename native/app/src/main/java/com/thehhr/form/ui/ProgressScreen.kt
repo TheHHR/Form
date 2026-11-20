@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.thehhr.form.ui
 
 import androidx.compose.foundation.Canvas
@@ -9,11 +11,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,7 +80,7 @@ fun ProgressTab(vm: AppViewModel, nav: Nav) {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Volume by day", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     val max = volumes.max().coerceAtLeast(1.0)
@@ -108,7 +111,8 @@ fun ProgressTab(vm: AppViewModel, nav: Nav) {
         if (dates.isEmpty()) item { EmptyNote("Finish a workout or log progress from an exercise to see it here.") }
         dates.take(shownDays).forEach { date ->
             item(key = "d-$date") { Text(vaultDateHeading(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
-            items(byDate[date].orEmpty().sortedBy(ProgressLog::createdAt), key = { it.id }) { log -> LogRow(vm, log) }
+            val dayLogs = byDate[date].orEmpty().sortedBy(ProgressLog::createdAt)
+            itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, dayLogs.size) }
         }
         if (dates.size > shownDays) item { TextButton(onClick = { shownDays += 14 }, modifier = Modifier.fillMaxWidth()) { Text("Show more") } }
     }
@@ -116,9 +120,9 @@ fun ProgressTab(vm: AppViewModel, nav: Nav) {
 
 @Composable
 private fun Stat(label: String, value: String, modifier: Modifier) {
-    Card(modifier) {
+    Card(modifier, shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
         Column(Modifier.padding(12.dp)) {
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(value, style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

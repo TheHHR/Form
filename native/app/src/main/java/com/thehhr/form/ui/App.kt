@@ -3,6 +3,22 @@
 package com.thehhr.form.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +47,6 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -101,8 +116,11 @@ private fun WelcomeScreen(vm: AppViewModel, error: String? = null) {
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(Icons.Rounded.Folder, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-            Text("Choose your Form folder", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Box(
+                Modifier.size(132.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Folder, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary) }
+            Text("Choose your Form folder", style = MaterialTheme.typography.headlineMediumEmphasized, textAlign = TextAlign.Center)
             Text(
                 "Form keeps everything in 5 plain .md files in a folder you pick: routines, meals, training logs, " +
                     "nutrition diary and settings. Pick your existing folder to keep your data, or an empty one to start fresh.",
@@ -113,7 +131,12 @@ private fun WelcomeScreen(vm: AppViewModel, error: String? = null) {
                 textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
             )
             if (error != null) Text(error, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
-            FolderPicker(vm) { launch -> Button(onClick = launch) { Text("Pick folder") } }
+            FolderPicker(vm) { launch ->
+                Button(onClick = launch, shapes = ButtonDefaults.shapes(), modifier = Modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight)) {
+                    Text("Pick folder", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
+                }
+            }
         }
     }
 }
@@ -128,24 +151,44 @@ private fun MainScreen(vm: AppViewModel) {
     }
     BackHandler(enabled = nav.stack.isNotEmpty()) { nav.pop() }
 
-    val top = nav.stack.lastOrNull()
-    if (top != null) {
-        Box(Modifier.fillMaxSize()) {
-            when (top) {
-                is Route.Library -> LibraryScreen(vm, nav, top.pick)
-                is Route.Detail -> ExerciseDetailScreen(vm, nav, top.id)
-                is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
-                Route.Settings -> SettingsScreen(vm, nav)
+    // Pushed screens slide over the tabs with the theme's expressive spring.
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    AnimatedContent(
+        targetState = nav.stack.lastOrNull(),
+        transitionSpec = {
+            // Push keeps the old screen on the stack (or comes from the tabs); pop removes it.
+            val forward = targetState != null && (initialState == null || initialState in nav.stack)
+            val dir = if (forward) 1 else -1
+            (slideInHorizontally(spatial) { it / 4 * dir } + fadeIn(effects)) togetherWith (slideOutHorizontally(spatial) { -it / 4 * dir } + fadeOut(effects))
+        },
+        label = "route",
+    ) { top ->
+        if (top != null) {
+            Box(Modifier.fillMaxSize()) {
+                when (top) {
+                    is Route.Library -> LibraryScreen(vm, nav, top.pick)
+                    is Route.Detail -> ExerciseDetailScreen(vm, nav, top.id)
+                    is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
+                    Route.Settings -> SettingsScreen(vm, nav)
+                }
+                SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
             }
-            SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
-        }
-        return
+        } else Tabs(vm, nav, tab, { tab = it }, snackbar)
     }
+}
 
+@Composable
+private fun Tabs(vm: AppViewModel, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackbar: SnackbarHostState) {
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val w = vm.workout
     Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(if (tab == Tab.Workout && vm.workout != null) vm.workout!!.routineName else tab.label) },
+            FormTopBar(
+                title = if (tab == Tab.Workout && w != null) w.routineName else tab.label,
+                subtitle = if (tab == Tab.Workout && w != null) "Workout in progress" else null,
+                scroll = scroll,
                 actions = { IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") } },
             )
         },
@@ -153,7 +196,7 @@ private fun MainScreen(vm: AppViewModel) {
             ShortNavigationBar {
                 Tab.entries.forEach { t ->
                     ShortNavigationBarItem(
-                        selected = tab == t, onClick = { tab = t },
+                        selected = tab == t, onClick = { onTab(t) },
                         icon = { Icon(t.icon, null) }, label = { Text(t.label) },
                     )
                 }
@@ -161,8 +204,8 @@ private fun MainScreen(vm: AppViewModel) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            when (tab) {
+        Crossfade(tab, Modifier.padding(pad).fillMaxSize(), animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tab") { t ->
+            when (t) {
                 Tab.Workout -> WorkoutTab(vm, nav)
                 Tab.Plans -> PlansTab(vm, nav)
                 Tab.Fuel -> FuelTab(vm)
