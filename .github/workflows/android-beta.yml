@@ -57,5 +57,8 @@ jobs:
             **Native Android app** (Kotlin + Jetpack Compose, Material 3 Expressive). No WebView.
             Installs as "Form Beta" next to the real Form app; upgrades the 3.x web beta in place.
             Point it at a **copy** of your Form folder while testing.
+            Allow notifications when asked: the rest timer counts down on the lock screen (+30s / Skip / Log set) and buzzes when rest ends, even with the screen off.
+            Also: workout reminders (Settings, off by default), app-icon shortcuts, a "Log water" Quick Settings tile, a "Today" home-screen widget,
+            Health Connect sync (Settings, opt-in), PR haptics, and barcode food lookup (Open Food Facts) in Fuel → Log meal.
             Not in this build yet: AI features, text import/export, tags editor, custom-exercise editor, muscle map, month/all-time dashboard.
           files: Form-${{ steps.ver.outputs.version }}.apk

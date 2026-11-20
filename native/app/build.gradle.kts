@@ -102,6 +102,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-gif:3.6.3")
     implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // Play services pulls an old Fragment transitively; ActivityResult APIs need >= 1.3.
+    implementation("androidx.fragment:fragment:1.8.9")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
