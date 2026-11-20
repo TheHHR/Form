@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import com.thehhr.form.data.WorkoutLogic
 import com.thehhr.form.ui.exTitle
 import kotlinx.coroutines.launch
@@ -30,6 +31,8 @@ object RestNotifier {
     const val ACTION_LOG = "com.thehhr.form.LOG_SET"
     const val ACTION_ALARM = "com.thehhr.form.REST_ALARM"
     const val ACTION_SET_DONE = "com.thehhr.form.SET_DONE"
+    const val ACTION_PAUSE = "com.thehhr.form.PAUSE"
+    const val ID_LIVE = ID_WORKOUT
 
     fun channels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
@@ -55,57 +58,80 @@ object RestNotifier {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
+    /**
+     * The live workout notification (Android 16 Live Update when the system allows promotion; a normal ongoing
+     * notification on older Android and other skins, e.g. Samsung). One clock: elapsed workout time, or the
+     * rest / set-timer countdown while one runs. Current exercise in the text; Pause/Resume plus up to two actions.
+     */
+    fun build(ctx: Context, store: FormStore): Notification? {
+        val w = store.workout ?: return null
+        channels(ctx)
+        val now = System.currentTimeMillis()
+        val routine = store.data.routines.firstOrNull { it.id == w.routineId }
+        val next = routine?.let { WorkoutLogic.nextTarget(w, it) }
+        val current = next?.let { exTitle(store.exercise(it.exerciseId)) }
+        val rest = w.rest?.takeIf { it.pausedRemaining == null && !w.paused && it.endsAt > now }
+        val counted = routine?.let { r -> WorkoutLogic.entries(w, r).filter { it.item.exerciseId !in w.skipped } }.orEmpty()
+        val done = counted.count { w.complete(it.item.exerciseId) }
+
+        val b = NotificationCompat.Builder(ctx, CH_WORKOUT)
+            .setSmallIcon(R.drawable.ic_stat_form)
+            .setContentTitle(w.routineName)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(openApp(ctx))
+            .setColorized(false) // promotion requires a non-colorized notification
+            .setRequestPromotedOngoing(true) // Live Update on Android 16+, ignored before
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .addAction(0, if (w.paused) "Resume" else "Pause", broadcast(ctx, ACTION_PAUSE, 6))
+        when {
+            w.paused -> b.setContentText("Paused · $done/${counted.size} done").setShowWhen(false).setShortCriticalText("Paused")
+            rest?.type == "set" -> {
+                val ex = rest.exerciseId?.let { exTitle(store.exercise(it)) } ?: "Set"
+                b.setContentText("Set ${(rest.setIndex ?: 0) + 1} · $ex").setShortCriticalText("Set")
+                    .setWhen(rest.endsAt).setUsesChronometer(true).setChronometerCountDown(true)
+                    .addAction(0, "Done", broadcast(ctx, ACTION_SET_DONE, 5))
+            }
+            rest != null -> {
+                b.setContentText((if (rest.warmup) "Warm-up" else "Rest") + (current?.let { " · next: $it" } ?: "")).setShortCriticalText("Rest")
+                    .setWhen(rest.endsAt).setUsesChronometer(true).setChronometerCountDown(true)
+                    .addAction(0, "+30s", broadcast(ctx, ACTION_EXTEND, 1))
+                    .addAction(0, "Skip", broadcast(ctx, ACTION_SKIP, 2))
+            }
+            else -> {
+                b.setContentText(current?.let { "$it · $done/${counted.size} done" } ?: "All done · tap to finish").setShortCriticalText("Gym")
+                    .setWhen(now - w.elapsedMs(now)).setUsesChronometer(true)
+                if (next != null) b.addAction(0, "Log set", broadcast(ctx, ACTION_LOG, 4))
+            }
+        }
+        return b.build()
+    }
+
     fun sync(ctx: Context, store: FormStore) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         val alarm = ctx.getSystemService(AlarmManager::class.java)
         val alarmPi = broadcast(ctx, ACTION_ALARM, 3)
         val w = store.workout
         if (w == null) {
-            nm.cancel(ID_WORKOUT); alarm.cancel(alarmPi); return
+            alarm.cancel(alarmPi)
+            if (WorkoutService.running) ctx.stopService(Intent(ctx, WorkoutService::class.java))
+            nm.cancel(ID_WORKOUT)
+            return
         }
-        channels(ctx)
-        val now = System.currentTimeMillis()
-        val routine = store.data.routines.firstOrNull { it.id == w.routineId }
-        val next = routine?.let { WorkoutLogic.nextTarget(w, it) }
-        val nextName = next?.let { exTitle(store.exercise(it.exerciseId)) }
+        // Start the foreground service once; afterwards just re-post the same notification id.
+        if (WorkoutService.running) build(ctx, store)?.let { runCatching { nm.notify(ID_WORKOUT, it) } }
+        else try {
+            androidx.core.content.ContextCompat.startForegroundService(ctx, Intent(ctx, WorkoutService::class.java))
+        } catch (e: IllegalStateException) {
+            // Background start not allowed (e.g. a cold receiver): fall back to a plain ongoing notification.
+            build(ctx, store)?.let { runCatching { nm.notify(ID_WORKOUT, it) } }
+        }
+
         val rest = w.rest?.takeIf { it.pausedRemaining == null && !w.paused }
-        val counted = routine?.let { r -> WorkoutLogic.entries(w, r).filter { it.item.exerciseId !in w.skipped } }.orEmpty()
-        val done = counted.count { w.complete(it.item.exerciseId) }
-
-        val b = Notification.Builder(ctx, CH_WORKOUT)
-            .setSmallIcon(R.drawable.ic_stat_form)
-            .setContentTitle(w.routineName)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(Notification.CATEGORY_STOPWATCH)
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setContentIntent(openApp(ctx))
-            .setShowWhen(true)
-            .setUsesChronometer(!w.paused)
-        when {
-            w.paused -> b.setContentText("Paused · $done/${counted.size} exercises").setShowWhen(false)
-            rest != null && rest.endsAt > now && rest.type == "set" -> {
-                val ex = rest.exerciseId?.let { exTitle(store.exercise(it)) } ?: "Set"
-                b.setContentText("Set ${(rest.setIndex ?: 0) + 1} · $ex")
-                    .setWhen(rest.endsAt).setChronometerCountDown(true)
-                    .addAction(Notification.Action.Builder(null, "Done", broadcast(ctx, ACTION_SET_DONE, 5)).build())
-                    .addAction(Notification.Action.Builder(null, "Cancel", broadcast(ctx, ACTION_SKIP, 2)).build())
-            }
-            rest != null && rest.endsAt > now -> {
-                val label = when { rest.warmup -> "Warm-up"; else -> "Rest" }
-                b.setContentText(label + (nextName?.let { " · next: $it" } ?: ""))
-                    .setWhen(rest.endsAt).setChronometerCountDown(true)
-                    .addAction(Notification.Action.Builder(null, "+30s", broadcast(ctx, ACTION_EXTEND, 1)).build())
-                    .addAction(Notification.Action.Builder(null, "Skip", broadcast(ctx, ACTION_SKIP, 2)).build())
-            }
-            else -> {
-                b.setContentText("$done/${counted.size} done" + (nextName?.let { " · up next: $it" } ?: ""))
-                    .setWhen(now - w.elapsedMs(now))
-                if (next != null) b.addAction(Notification.Action.Builder(null, "Log set", broadcast(ctx, ACTION_LOG, 4)).build())
-            }
-        }
-        runCatching { nm.notify(ID_WORKOUT, b.build()) } // throws only without POST_NOTIFICATIONS on some OEMs
-
+        val now = System.currentTimeMillis()
         alarm.cancel(alarmPi)
         if (rest != null && rest.endsAt > now) {
             if (Build.VERSION.SDK_INT < 31 || alarm.canScheduleExactAlarms()) alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, rest.endsAt, alarmPi)
@@ -150,6 +176,7 @@ class RestReceiver : BroadcastReceiver() {
                         } else RestNotifier.restOver(ctx, store)
                     }
                     RestNotifier.ACTION_SET_DONE -> store.whenReady { completeSetTimer() }
+                    RestNotifier.ACTION_PAUSE -> store.whenReady { togglePause() }
                     RestNotifier.ACTION_EXTEND -> store.whenReady { extendRest(30) }
                     RestNotifier.ACTION_SKIP -> store.whenReady { skipRest() }
                     RestNotifier.ACTION_LOG -> store.whenReady { logNextSet() }

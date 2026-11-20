@@ -112,6 +112,23 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
             item { ValueItem(2, 4, "Rest between sets", "${jsRound(prefs.restBetweenSets)} s", prefs.restBetweenSets, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenSets = it)) } }
             item { ValueItem(3, 4, "Rest between exercises", "${jsRound(prefs.restBetweenExercises)} s", prefs.restBetweenExercises, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenExercises = it)) } }
 
+            item { SectionTitle("Live updates") }
+            item {
+                val ctx = LocalContext.current
+                // Android 16+: users can switch promoted (Live Update) notifications off per app.
+                val allowed = remember { androidx.core.app.NotificationManagerCompat.from(ctx).canPostPromotedNotifications() }
+                GroupedItem(0, 1, onClick = {
+                    val intent = if (android.os.Build.VERSION.SDK_INT >= 36) android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS)
+                    else android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    ctx.startActivity(intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName))
+                }, supporting = {
+                    Text(when {
+                        android.os.Build.VERSION.SDK_INT < 36 -> "Workout shows as an ongoing notification (Live Updates need Android 16)"
+                        allowed -> "On: your workout shows as a Live Update on the lock screen and status bar"
+                        else -> "Off: tap to allow Live Updates for Form"
+                    })
+                }) { Text("Workout Live Update") }
+            }
             item { SectionTitle("Reminders") }
             item { ReminderSettings(vm) }
 
