@@ -64,7 +64,8 @@ fun MuscleMap(heat: Map<String, Float>, sex: String, modifier: Modifier = Modifi
     var data by remember { mutableStateOf<Map<String, BodySide>?>(null) }
     LaunchedEffect(Unit) { data = MuscleMapData.load(ctx) }
     val gender = if (sex == "f") "female" else "male"
-    val base = MaterialTheme.colorScheme.surfaceContainerHighest
+    // Untrained muscles: a step lighter than the surfaceContainer card the map sits on.
+    val base = MaterialTheme.colorScheme.outlineVariant
     val hot = MaterialTheme.colorScheme.primary
     val label = if (heat.isEmpty()) "No muscles highlighted"
     else "Muscles worked: " + heat.entries.sortedByDescending { it.value }.joinToString { jsTitle(it.key.replace('-', ' ')) }

@@ -48,7 +48,7 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 1. AI: bring-your-own-key settings, the meal macro estimate, the review stream and the routine generator.
 2. Text import and export for routines, meals and logs, plus clear data.
 3. A tags editor and filters, plus the custom-exercise create, edit and delete UI. The data is already preserved in `config.md`.
-4. The dashboard month and all-time scopes, and the muscle heatmap, which needs a native SVG body map.
-5. A rest-timer notification while the app is in the background, and the update check.
+4. The dashboard month and all-time scopes. (The muscle map is done: MuscleMapJS data, exercise detail and weekly heatmap.)
+5. The update check. (Background rest notification, set timer, reminders, shortcuts, tile, widget, Health Connect and barcode lookup are done.)
 6. Fonts: Space Grotesk and Roboto still need to be bundled as resources.
 7. Cutover: compare 3.6.x and native feature by feature, test an in-place upgrade on a real phone with real data, then ship prod 4.0.0 and retire `android/` and `www/`.

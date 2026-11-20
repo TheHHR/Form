@@ -60,5 +60,6 @@ jobs:
             Allow notifications when asked: the rest timer counts down on the lock screen (+30s / Skip / Log set) and buzzes when rest ends, even with the screen off.
             Also: workout reminders (Settings, off by default), app-icon shortcuts, a "Log water" Quick Settings tile, a "Today" home-screen widget,
             Health Connect sync (Settings, opt-in), PR haptics, and barcode food lookup (Open Food Facts) in Fuel → Log meal.
-            Not in this build yet: AI features, text import/export, tags editor, custom-exercise editor, muscle map, month/all-time dashboard.
+            New: ± steppers and a set timer (▶ on timed sets) in workouts, full progress logging (date, reps or timed, notes), muscle maps (MuscleMapJS).
+            Not in this build yet: AI features, text import/export, tags editor, custom-exercise editor, month/all-time dashboard.
           files: Form-${{ steps.ver.outputs.version }}.apk

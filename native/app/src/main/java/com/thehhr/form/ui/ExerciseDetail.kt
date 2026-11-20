@@ -101,7 +101,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             item {
                 // Short, wide hero like the web app; the demo itself stays square in the middle.
                 Box(
-                    Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.extraLarge).background(Color(0xFFF2F2EE)),
+                    Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.extraLarge).background(Color.White),
                     contentAlignment = Alignment.Center,
                 ) { ExerciseImage(e, Modifier.fillMaxHeight().aspectRatio(1f), animated = true) }
             }
@@ -147,7 +147,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             if (e != null) {
                 item { SectionTitle("Muscles") }
                 item {
-                    Card(shape = MaterialTheme.shapes.extraLarge) {
+                    Card(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                         MuscleMap(Muscles.forExercise(e), d.profile.sex, Modifier.padding(16.dp).height(220.dp))
                     }
                 }
@@ -246,9 +246,8 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
                 if (new != sec) durations = durations.map { if (new) round1(it * 60) else round1(it / 60) }
                 sec = new
             })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
-                Spacer(Modifier.weight(1f))
+            Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
                 if (timed) FilterChip(showDistance, { showDistance = !showDistance }, label = { Text("Distance") })
             }

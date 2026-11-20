@@ -97,7 +97,7 @@ fun ExerciseImage(exercise: Exercise?, modifier: Modifier = Modifier, animated: 
         contentDescription = exercise?.let { "Demonstration of ${it.name}" },
         contentScale = ContentScale.Crop,
         // The exercise stills are drawn on white.
-        modifier = base.background(androidx.compose.ui.graphics.Color(0xFFF2F2EE)),
+        modifier = base.background(androidx.compose.ui.graphics.Color.White),
         error = { Box(Modifier, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.FitnessCenter, null) } },
     )
 }

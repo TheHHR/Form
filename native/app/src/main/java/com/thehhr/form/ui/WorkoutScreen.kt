@@ -285,8 +285,9 @@ private fun RestCue(vm: FormStore, w: ActiveWorkout) {
         delay(wait.coerceAtLeast(0))
         // The notification alarm stays quiet while the app is visible, so this is the only cue then.
         if (com.thehhr.form.AppVisibility.visible) com.thehhr.form.Haptics.restEnd(context, vm.data.prefs.restSound)
-        // A finished set timer checks its set (idempotent if the background alarm got there first).
-        if (rest.type == "set") vm.completeSetTimer(rest.endsAt)
+        // A finished set timer checks its set. Only while visible: in the background the alarm must do it,
+        // or completing here would reschedule the alarm and swallow the "Set done" alert.
+        if (rest.type == "set" && com.thehhr.form.AppVisibility.visible) vm.completeSetTimer(rest.endsAt)
     }
 }
 

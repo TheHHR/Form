@@ -111,7 +111,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         item { SectionTitle("Muscles this week") }
         item {
             val heat = androidx.compose.runtime.remember(weekLogs) { com.thehhr.form.data.Muscles.heat(weekLogs, vm::exercise) }
-            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                 if (heat.isEmpty()) EmptyNote("Log a workout to see which muscles you trained.")
                 else MuscleMap(heat, vm.data.profile.sex, Modifier.padding(16.dp).height(240.dp))
             }
