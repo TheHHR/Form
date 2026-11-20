@@ -85,7 +85,7 @@ fun LibraryScreen(vm: AppViewModel, nav: Nav, pick: Pick?) {
         vm.catalog.all.filter { e ->
             (category.isEmpty() || e.category == category) && (!likedOnly || e.id in d.liked) &&
                 matches(e, query, d.exerciseTags[e.id].orEmpty())
-        }.sortedBy { it.name }
+        }.sortedBy { it.name.lowercase() }
     }
     val title = when (pick) {
         is Pick.ToRoutine -> "Add to ${d.routines.firstOrNull { it.id == pick.routineId }?.name ?: "routine"}"

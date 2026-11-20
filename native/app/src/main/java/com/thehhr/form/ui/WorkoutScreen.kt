@@ -211,6 +211,7 @@ private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
 private fun RestCard(vm: AppViewModel, w: ActiveWorkout, now: Long) {
     val rest = w.rest ?: return
     val left = rest.pausedRemaining ?: (rest.endsAt - now)
+    if (left < -15 * 60_000) return // forgotten rest: hide the stale overtime
     val over = left < 0
     Card(
         Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 0.dp),
@@ -337,7 +338,7 @@ private fun SetRowView(vm: AppViewModel, exId: String, index: Int, row: SetRow, 
                 { set(row.copy(weight = ((row.weight ?: 0.0) + wStep).coerceAtMost(2000.0))) })
         }
         FilledIconToggleButton(checked = row.done, onCheckedChange = { vm.toggleRow(exId, index) }) {
-            Icon(if (row.done) Icons.Rounded.Check else Icons.Rounded.Close, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done")
+            Icon(Icons.Rounded.Check, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done")
         }
     }
 }
