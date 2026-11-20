@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -73,7 +73,8 @@ fun MuscleMap(heat: Map<String, Float>, sex: String, modifier: Modifier = Modifi
         for (side in listOf("front", "back")) {
             val body = data?.get("$gender-$side")
             val vb = body?.viewBox ?: floatArrayOf(0f, 0f, 727f, 1280f)
-            Canvas(Modifier.weight(1f).aspectRatio(vb[2] / vb[3])) {
+            // Fill the height the caller gives; the transform below scales the body to fit, so head and feet always show.
+            Canvas(Modifier.weight(1f).fillMaxHeight()) {
                 if (body == null) return@Canvas
                 val scale = minOf(size.width / vb[2], size.height / vb[3])
                 withTransform({

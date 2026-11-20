@@ -76,14 +76,13 @@ sealed interface Route {
     data class Detail(val id: String) : Route
     data class RoutineEdit(val id: String) : Route
     data object Settings : Route
-    data object Plans : Route
-    data object Meals : Route
 }
 
 enum class Tab(val label: String, val icon: ImageVector) {
     Progress("Progress", Icons.Rounded.Insights),
     Fuel("Fuel", Icons.Rounded.Restaurant),
     Workout("Workout", Icons.Rounded.FitnessCenter),
+    Plans("Plans", Icons.Rounded.CalendarMonth),
     Ai("AI", Icons.Rounded.AutoAwesome),
 
 }
@@ -93,6 +92,8 @@ class Nav {
     val stack = mutableStateListOf<Route>()
     fun push(r: Route) { stack.add(r) }
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
+    /** Switches the bottom-nav tab (set by the main screen). */
+    var selectTab: (Tab) -> Unit = {}
 }
 
 @Composable
@@ -150,6 +151,7 @@ private fun WelcomeScreen(vm: FormStore, error: String? = null) {
 private fun MainScreen(vm: FormStore) {
     var tab by rememberSaveable { mutableStateOf(Tab.Workout) }
     val nav = remember { Nav() }
+    nav.selectTab = { tab = it }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) {
         vm.message?.let { snackbar.showSnackbar(it); vm.message = null }
@@ -176,8 +178,6 @@ private fun MainScreen(vm: FormStore) {
                     is Route.Detail -> ExerciseDetailScreen(vm, nav, top.id)
                     is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
                     Route.Settings -> SettingsScreen(vm, nav)
-                    Route.Plans -> PlansScreen(vm, nav)
-                    Route.Meals -> MealsScreen(vm, nav)
                 }
                 SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
             }
@@ -196,11 +196,6 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
                 title = if (tab == Tab.Workout && w != null) w.routineName else tab.label,
                 scroll = scroll,
                 actions = {
-                    when (tab) {
-                        Tab.Workout -> IconButton(onClick = { nav.push(Route.Plans) }) { Icon(Icons.Rounded.CalendarMonth, "Routines and week") }
-                        Tab.Fuel -> IconButton(onClick = { nav.push(Route.Meals) }) { Icon(Icons.AutoMirrored.Rounded.MenuBook, "Meal library") }
-                        else -> {}
-                    }
                     IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") }
                 },
             )
@@ -220,6 +215,7 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
         Crossfade(tab, Modifier.padding(pad).fillMaxSize(), animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tab") { t ->
             when (t) {
                 Tab.Workout -> WorkoutTab(vm, nav)
+                Tab.Plans -> PlansTab(vm, nav)
                 Tab.Ai -> AiTab(vm, nav)
                 Tab.Fuel -> FuelTab(vm)
                 Tab.Progress -> ProgressTab(vm, nav)

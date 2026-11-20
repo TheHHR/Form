@@ -105,7 +105,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
             Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Stat("Sessions", "$sessions", Modifier.weight(1f))
                 Stat("Sets", "$sets", Modifier.weight(1f))
-                Stat("Volume", compact(volume) + " ${units.weight}", Modifier.weight(1f))
+                Stat("Volume (${units.weight})", compact(volume), Modifier.weight(1f))
             }
         }
         item {

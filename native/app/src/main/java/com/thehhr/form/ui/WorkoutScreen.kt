@@ -129,8 +129,8 @@ private fun StartWorkout(vm: FormStore, nav: Nav) {
                 Icon(Icons.Rounded.Search, null); Spacer(Modifier.width(8.dp)); Text("Browse exercises")
             }
         }
-        item { SectionTitle("Liked routines", action = { TextButton(onClick = { nav.push(Route.Plans) }) { Text("All routines") } }) }
-        if (routines.isEmpty()) item { EmptyNote("Like a routine (♥) in Routines & week to pin it here.") }
+        item { SectionTitle("Liked routines", action = { TextButton(onClick = { nav.selectTab(Tab.Plans) }) { Text("All routines") } }) }
+        if (routines.isEmpty()) item { EmptyNote("Like a routine (♥) in Plans to pin it here.") }
         itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
             GroupedItem(
                 i, routines.size,

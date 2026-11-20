@@ -134,7 +134,9 @@ fun <T> ChoiceGroup(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
                 modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-            ) { Text(label, maxLines = 1) }
+                // Tighter than the default so four options (e.g. meal slots) fit a 360 dp phone without truncating.
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+            ) { Text(label, maxLines = 1, softWrap = false) }
         }
     }
 }

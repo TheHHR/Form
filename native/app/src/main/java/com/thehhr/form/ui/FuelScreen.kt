@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,12 +43,11 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
@@ -133,7 +134,7 @@ fun FuelTab(vm: FormStore) {
                         LinearProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(top = 6.dp), color = FormColors.Carbs)
                     }
                     TextButton(onClick = { vm.addWater(date, -250.0) }, enabled = day.water > 0) { Text("−250") }
-                    FilledTonalButton(onClick = { vm.addWater(date, 250.0) }) { Text("+250") }
+                    FilledTonalButton(onClick = { vm.addWater(date, 250.0) }, shapes = ButtonDefaults.shapes()) { Text("+250") }
                 }
             }
         }
@@ -182,59 +183,76 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
     var mode by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
     var picked by remember { mutableStateOf<Meal?>(null) }
-    var grams by remember { mutableStateOf("") }
+    var grams by remember { mutableStateOf(100.0) }
     var name by remember { mutableStateOf("") }
-    var mp by remember { mutableStateOf("") }; var mc by remember { mutableStateOf("") }; var mf by remember { mutableStateOf("") }
-    fun n(s: String) = jsNumber(s).takeIf { it.isFinite() && it >= 0 } ?: 0.0
-    val num = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Log meal", style = MaterialTheme.typography.titleLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Fuel.SLOTS.forEach { s -> FilterChip(slot == s, { slot = s }, label = { Text(s) }) }
-            }
-            SecondaryTabRow(selectedTabIndex = mode) {
-                Tab(mode == 0, { mode = 0 }, text = { Text("From library") })
-                Tab(mode == 1, { mode = 1 }, text = { Text("Manual") })
-                Tab(mode == 2, { mode = 2 }, text = { Text("Barcode") })
-            }
+    var mp by remember { mutableStateOf(0.0) }; var mc by remember { mutableStateOf(0.0) }; var mf by remember { mutableStateOf(0.0) }
+    val addLabel = "Add to $slot"
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Log meal", style = MaterialTheme.typography.titleMediumEmphasized)
+            ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it })
+            ChoiceGroup(listOf(0 to "Library", 1 to "Manual", 2 to "Barcode"), mode, { mode = it })
             if (mode == 2) {
-                BarcodePane(vm) { meal, serving -> picked = meal; grams = jsNum(serving); mode = 0 }
+                BarcodePane(vm) { meal, serving -> picked = meal; grams = serving; mode = 0 }
             } else if (mode == 0) {
                 val meal = picked
                 if (meal == null) {
-                    OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Search meals") }, singleLine = true)
+                    androidx.compose.material3.TextField(
+                        query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
+                        leadingIcon = { Icon(androidx.compose.material.icons.Icons.Rounded.Search, null) },
+                        placeholder = { Text("Search meals") }, shape = MaterialTheme.shapes.extraLarge,
+                        colors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                    )
                     val list = vm.data.meals.filter { it.name.contains(query.trim(), true) }
                         .sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
-                    if (list.isEmpty()) EmptyNote("No meals. Add some in Plans → Meals.")
-                    LazyColumn(Modifier.heightIn(max = 320.dp)) {
-                        items(list, key = { it.id }) { m ->
-                            ListItem(headlineContent = { Text(m.name) }, supportingContent = { Text("${jsNum(m.cals100)} kcal / 100 g") },
-                                modifier = Modifier.clickable { picked = m; grams = jsNum(m.defaultGrams) })
+                    if (list.isEmpty()) EmptyNote("No meals yet. Add some in Plans → Meals, or try Manual or Barcode.")
+                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                        itemsIndexed(list, key = { _, m -> m.id }) { i, m ->
+                            GroupedItem(i, list.size, onClick = { picked = m; grams = m.defaultGrams },
+                                supporting = { Text("${jsNum(m.defaultGrams)} g serving") },
+                                trailing = { Text("${jsNum(m.cals100)}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) },
+                            ) { Text(m.name) }
                         }
                     }
                 } else {
-                    Text(meal.name, style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(grams, { grams = it }, label = { Text("Grams") }, singleLine = true, keyboardOptions = num)
-                    val e = Fuel.entryFor(meal, n(grams), slot, "")
-                    Text("${jsRound(e.cals)} kcal · ${jsNum(e.p)}p · ${jsNum(e.c)}c · ${jsNum(e.f)}f", color = MaterialTheme.colorScheme.primary)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { picked = null }) { Text("Back") }
-                        Button(enabled = n(grams) > 0, onClick = { vm.logMeal(date, Fuel.entryFor(meal, n(grams), slot, vm.newMealEntryId())); onClose() }) { Text("Add") }
+                    val e = Fuel.entryFor(meal, grams, slot, "")
+                    androidx.compose.material3.Card(shape = MaterialTheme.shapes.extraLarge,
+                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(meal.name, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 2)
+                            Text("${jsRound(e.cals)} kcal", style = MaterialTheme.typography.headlineMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                            Text("${jsNum(e.p)} g protein · ${jsNum(e.c)} g carbs · ${jsNum(e.f)} g fat", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
+                    Text("Grams", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+                    StepperField(grams, "grams", 10.0, 1.0..5000.0, { grams = it }, Modifier.fillMaxWidth())
+                    Button(onClick = { vm.logMeal(date, Fuel.entryFor(meal, grams, slot, vm.newMealEntryId())); onClose() },
+                        shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(ButtonDefaults.MediumContainerHeight)) {
+                        Text(addLabel, style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
+                    }
+                    TextButton(onClick = { picked = null }, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Choose another meal") }
                 }
             } else {
                 OutlinedTextField(name, { name = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(mp, { mp = it }, Modifier.weight(1f), label = { Text("Protein g") }, singleLine = true, keyboardOptions = num)
-                    OutlinedTextField(mc, { mc = it }, Modifier.weight(1f), label = { Text("Carbs g") }, singleLine = true, keyboardOptions = num)
-                    OutlinedTextField(mf, { mf = it }, Modifier.weight(1f), label = { Text("Fat g") }, singleLine = true, keyboardOptions = num)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Protein g", "Carbs g", "Fat g").forEach {
+                        Text(it, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
                 }
-                val kcal = Fuel.kcal(n(mp), n(mc), n(mf))
-                Text("${jsNum(kcal)} kcal", color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StepperField(mp, "protein grams", 5.0, 0.0..1000.0, { mp = it }, Modifier.weight(1f))
+                    StepperField(mc, "carb grams", 5.0, 0.0..1000.0, { mc = it }, Modifier.weight(1f))
+                    StepperField(mf, "fat grams", 1.0, 0.0..1000.0, { mf = it }, Modifier.weight(1f))
+                }
+                val kcal = Fuel.kcal(mp, mc, mf)
+                Text("${jsNum(kcal)} kcal", style = MaterialTheme.typography.headlineSmallEmphasized, color = MaterialTheme.colorScheme.primary)
                 Button(enabled = name.isNotBlank(), onClick = {
-                    vm.logMeal(date, MealEntry(vm.newMealEntryId(), name.trim(), kcal, n(mp), n(mc), n(mf), slot)); onClose()
-                }) { Text("Add") }
+                    vm.logMeal(date, MealEntry(vm.newMealEntryId(), name.trim(), kcal, mp, mc, mf, slot)); onClose()
+                }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(ButtonDefaults.MediumContainerHeight)) {
+                    Text(addLabel, style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
+                }
             }
         }
     }
@@ -276,7 +294,7 @@ private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(code, { code = it.filter(Char::isDigit).take(14) }, Modifier.weight(1f), label = { Text("Or type the code") },
                 singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            FilledTonalButton(onClick = { lookup(code) }, enabled = !busy && code.isNotEmpty()) { Text("Look up") }
+            FilledTonalButton(onClick = { lookup(code) }, enabled = !busy && code.isNotEmpty(), shapes = ButtonDefaults.shapes()) { Text("Look up") }
         }
         if (busy) LoadingIndicator(Modifier.align(Alignment.CenterHorizontally))
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

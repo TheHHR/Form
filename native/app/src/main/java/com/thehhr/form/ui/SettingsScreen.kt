@@ -159,7 +159,7 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
             item { SectionTitle("Data") }
             item {
                 GroupedItem(0, 2, supporting = { Text(vm.folderName.ifEmpty { "—" }) },
-                    trailing = { FolderPicker(vm) { launch -> FilledTonalButton(onClick = launch) { Text("Change") } } }) { Text("Vault folder") }
+                    trailing = { FolderPicker(vm) { launch -> FilledTonalButton(onClick = launch, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Change") } } }) { Text("Vault folder") }
             }
             item { GroupedItem(1, 2, supporting = { Text("Native · Kotlin + Compose") }) { Text("Form ${BuildConfig.VERSION_NAME}") } }
         }
@@ -194,7 +194,7 @@ private fun OptionItem(index: Int, count: Int, title: String, options: List<Pair
     var open by remember { mutableStateOf(false) }
     val current = options.firstOrNull { it.first == value }?.second?.first ?: "Custom (${num(value)})"
     GroupedItem(index, count, onClick = { open = true }, supporting = { Text(current) }) { Text(title) }
-    if (open) ModalBottomSheet(onDismissRequest = { open = false }) {
+    if (open) ModalBottomSheet(onDismissRequest = { open = false }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text(title, style = MaterialTheme.typography.titleMediumEmphasized, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
             options.forEachIndexed { i, (v, labels) ->
