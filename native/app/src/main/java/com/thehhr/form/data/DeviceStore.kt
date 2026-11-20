@@ -23,6 +23,10 @@ class DeviceStore(context: Context) {
     var aiConfig: AiConfig
         get() = AiConfig.fromJson(prefs.getString("ai_config", null))
         set(v) = prefs.edit().putString("ai_config", v.toJson()).apply()
+    /** Accent from config.md, remembered so the loading screen isn't the default lime. */
+    var lastAccent: String
+        get() = prefs.getString("last_accent", null) ?: "lime"
+        set(v) = prefs.edit().putString("last_accent", v).apply()
     var notificationsAsked: Boolean
         get() = prefs.getBoolean("notifications_asked", false)
         set(v) = prefs.edit().putBoolean("notifications_asked", v).apply()

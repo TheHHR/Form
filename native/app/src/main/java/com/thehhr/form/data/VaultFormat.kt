@@ -608,8 +608,9 @@ class VaultFormat(private val catalog: Catalog) {
                     "default-view" -> prefs["defaultView"] = if (v in listOf("week", "month", "all")) v else "week"
                     "workout-reminder" -> prefs["workoutReminder"] = truthy(v)
                     "rest-enabled" -> prefs["restEnabled"] = truthy(v)
-                    "rest-between-sets" -> prefs["restBetweenSets"] = vClamp(v, 30.0, 180.0, 60.0)
-                    "rest-between-exercises" -> prefs["restBetweenExercises"] = vClamp(v, 30.0, 180.0, 90.0)
+                    // fix: native allows rest up to 300 s; the web app capped it at 180 (it clamps 300 back to 180 if reopened there).
+                    "rest-between-sets" -> prefs["restBetweenSets"] = vClamp(v, 30.0, 300.0, 60.0)
+                    "rest-between-exercises" -> prefs["restBetweenExercises"] = vClamp(v, 30.0, 300.0, 90.0)
                     "rest-sound" -> prefs["restSound"] = truthy(v)
                     "pill-routine" -> prefs["pillRoutine"] = if (v in pillModes) v else "default"
                     "pill-category" -> prefs["pillCategory"] = if (v in pillModes) v else "default"

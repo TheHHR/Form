@@ -98,7 +98,8 @@ class Nav {
 
 @Composable
 fun FormApp(vm: FormStore) {
-    FormTheme(accent = vm.data.prefs.accent) {
+    // Until the vault loads, use the accent remembered on this device (not the lime default).
+    FormTheme(accent = if (vm.status == Status.Ready) vm.data.prefs.accent else vm.device.lastAccent) {
         when (val s = vm.status) {
             Status.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
             Status.NeedsFolder -> WelcomeScreen(vm)

@@ -94,7 +94,7 @@ fun WorkoutTab(vm: FormStore, nav: Nav) {
 private fun StartWorkout(vm: FormStore, nav: Nav) {
     val today = vm.todaysRoutine()
     val routines = vm.data.routines.filter { it.liked }
-    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
             Card(
                 Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
@@ -310,7 +310,7 @@ private fun ExerciseCard(
         ),
     ) {
         Row(Modifier.clickable(onClick = onToggleOpen).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ExerciseImage(ex, size = if (open) 72.dp else 52.dp, animated = open)
+            ExerciseImage(ex, size = 56.dp, animated = open)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 if (isTarget) Text("Up next", style = MaterialTheme.typography.labelMediumEmphasized, color = MaterialTheme.colorScheme.primary)

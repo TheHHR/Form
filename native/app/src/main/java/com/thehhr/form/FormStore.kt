@@ -144,6 +144,7 @@ class FormStore private constructor(val app: Application) {
                 if (missing.isNotEmpty()) message = "Missing: ${missing.joinToString { it.fileName }}. Check your vault folder."
             }
             status = Status.Ready
+            device.lastAccent = data.prefs.accent
             putWorkout(workout?.takeIf { w -> data.routines.any { it.id == w.routineId } && recent(w) })
             completeExpiredSetTimer()
         } catch (e: Exception) {
@@ -309,6 +310,7 @@ class FormStore private constructor(val app: Application) {
     fun setPrefs(p: Prefs) {
         val unitsChanged = p.units != data.prefs.units
         update(VaultFile.Config) { it.copy(prefs = p) }
+        device.lastAccent = p.accent
         if (unitsChanged) save(VaultFile.TrainingLogs)
     }
     val unitsLocked: Boolean get() = data.logs.isNotEmpty()

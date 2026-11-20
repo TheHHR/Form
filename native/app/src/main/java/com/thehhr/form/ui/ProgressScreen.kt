@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,22 +86,19 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
     val heat = remember(scopeLogs) { Muscles.heat(scopeLogs, vm::exercise) }
     val dates = (selectedDay?.let { listOf(it) } ?: byDate.keys.sortedDescending()).filter { byDate.containsKey(it) }
 
-    LazyColumn(contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
         item {
             ChoiceGroup(listOf("week" to "Week", "month" to "Month", "all" to "All"), scope, { scope = it; offset = 0; selectedDay = null }, Modifier.padding(vertical = 8.dp))
         }
         if (scope != "all") item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { offset--; selectedDay = null }) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $scope") }
-                val label = when {
-                    scope == "week" && offset == 0 -> "This week"
-                    scope == "week" -> "${from.format(DateTimeFormatter.ofPattern("MMM d"))} – ${to.format(DateTimeFormatter.ofPattern("MMM d"))}"
-                    offset == 0 -> "This month"
-                    else -> from.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
-                }
-                Text(label, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = { offset++; selectedDay = null }, enabled = offset < 0) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next $scope") }
+            val label = when {
+                scope == "week" && offset == 0 -> "This week"
+                scope == "week" -> "${from.format(DateTimeFormatter.ofPattern("MMM d"))} – ${to.format(DateTimeFormatter.ofPattern("MMM d"))}"
+                offset == 0 -> "This month"
+                from.year == LocalDate.now().year -> from.format(DateTimeFormatter.ofPattern("MMMM"))
+                else -> from.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
             }
+            PeriodNav(label, scope, { offset--; selectedDay = null }, { offset++; selectedDay = null }, offset < 0)
         }
         item {
             Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -139,11 +138,11 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                 else MuscleMap(heat, vm.data.profile.sex, Modifier.padding(16.dp).height(240.dp))
             }
         }
-        item { SectionTitle(selectedDay?.let { "History · ${vaultDateHeading(it)}" } ?: "History") }
+        item { SectionTitle(selectedDay?.let { "History · ${displayDate(it)}" } ?: "History") }
         if (dates.isEmpty()) item { EmptyNote("Finish a workout or log progress from an exercise to see it here.") }
         dates.take(shownDays).forEach { date ->
             if (selectedDay == null) item(key = "d-$date") {
-                Text(vaultDateHeading(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(displayDate(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp))
             }
             val dayLogs = byDate[date].orEmpty().sortedBy(ProgressLog::createdAt)

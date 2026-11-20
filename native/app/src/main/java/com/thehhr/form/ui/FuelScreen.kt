@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Button
@@ -33,7 +36,6 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -44,6 +46,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.rounded.QrCodeScanner
@@ -92,15 +97,10 @@ fun FuelTab(vm: FormStore) {
     val ld = LocalDate.parse(date)
 
     // No spacedBy: grouped meal rows bring their own 2 dp gap; other items pad themselves.
-    LazyColumn(contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { date = ld.minusDays(1).toString() }) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous day") }
-                Text(if (isToday) "Today" else ld.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
-                    Modifier.weight(1f).clickable { date = vm.todayKey }, style = MaterialTheme.typography.titleMedium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                IconButton(onClick = { date = ld.plusDays(1).toString() }, enabled = !isToday) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next day") }
-            }
+            PeriodNav(if (isToday) "Today" else displayDate(date), "day", { date = ld.minusDays(1).toString() },
+                { date = ld.plusDays(1).toString() }, !isToday, onLabel = { date = vm.todayKey })
         }
         item {
             Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
@@ -126,15 +126,22 @@ fun FuelTab(vm: FormStore) {
         }
         item {
             Card(Modifier.fillMaxWidth().padding(vertical = 12.dp), shape = MaterialTheme.shapes.large) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("${jsRound(day.water)} / ${jsRound(targets.water)} ml", style = MaterialTheme.typography.titleSmall)
-                        LinearProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(top = 6.dp), color = FormColors.Carbs)
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(44.dp).clip(androidx.compose.material3.MaterialShapes.Cookie9Sided.toShape()).background(FormColors.Carbs.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center) { Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("${jsRound(day.water)} ml", style = MaterialTheme.typography.titleLargeEmphasized)
+                            Text("of ${jsRound(targets.water)} ml water", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        androidx.compose.material3.FilledTonalIconButton(onClick = { vm.addWater(date, -250.0) }, enabled = day.water > 0,
+                            shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Remove, "Remove 250 ml") }
+                        Spacer(Modifier.width(8.dp))
+                        androidx.compose.material3.FilledIconButton(onClick = { vm.addWater(date, 250.0) },
+                            shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Add, "Add 250 ml") }
                     }
-                    TextButton(onClick = { vm.addWater(date, -250.0) }, enabled = day.water > 0) { Text("−250") }
-                    FilledTonalButton(onClick = { vm.addWater(date, 250.0) }, shapes = ButtonDefaults.shapes()) { Text("+250") }
+                    LinearWavyProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth(), color = FormColors.Carbs)
                 }
             }
         }

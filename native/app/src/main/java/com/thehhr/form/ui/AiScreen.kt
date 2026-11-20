@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +32,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
@@ -88,7 +89,7 @@ fun AiTab(vm: FormStore, nav: Nav) {
     var cfg by remember { mutableStateOf(vm.device.aiConfig) }
     var setup by remember { mutableStateOf(false) }
     var mode by rememberSaveable { mutableStateOf("coach") }
-    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!cfg.configured) {
             item {
                 Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
@@ -269,7 +270,7 @@ private fun MealPane(vm: FormStore, cfg: AiConfig) {
                         style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     StepperField(grams, "grams", 10.0, 1.0..5000.0, { grams = it }, Modifier.fillMaxWidth())
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Fuel.SLOTS.forEach { s -> FilterChip(slot == s, { slot = s }, label = { Text(s) }) }
+                        Fuel.SLOTS.forEach { s -> Pill(slot == s, { slot = s }, label = { Text(s) }) }
                     }
                     est.notes.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -302,7 +303,7 @@ private fun AiSetupSheet(current: AiConfig, onDismiss: () -> Unit, onSave: (AiCo
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("AI provider", style = MaterialTheme.typography.titleMediumEmphasized)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AiConfig.PROVIDERS.forEach { (id, p) -> FilterChip(provider == id, { provider = id; result = null }, label = { Text(p.first) }) }
+                AiConfig.PROVIDERS.forEach { (id, p) -> Pill(provider == id, { provider = id; result = null }, label = { Text(p.first) }) }
             }
             OutlinedTextField(keys[provider].orEmpty(), { keys = keys + (provider to it.trim()) }, Modifier.fillMaxWidth(),
                 label = { Text(if (provider == "custom") "API key (optional)" else "API key") }, singleLine = true,

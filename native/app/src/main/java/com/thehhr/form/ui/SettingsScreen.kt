@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +72,7 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = { FormTopBar("Settings", scroll, onBack = nav::pop) },
     ) { pad ->
-        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 32.dp)) {
+        LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 32.dp)) {
             item { SectionTitle("Appearance") }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -109,8 +111,8 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
             item { Spacer(Modifier.height(12.dp)) }
             item { SwitchItem(0, 4, "Rest timer", "Countdown after each set", prefs.restEnabled) { vm.setPrefs(prefs.copy(restEnabled = it)) } }
             item { SwitchItem(1, 4, "Rest sound", "Beep when rest ends", prefs.restSound) { vm.setPrefs(prefs.copy(restSound = it)) } }
-            item { ValueItem(2, 4, "Rest between sets", "${jsRound(prefs.restBetweenSets)} s", prefs.restBetweenSets, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenSets = it)) } }
-            item { ValueItem(3, 4, "Rest between exercises", "${jsRound(prefs.restBetweenExercises)} s", prefs.restBetweenExercises, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenExercises = it)) } }
+            item { ValueItem(2, 4, "Rest between sets", "${jsRound(prefs.restBetweenSets)} s", prefs.restBetweenSets, 30.0..300.0) { vm.setPrefs(prefs.copy(restBetweenSets = it)) } }
+            item { ValueItem(3, 4, "Rest between exercises", "${jsRound(prefs.restBetweenExercises)} s", prefs.restBetweenExercises, 30.0..300.0) { vm.setPrefs(prefs.copy(restBetweenExercises = it)) } }
 
             item { SectionTitle("Live updates") }
             item {
@@ -120,7 +122,10 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
                 GroupedItem(0, 1, onClick = {
                     val intent = if (android.os.Build.VERSION.SDK_INT >= 36) android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS)
                     else android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    ctx.startActivity(intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName))
+                    // Some Android 16 builds lack the Live Update settings page: fall back instead of crashing.
+                    runCatching { ctx.startActivity(intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)) }.onFailure {
+                        runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)) }
+                    }
                 }, supporting = {
                     Text(when {
                         android.os.Build.VERSION.SDK_INT < 36 -> "Workout shows as an ongoing notification (Live Updates need Android 16)"
@@ -249,7 +254,7 @@ private fun ReminderSettings(vm: FormStore) {
     var minutes by remember { mutableIntStateOf(vm.device.reminderMinutes) }
     var picking by remember { mutableStateOf(false) }
     fun apply() = Reminders.schedule(ctx, vm.device)
-    SwitchItem(0, 2, "Workout reminder", "On days with a scheduled routine, if you haven't trained yet", enabled) {
+    SwitchItem(0, 2, "Workout reminder", "On days with scheduled routine", enabled) {
         enabled = it; vm.device.reminderEnabled = it; apply()
     }
     GroupedItem(1, 2, onClick = { picking = true },

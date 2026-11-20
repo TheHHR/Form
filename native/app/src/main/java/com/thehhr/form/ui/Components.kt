@@ -24,7 +24,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.AlertDialog
@@ -290,4 +293,62 @@ fun num(v: Double) = jsNum(Math.round(v * 10) / 10.0)
 fun fmtTime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
+
+/** App-wide date style: "Tue, Aug 11", with ", 2025" only when it isn't the current year. */
+fun displayDate(iso: String): String = runCatching {
+    val d = java.time.LocalDate.parse(iso)
+    val pattern = if (d.year == java.time.LocalDate.now().year) "EEE, MMM d" else "EEE, MMM d, yyyy"
+    d.format(java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.ENGLISH))
+}.getOrDefault(iso)
+
+/**
+ * Expressive filter pill: filled tonal, fully rounded, no outline; selected = accent fill with a check.
+ * Same parameter order as FilterChip so call sites read the same.
+ */
+@Composable
+fun Pill(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+) {
+    androidx.compose.material3.FilterChip(
+        selected = selected, onClick = onClick, label = label, modifier = modifier.height(40.dp),
+        shape = CircleShape, border = null,
+        leadingIcon = leadingIcon ?: if (selected) ({ Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }) else null,
+        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    )
+}
+
+/** Non-interactive tonal badge (exercise muscles, equipment, …). */
+@Composable
+fun Tag(text: String, modifier: Modifier = Modifier) {
+    androidx.compose.material3.Surface(modifier, shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
+        Text(text, Modifier.padding(horizontal = 14.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/** ‹ label › navigation for days/weeks/months, with Expressive tonal icon buttons. */
+@Composable
+fun PeriodNav(label: String, what: String, onPrev: () -> Unit, onNext: () -> Unit, nextEnabled: Boolean, onLabel: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.FilledTonalIconButton(onClick = onPrev, shapes = IconButtonDefaults.shapes()) {
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $what")
+        }
+        Text(label, (if (onLabel != null) Modifier.weight(1f).clickable(onClick = onLabel) else Modifier.weight(1f)),
+            style = MaterialTheme.typography.titleMediumEmphasized, textAlign = TextAlign.Center)
+        androidx.compose.material3.FilledTonalIconButton(onClick = onNext, enabled = nextEnabled, shapes = IconButtonDefaults.shapes()) {
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next $what")
+        }
+    }
 }

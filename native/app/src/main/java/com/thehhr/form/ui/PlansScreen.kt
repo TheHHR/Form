@@ -38,7 +38,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialShapes
@@ -89,7 +88,7 @@ fun PlansTab(vm: FormStore, nav: Nav) {
 private fun RoutineList(vm: FormStore, nav: Nav) {
     var creating by remember { mutableStateOf(false) }
     val routines = vm.data.routines
-    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
             FilledTonalButton(onClick = { creating = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("New routine")
@@ -142,7 +141,7 @@ private fun WeekSchedule(vm: FormStore) {
     val start = vm.data.prefs.weekStart
     val todayDow = java.time.LocalDate.now().dayOfWeek.value % 7
     val days = (0..6).map { (start + it) % 7 }
-    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         itemsIndexed(days) { i, day ->
             var open by remember { mutableStateOf(false) }
             val routine = vm.data.schedule[day]?.let { id -> vm.data.routines.firstOrNull { it.id == id } }
@@ -168,7 +167,7 @@ private fun WeekSchedule(vm: FormStore) {
 private fun MealLibrary(vm: FormStore) {
     var editing by remember { mutableStateOf<Meal?>(null) }
     val meals = vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
-    LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
         item {
             FilledTonalButton(onClick = { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, shapes = ButtonDefaults.shapes(),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
@@ -256,7 +255,7 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
             ExtendedFloatingActionButton(onClick = { nav.push(Route.Library(Pick.ToRoutine(id))) }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text("Add exercises") })
         },
     ) { pad ->
-        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (routine.items.isEmpty()) item { EmptyNote("No exercises yet") }
             itemsIndexed(routine.items, key = { _, it -> it.exerciseId }) { i, item ->
                 val ex = vm.exercise(item.exerciseId)
@@ -267,7 +266,7 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            ExerciseImage(ex, size = 52.dp)
+                            ExerciseImage(ex, size = 56.dp)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(exTitle(ex), style = MaterialTheme.typography.titleSmallEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -291,10 +290,10 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
                             }
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(item.timed, { editItem(i) { it.copy(timed = !it.timed, reps = it.reps.coerceAtMost(60), distance = false) } }, label = { Text("Timed") })
-                            if (item.timed) FilterChip(item.unit == "min", { editItem(i) { it.copy(unit = if (it.unit == "min") null else "min") } }, label = { Text("Minutes") })
-                            FilterChip(item.weighted, { editItem(i) { it.copy(unweighted = !it.unweighted) } }, label = { Text("Weight") })
-                            if (item.timed) FilterChip(item.distance, { editItem(i) { it.copy(distance = !it.distance) } }, label = { Text("Distance") })
+                            Pill(item.timed, { editItem(i) { it.copy(timed = !it.timed, reps = it.reps.coerceAtMost(60), distance = false) } }, label = { Text("Timed") })
+                            if (item.timed) Pill(item.unit == "min", { editItem(i) { it.copy(unit = if (it.unit == "min") null else "min") } }, label = { Text("Minutes") })
+                            Pill(item.weighted, { editItem(i) { it.copy(unweighted = !it.unweighted) } }, label = { Text("Weight") })
+                            if (item.timed) Pill(item.distance, { editItem(i) { it.copy(distance = !it.distance) } }, label = { Text("Distance") })
                         }
                         Row {
                             if (partnerIdx >= 0) TextButton(onClick = { edit { r -> r.copy(items = r.items.map { if (it.superset == item.superset) it.copy(superset = null) else it }) } }) {

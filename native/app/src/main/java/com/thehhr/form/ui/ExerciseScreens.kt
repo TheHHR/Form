@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.ui.layout.layout
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +37,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
@@ -43,7 +44,6 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -91,10 +91,16 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?) {
     var query by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
     var likedOnly by rememberSaveable { mutableStateOf(false) }
+    var loggedOnly by rememberSaveable { mutableStateOf(false) }
+    var target by rememberSaveable { mutableStateOf("") }
+    var equipment by rememberSaveable { mutableStateOf("") }
     val d = vm.data
-    val list = remember(query, category, likedOnly, d.liked, d.customExercises, d.exerciseTags) {
+    val logged = remember(d.logs) { d.logs.map { it.exerciseId }.toSet() }
+    val list = remember(query, category, target, equipment, likedOnly, loggedOnly, d.liked, logged, d.customExercises, d.exerciseTags) {
         vm.catalog.all.filter { e ->
-            (category.isEmpty() || e.category == category) && (!likedOnly || e.id in d.liked) &&
+            (category.isEmpty() || e.category == category) && (target.isEmpty() || e.target == target) &&
+                (equipment.isEmpty() || e.equipment == equipment) &&
+                (!likedOnly || e.id in d.liked) && (!loggedOnly || e.id in logged) &&
                 matches(e, query, d.exerciseTags[e.id].orEmpty())
         }.sortedBy { it.name.lowercase() }
     }
@@ -122,11 +128,23 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?) {
                 )
             }
             item {
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = likedOnly, onClick = { likedOnly = !likedOnly }, label = { Text("Liked") },
-                        leadingIcon = { Icon(Icons.Rounded.Favorite, null, Modifier.size(18.dp)) })
-                    Exercise.CATEGORIES.forEach { c ->
-                        FilterChip(selected = category == c, onClick = { category = if (category == c) "" else c }, label = { Text(jsTitle(c)) })
+                // Three scrollable rows like the original app: toggles + category, muscle, equipment.
+                // The selected pill leads its row so the active filter is always visible.
+                val muscles = remember { vm.catalog.builtIn.map { it.target }.distinct().sorted() }
+                Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PillRow {
+                        if (d.liked.isNotEmpty()) Pill(likedOnly, { likedOnly = !likedOnly }, { Text("Liked") },
+                            leadingIcon = { Icon(Icons.Rounded.Favorite, null, Modifier.size(18.dp)) })
+                        if (d.logs.isNotEmpty()) Pill(loggedOnly, { loggedOnly = !loggedOnly }, { Text("Logged") })
+                        selectedFirst(Exercise.CATEGORIES, category).forEach { c ->
+                            Pill(category == c, { category = if (category == c) "" else c }, { Text(jsTitle(c)) })
+                        }
+                    }
+                    PillRow {
+                        selectedFirst(muscles, target).forEach { m -> Pill(target == m, { target = if (target == m) "" else m }, { Text(jsTitle(m)) }) }
+                    }
+                    PillRow {
+                        selectedFirst(vm.catalog.equipmentOptions, equipment).forEach { q -> Pill(equipment == q, { equipment = if (equipment == q) "" else q }, { Text(jsTitle(q)) }) }
                     }
                 }
             }
@@ -155,10 +173,10 @@ fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Bo
     var confirm by remember { mutableStateOf(false) }
     GroupedItem(
         index, count,
-        leading = if (showName) ({ ExerciseImage(vm.exercise(log.exerciseId), size = 48.dp) }) else null,
+        leading = if (showName) ({ ExerciseImage(vm.exercise(log.exerciseId), size = 56.dp) }) else null,
         supporting = { Text(WorkoutLogic.formatLog(log, vm.data.prefs.units) + if (log.notes.isNotEmpty()) " · ${log.notes}" else "") },
         trailing = { IconButton(onClick = { confirm = true }) { Icon(Icons.Rounded.Delete, "Delete log") } },
-    ) { Text(if (showName) exTitle(vm.exercise(log.exerciseId)) else log.date, style = MaterialTheme.typography.titleSmall) }
+    ) { Text(if (showName) exTitle(vm.exercise(log.exerciseId)) else displayDate(log.date), style = MaterialTheme.typography.titleSmall) }
     if (confirm) AlertDialog(
         onDismissRequest = { confirm = false },
         icon = { Icon(Icons.Rounded.Delete, null) },
@@ -168,3 +186,20 @@ fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Bo
     )
 }
 
+
+/** One horizontally scrolling row of pills. */
+@Composable
+private fun PillRow(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    // Bleed past the list's 16 dp side padding so pills scroll in from the screen edge.
+    Row(
+        Modifier.layout { m, c ->
+            val bleed = 16.dp.roundToPx()
+            val p = m.measure(c.copy(maxWidth = c.maxWidth + bleed * 2, minWidth = 0))
+            layout(c.maxWidth, p.height) { p.place(-bleed, 0) }
+        }.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), content = content,
+    )
+}
+
+private fun selectedFirst(options: List<String>, selected: String) =
+    if (selected.isEmpty()) options else listOf(selected) + (options - selected)

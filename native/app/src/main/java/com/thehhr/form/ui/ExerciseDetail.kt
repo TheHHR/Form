@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +38,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +46,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -97,7 +97,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
         },
     ) { pad ->
         // No spacedBy: grouped history rows bring their own gap; other items pad themselves.
-        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
+        LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
             item {
                 // Short, wide hero like the web app; the demo itself stays square in the middle.
                 Box(
@@ -108,7 +108,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             item {
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOfNotNull(e?.category, e?.muscleGroup?.takeIf { it.isNotEmpty() }).plus(e?.secondary.orEmpty()).distinct()
-                        .forEach { SuggestionChip(onClick = {}, label = { Text(jsTitle(it)) }) }
+                        .forEach { Tag(jsTitle(it)) }
                 }
             }
             item {
@@ -240,7 +240,7 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = { pickingDate = true }, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 12.dp)) {
                     Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                    Text(if (date == LocalDate.now()) "Today" else date.format(DateTimeFormatter.ofPattern("MMM d")), maxLines = 1)
+                    Text(if (date == LocalDate.now()) "Today" else displayDate(date.toString()), maxLines = 1)
                 }
                 ChoiceGroup(listOf(false to "Reps", true to "Timed"), timed, { timed = it }, Modifier.weight(1f))
             }
@@ -253,8 +253,8 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
-                FilterChip(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
-                if (timed) FilterChip(showDistance, { showDistance = !showDistance }, label = { Text("Distance") })
+                Pill(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
+                if (timed) Pill(showDistance, { showDistance = !showDistance }, label = { Text("Distance") })
             }
             // Column header, then one row per set.
             val cols = buildList {
