@@ -37,7 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.data.ProgressLog
 import com.thehhr.form.data.WorkoutLogic
 import com.thehhr.form.data.jsRound
@@ -46,7 +46,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun ProgressTab(vm: AppViewModel, nav: Nav) {
+fun ProgressTab(vm: FormStore, nav: Nav) {
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
     var shownDays by rememberSaveable { mutableIntStateOf(14) }
     val logs = vm.data.logs

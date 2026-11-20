@@ -30,6 +30,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.thehhr.form.HealthSync
+import com.thehhr.form.Reminders
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,13 +53,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.BuildConfig
 import com.thehhr.form.data.Fuel
 import com.thehhr.form.data.jsRound
 
 @Composable
-fun SettingsScreen(vm: AppViewModel, nav: Nav) {
+fun SettingsScreen(vm: FormStore, nav: Nav) {
     val prefs = vm.data.prefs
     val profile = vm.data.profile
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -99,6 +109,12 @@ fun SettingsScreen(vm: AppViewModel, nav: Nav) {
             item { ValueItem(2, 4, "Rest between sets", "${jsRound(prefs.restBetweenSets)} s", prefs.restBetweenSets, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenSets = it)) } }
             item { ValueItem(3, 4, "Rest between exercises", "${jsRound(prefs.restBetweenExercises)} s", prefs.restBetweenExercises, 30.0..180.0) { vm.setPrefs(prefs.copy(restBetweenExercises = it)) } }
 
+            item { SectionTitle("Reminders") }
+            item { ReminderSettings(vm) }
+
+            item { SectionTitle("Health Connect") }
+            item { HealthSettings(vm) }
+
             item { SectionTitle("Body") }
             item { ChoiceGroup(listOf("m" to "Male", "f" to "Female"), if (profile.sex == "f") "f" else "m", { vm.setProfile(profile.copy(sex = it)) }, Modifier.padding(bottom = 12.dp)) }
             val hUnit = if (prefs.units.height == "ftin") "in" else "cm"
@@ -132,6 +148,68 @@ fun SettingsScreen(vm: AppViewModel, nav: Nav) {
             item { GroupedItem(1, 2, supporting = { Text("Native · Kotlin + Compose") }) { Text("Form ${BuildConfig.VERSION_NAME}") } }
         }
     }
+}
+
+@Composable
+private fun ReminderSettings(vm: FormStore) {
+    val ctx = LocalContext.current
+    var enabled by remember { mutableStateOf(vm.device.reminderEnabled) }
+    var minutes by remember { mutableIntStateOf(vm.device.reminderMinutes) }
+    var picking by remember { mutableStateOf(false) }
+    fun apply() = Reminders.schedule(ctx, vm.device)
+    SwitchItem(0, 2, "Workout reminder", "On days with a scheduled routine, if you haven't trained yet", enabled) {
+        enabled = it; vm.device.reminderEnabled = it; apply()
+    }
+    GroupedItem(1, 2, onClick = { picking = true },
+        trailing = { Text("%02d:%02d".format(minutes / 60, minutes % 60), style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) }) {
+        Text("Reminder time")
+    }
+    if (picking) {
+        val state = rememberTimePickerState(minutes / 60, minutes % 60, android.text.format.DateFormat.is24HourFormat(ctx))
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = { TextButton(onClick = {
+                minutes = state.hour * 60 + state.minute; vm.device.reminderMinutes = minutes; apply(); picking = false
+            }) { Text("Set") } },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+            text = { TimePicker(state) },
+        )
+    }
+}
+
+@Composable
+private fun HealthSettings(vm: FormStore) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var enabled by remember { mutableStateOf(vm.device.healthEnabled) }
+    val available = remember { HealthSync.available(ctx) }
+    val request = rememberLauncherForActivityResult(HealthSync.permissionContract()) { granted ->
+        val ok = granted.containsAll(HealthSync.permissions)
+        enabled = ok; vm.device.healthEnabled = ok
+        vm.message = if (ok) "Health Connect connected" else "Health Connect permissions not granted"
+    }
+    if (!available) {
+        GroupedItem(0, 1, supporting = { Text("Install or update Health Connect to sync workouts and meals.") }) { Text("Health Connect not available") }
+        return
+    }
+    SwitchItem(0, 2, "Sync to Health Connect", "Write finished workouts and logged meals", enabled) { on ->
+        if (!on) { enabled = false; vm.device.healthEnabled = false }
+        else scope.launch {
+            if (HealthSync.granted(ctx).containsAll(HealthSync.permissions)) { enabled = true; vm.device.healthEnabled = true }
+            else request.launch(HealthSync.permissions)
+        }
+    }
+    GroupedItem(1, 2, onClick = {
+        scope.launch {
+            val kg = HealthSync.latestWeightKg(ctx)
+            if (kg == null) { vm.message = "No weight found in Health Connect"; return@launch }
+            // Profile weights are stored in the display unit.
+            val value = if (vm.data.prefs.units.weight == "lb") kg * com.thehhr.form.data.Fuel.LB_PER_KG else kg
+            val rounded = Math.round(value * 10) / 10.0
+            vm.setProfile(vm.data.profile.copy(currentWeight = rounded))
+            vm.message = "Weight set to ${num(rounded)} ${vm.data.prefs.units.weight}"
+        }
+    }, supporting = { Text("Use your latest weight as current weight") }) { Text("Import weight") }
 }
 
 @Composable

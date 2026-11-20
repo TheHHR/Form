@@ -63,7 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.data.Exercise
 import com.thehhr.form.data.ProgressLog
 import com.thehhr.form.data.WorkoutLogic
@@ -87,7 +87,7 @@ fun LikeButton(liked: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-fun LibraryScreen(vm: AppViewModel, nav: Nav, pick: Pick?) {
+fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?) {
     var query by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
     var likedOnly by rememberSaveable { mutableStateOf(false) }
@@ -152,7 +152,7 @@ fun LibraryScreen(vm: AppViewModel, nav: Nav, pick: Pick?) {
 }
 
 @Composable
-fun ExerciseDetailScreen(vm: AppViewModel, nav: Nav, id: String) {
+fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
     val e = vm.exercise(id)
     val d = vm.data
     val units = d.prefs.units
@@ -236,7 +236,7 @@ fun ExerciseDetailScreen(vm: AppViewModel, nav: Nav, id: String) {
 }
 
 @Composable
-fun LogRow(vm: AppViewModel, log: ProgressLog, index: Int, count: Int, showName: Boolean = true) {
+fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Boolean = true) {
     var confirm by remember { mutableStateOf(false) }
     GroupedItem(
         index, count,
@@ -254,7 +254,7 @@ fun LogRow(vm: AppViewModel, log: ProgressLog, index: Int, count: Int, showName:
 
 /** Manual log for today (strength: sets × reps @ weight; timed cardio: minutes). */
 @Composable
-private fun LogDialog(vm: AppViewModel, e: Exercise, onClose: () -> Unit) {
+private fun LogDialog(vm: FormStore, e: Exercise, onClose: () -> Unit) {
     val units = vm.data.prefs.units
     var sets by remember { mutableIntStateOf(3) }
     var reps by remember { mutableIntStateOf(10) }

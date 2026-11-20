@@ -74,7 +74,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.data.ActiveWorkout
 import com.thehhr.form.data.RoutineItem
 import com.thehhr.form.data.SetRow
@@ -82,13 +82,13 @@ import com.thehhr.form.data.WorkoutLogic
 import kotlinx.coroutines.delay
 
 @Composable
-fun WorkoutTab(vm: AppViewModel, nav: Nav) {
+fun WorkoutTab(vm: FormStore, nav: Nav) {
     val w = vm.workout
     if (w == null) StartWorkout(vm, nav) else ActiveWorkoutView(vm, nav, w)
 }
 
 @Composable
-private fun StartWorkout(vm: AppViewModel, nav: Nav) {
+private fun StartWorkout(vm: FormStore, nav: Nav) {
     val today = vm.todaysRoutine()
     val routines = vm.data.routines
     LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
@@ -141,7 +141,7 @@ private fun StartWorkout(vm: AppViewModel, nav: Nav) {
 }
 
 @Composable
-private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
+private fun ActiveWorkoutView(vm: FormStore, nav: Nav, w: ActiveWorkout) {
     val routine = vm.data.routines.firstOrNull { it.id == w.routineId } ?: return
     val entries = WorkoutLogic.entries(w, routine)
     val target = WorkoutLogic.nextTarget(w, routine)
@@ -193,7 +193,7 @@ private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
             expanded = true,
             floatingActionButton = {
                 FloatingToolbarDefaults.VibrantFloatingActionButton(
-                    onClick = { if (target != null && !w.paused) vm.logNextSet() },
+                    onClick = { if (target != null && !w.paused) { com.thehhr.form.Haptics.setDone(view); vm.logNextSet() } },
                     containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
                 ) {
                     Icon(Icons.Rounded.Check, target?.let { "Log next set of ${exTitle(vm.exercise(it.exerciseId))}" } ?: "All done")
@@ -230,7 +230,7 @@ private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
 }
 
 @Composable
-private fun RestCard(vm: AppViewModel, w: ActiveWorkout, now: Long) {
+private fun RestCard(vm: FormStore, w: ActiveWorkout, now: Long) {
     val rest = w.rest ?: return
     val left = rest.pausedRemaining ?: (rest.endsAt - now)
     if (left < -15 * 60_000) return // forgotten rest: hide the stale overtime
@@ -261,7 +261,7 @@ private fun RestCard(vm: AppViewModel, w: ActiveWorkout, now: Long) {
 
 /** Beep + vibrate once when the rest countdown reaches zero. */
 @Composable
-private fun RestCue(vm: AppViewModel, w: ActiveWorkout) {
+private fun RestCue(vm: FormStore, w: ActiveWorkout) {
     val rest = w.rest
     val context = LocalContext.current
     LaunchedEffect(rest?.endsAt, rest?.pausedRemaining) {
@@ -269,25 +269,14 @@ private fun RestCue(vm: AppViewModel, w: ActiveWorkout) {
         val wait = rest.endsAt - System.currentTimeMillis()
         if (wait < -5_000) return@LaunchedEffect // ended long ago (app reopened later)
         delay(wait.coerceAtLeast(0))
-        restAlert(context, vm.data.prefs.restSound)
-    }
-}
-
-private fun restAlert(context: Context, sound: Boolean) {
-    runCatching {
-        val vib = (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-        vib.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 180, 120, 180), -1))
-    }
-    if (sound) runCatching {
-        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-        tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 400)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 600)
+        // The notification alarm stays quiet while the app is visible, so this is the only cue then.
+        if (com.thehhr.form.AppVisibility.visible) com.thehhr.form.Haptics.restEnd(context, vm.data.prefs.restSound)
     }
 }
 
 @Composable
 private fun ExerciseCard(
-    vm: AppViewModel, nav: Nav, w: ActiveWorkout, item: RoutineItem, added: Boolean,
+    vm: FormStore, nav: Nav, w: ActiveWorkout, item: RoutineItem, added: Boolean,
     open: Boolean, isTarget: Boolean, onToggleOpen: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val id = item.exerciseId
@@ -344,8 +333,9 @@ private fun ExerciseCard(
 }
 
 @Composable
-private fun SetRowView(vm: AppViewModel, exId: String, index: Int, row: SetRow, item: RoutineItem, wUnit: String, dUnit: String) {
+private fun SetRowView(vm: FormStore, exId: String, index: Int, row: SetRow, item: RoutineItem, wUnit: String, dUnit: String) {
     fun set(r: SetRow) = vm.updateRow(exId, index, r)
+    val view = LocalView.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             Modifier.size(28.dp).clip(MaterialShapes.Circle.toShape())
@@ -366,7 +356,7 @@ private fun SetRowView(vm: AppViewModel, exId: String, index: Int, row: SetRow, 
             NumberField(row.weight ?: 0.0, wUnit, 0.0..2000.0, { set(row.copy(weight = it)) }, Modifier.weight(1.2f))
         }
         FilledIconToggleButton(
-            checked = row.done, onCheckedChange = { vm.toggleRow(exId, index) },
+            checked = row.done, onCheckedChange = { if (!row.done) com.thehhr.form.Haptics.setDone(view); vm.toggleRow(exId, index) },
             shapes = IconButtonDefaults.toggleableShapes(),
             modifier = Modifier.size(IconButtonDefaults.mediumContainerSize()),
         ) { Icon(Icons.Rounded.Check, if (row.done) "Set ${index + 1} done" else "Mark set ${index + 1} done") }

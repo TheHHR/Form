@@ -100,6 +100,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.1")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-gif:3.6.3")
+    implementation("androidx.health.connect:connect-client:1.1.0")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")

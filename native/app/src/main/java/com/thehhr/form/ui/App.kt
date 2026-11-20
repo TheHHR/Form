@@ -60,7 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.Status
 
 sealed interface Pick {
@@ -91,7 +91,7 @@ class Nav {
 }
 
 @Composable
-fun FormApp(vm: AppViewModel) {
+fun FormApp(vm: FormStore) {
     FormTheme(accent = vm.data.prefs.accent) {
         when (val s = vm.status) {
             Status.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
@@ -103,13 +103,13 @@ fun FormApp(vm: AppViewModel) {
 }
 
 @Composable
-fun FolderPicker(vm: AppViewModel, content: @Composable (launch: () -> Unit) -> Unit) {
+fun FolderPicker(vm: FormStore, content: @Composable (launch: () -> Unit) -> Unit) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::onFolderPicked) }
     content { launcher.launch(null) }
 }
 
 @Composable
-private fun WelcomeScreen(vm: AppViewModel, error: String? = null) {
+private fun WelcomeScreen(vm: FormStore, error: String? = null) {
     Scaffold { pad ->
         Column(
             Modifier.fillMaxSize().padding(pad).padding(24.dp),
@@ -142,7 +142,7 @@ private fun WelcomeScreen(vm: AppViewModel, error: String? = null) {
 }
 
 @Composable
-private fun MainScreen(vm: AppViewModel) {
+private fun MainScreen(vm: FormStore) {
     var tab by rememberSaveable { mutableStateOf(Tab.Workout) }
     val nav = remember { Nav() }
     val snackbar = remember { SnackbarHostState() }
@@ -179,7 +179,7 @@ private fun MainScreen(vm: AppViewModel) {
 }
 
 @Composable
-private fun Tabs(vm: AppViewModel, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackbar: SnackbarHostState) {
+private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackbar: SnackbarHostState) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val w = vm.workout
     Scaffold(

@@ -8,6 +8,21 @@ import org.json.JSONObject
 class DeviceStore(context: Context) {
     private val prefs = context.getSharedPreferences("form_device", Context.MODE_PRIVATE)
 
+    // Device-only settings: kept out of config.md so the vault stays byte-compatible with the web app.
+    var reminderEnabled: Boolean
+        get() = prefs.getBoolean("reminder_enabled", false)
+        set(v) = prefs.edit().putBoolean("reminder_enabled", v).apply()
+    /** Minutes after midnight. */
+    var reminderMinutes: Int
+        get() = prefs.getInt("reminder_minutes", 18 * 60)
+        set(v) = prefs.edit().putInt("reminder_minutes", v).apply()
+    var healthEnabled: Boolean
+        get() = prefs.getBoolean("health_enabled", false)
+        set(v) = prefs.edit().putBoolean("health_enabled", v).apply()
+    var notificationsAsked: Boolean
+        get() = prefs.getBoolean("notifications_asked", false)
+        set(v) = prefs.edit().putBoolean("notifications_asked", v).apply()
+
     fun saveWorkout(w: ActiveWorkout?) {
         prefs.edit().apply { if (w == null) remove("active_workout") else putString("active_workout", encode(w).toString()) }.apply()
     }

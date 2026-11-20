@@ -46,6 +46,17 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.thehhr.form.data.FoodLookup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.data.DayLog
 import com.thehhr.form.data.Fuel
 import com.thehhr.form.data.Meal
@@ -69,7 +80,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun FuelTab(vm: AppViewModel) {
+fun FuelTab(vm: FormStore) {
     var date by rememberSaveable { mutableStateOf(vm.todayKey) }
     var logging by remember { mutableStateOf(false) }
     val day = vm.data.history[date] ?: DayLog()
@@ -165,7 +176,7 @@ private fun Macro(label: String, value: Double, target: Double, color: Color) {
 }
 
 @Composable
-private fun LogMealSheet(vm: AppViewModel, date: String, day: DayLog, onClose: () -> Unit) {
+private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -> Unit) {
     var slot by remember { mutableStateOf(Fuel.SLOTS.firstOrNull { s -> day.meals.none { it.category == s } } ?: "Snacks") }
     var mode by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
@@ -184,8 +195,11 @@ private fun LogMealSheet(vm: AppViewModel, date: String, day: DayLog, onClose: (
             SecondaryTabRow(selectedTabIndex = mode) {
                 Tab(mode == 0, { mode = 0 }, text = { Text("From library") })
                 Tab(mode == 1, { mode = 1 }, text = { Text("Manual") })
+                Tab(mode == 2, { mode = 2 }, text = { Text("Barcode") })
             }
-            if (mode == 0) {
+            if (mode == 2) {
+                BarcodePane(vm) { meal, serving -> picked = meal; grams = jsNum(serving); mode = 0 }
+            } else if (mode == 0) {
                 val meal = picked
                 if (meal == null) {
                     OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Search meals") }, singleLine = true)
@@ -222,5 +236,49 @@ private fun LogMealSheet(vm: AppViewModel, date: String, day: DayLog, onClose: (
                 }) { Text("Add") }
             }
         }
+    }
+}
+
+/** Scan with Google's code scanner (no camera permission needed) or type the code; looks it up on Open Food Facts. */
+@Composable
+private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var code by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    fun lookup(c: String) {
+        if (!FoodLookup.validBarcode(c)) { error = "Barcodes are 8–14 digits"; return }
+        busy = true; error = null
+        scope.launch {
+            val found = withContext(Dispatchers.IO) { FoodLookup.lookup(c) }
+            busy = false
+            if (found == null) { error = "Not found on Open Food Facts (or offline). Add it manually instead."; return@launch }
+            // Keep the user's edits if this barcode was saved before.
+            val meal = vm.data.meals.firstOrNull { it.id == found.meal.id } ?: found.meal.also(vm::saveMeal)
+            onFound(meal, found.servingGrams)
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Button(
+            onClick = {
+                error = null
+                val options = GmsBarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
+                    .enableAutoZoom().build()
+                GmsBarcodeScanning.getClient(ctx, options).startScan()
+                    .addOnSuccessListener { b -> b.rawValue?.let { code = it; lookup(it) } }
+                    .addOnFailureListener { error = "Scanner unavailable (needs Google Play services). Type the code below." }
+            },
+            enabled = !busy, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth(),
+        ) { Icon(Icons.Rounded.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Scan barcode") }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(code, { code = it.filter(Char::isDigit).take(14) }, Modifier.weight(1f), label = { Text("Or type the code") },
+                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            FilledTonalButton(onClick = { lookup(code) }, enabled = !busy && code.isNotEmpty()) { Text("Look up") }
+        }
+        if (busy) LoadingIndicator(Modifier.align(Alignment.CenterHorizontally))
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        Text("Food data © Open Food Facts contributors (ODbL).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -64,7 +64,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.thehhr.form.AppViewModel
+import com.thehhr.form.FormStore
 import com.thehhr.form.data.Fuel
 import com.thehhr.form.data.Meal
 import com.thehhr.form.data.Routine
@@ -73,7 +73,7 @@ import com.thehhr.form.data.jsNum
 import com.thehhr.form.data.jsNumber
 
 @Composable
-fun PlansTab(vm: AppViewModel, nav: Nav) {
+fun PlansTab(vm: FormStore, nav: Nav) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         ChoiceGroup(listOf(0 to "Routines", 1 to "Week", 2 to "Meals"), section, { section = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -86,7 +86,7 @@ fun PlansTab(vm: AppViewModel, nav: Nav) {
 }
 
 @Composable
-private fun RoutineList(vm: AppViewModel, nav: Nav) {
+private fun RoutineList(vm: FormStore, nav: Nav) {
     var creating by remember { mutableStateOf(false) }
     val routines = vm.data.routines
     LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
@@ -138,7 +138,7 @@ fun NameDialog(title: String, initial: String, onDone: (String?) -> Unit) {
 private val DAY_NAMES = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
 
 @Composable
-private fun WeekSchedule(vm: AppViewModel) {
+private fun WeekSchedule(vm: FormStore) {
     val start = vm.data.prefs.weekStart
     val todayDow = java.time.LocalDate.now().dayOfWeek.value % 7
     val days = (0..6).map { (start + it) % 7 }
@@ -165,7 +165,7 @@ private fun WeekSchedule(vm: AppViewModel) {
 }
 
 @Composable
-private fun MealLibrary(vm: AppViewModel) {
+private fun MealLibrary(vm: FormStore) {
     var editing by remember { mutableStateOf<Meal?>(null) }
     val meals = vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
     LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
@@ -193,7 +193,7 @@ private fun MealLibrary(vm: AppViewModel) {
 }
 
 @Composable
-private fun MealEditor(vm: AppViewModel, meal: Meal, onClose: () -> Unit) {
+private fun MealEditor(vm: FormStore, meal: Meal, onClose: () -> Unit) {
     var name by remember { mutableStateOf(meal.name) }
     var grams by remember { mutableStateOf(jsNum(meal.defaultGrams)) }
     var p by remember { mutableStateOf(jsNum(meal.p100)) }
@@ -236,7 +236,7 @@ private fun MealEditor(vm: AppViewModel, meal: Meal, onClose: () -> Unit) {
 }
 
 @Composable
-fun RoutineEditorScreen(vm: AppViewModel, nav: Nav, id: String) {
+fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
     val routine = vm.data.routines.firstOrNull { it.id == id } ?: run { nav.pop(); return }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
