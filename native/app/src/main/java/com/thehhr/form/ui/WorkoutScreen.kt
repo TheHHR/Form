@@ -192,7 +192,10 @@ private fun ActiveWorkoutView(vm: AppViewModel, nav: Nav, w: ActiveWorkout) {
         HorizontalFloatingToolbar(
             expanded = true,
             floatingActionButton = {
-                FloatingToolbarDefaults.VibrantFloatingActionButton(onClick = { if (target != null && !w.paused) vm.logNextSet() }) {
+                FloatingToolbarDefaults.VibrantFloatingActionButton(
+                    onClick = { if (target != null && !w.paused) vm.logNextSet() },
+                    containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
+                ) {
                     Icon(Icons.Rounded.Check, target?.let { "Log next set of ${exTitle(vm.exercise(it.exerciseId))}" } ?: "All done")
                 }
             },

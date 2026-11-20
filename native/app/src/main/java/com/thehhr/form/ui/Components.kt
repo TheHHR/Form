@@ -152,10 +152,12 @@ fun GroupedItem(
 ) {
     val shapes = ListItemDefaults.segmentedShapes(index, count)
     val m = modifier.padding(bottom = if (index < count - 1) ListItemDefaults.SegmentedGap else 0.dp)
+    // Rows sit on surfaceContainer so the group reads as one block against the near-black background.
+    val colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     if (onClick != null) SegmentedListItem(onClick = onClick, shapes = shapes, modifier = m, leadingContent = leading,
-        supportingContent = supporting, trailingContent = trailing, content = headline)
+        supportingContent = supporting, trailingContent = trailing, colors = colors, content = headline)
     else SegmentedListItem(shapes = shapes, modifier = m, leadingContent = leading, supportingContent = supporting,
-        trailingContent = trailing, content = headline)
+        trailingContent = trailing, colors = colors, content = headline)
 }
 
 /** − value + in one pill. Tap the value to type it. Buttons keep 48 dp touch targets. */

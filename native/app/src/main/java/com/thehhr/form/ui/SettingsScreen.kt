@@ -77,13 +77,14 @@ fun SettingsScreen(vm: AppViewModel, nav: Nav) {
 
             item { SectionTitle("Units") }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val locked = vm.unitsLocked
-                    ChoiceGroup(listOf("kg" to "kg", "lb" to "lb"), prefs.units.weight, { vm.setPrefs(prefs.copy(units = prefs.units.copy(weight = it))) }, enabled = !locked)
-                    ChoiceGroup(listOf("km" to "km", "mi" to "mi"), prefs.units.distance, { vm.setPrefs(prefs.copy(units = prefs.units.copy(distance = it))) }, enabled = !locked)
-                    ChoiceGroup(listOf("cm" to "cm", "ftin" to "ft / in"), prefs.units.height, { vm.setPrefs(prefs.copy(units = prefs.units.copy(height = it))) }, enabled = !locked)
-                    if (locked) Text("Locked once you have logs: stored values are not converted.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val u = prefs.units
+                // Disabled toggle groups hide the selection, so a locked choice is shown as a plain row.
+                if (vm.unitsLocked) GroupedItem(0, 1, supporting = { Text("Locked once you have logs: stored values are not converted.") }) {
+                    Text("${u.weight} · ${u.distance} · ${if (u.height == "ftin") "ft / in" else "cm"}", style = MaterialTheme.typography.titleMediumEmphasized)
+                } else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChoiceGroup(listOf("kg" to "kg", "lb" to "lb"), u.weight, { vm.setPrefs(prefs.copy(units = u.copy(weight = it))) })
+                    ChoiceGroup(listOf("km" to "km", "mi" to "mi"), u.distance, { vm.setPrefs(prefs.copy(units = u.copy(distance = it))) })
+                    ChoiceGroup(listOf("cm" to "cm", "ftin" to "ft / in"), u.height, { vm.setPrefs(prefs.copy(units = u.copy(height = it))) })
                 }
             }
 
