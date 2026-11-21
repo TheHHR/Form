@@ -269,7 +269,7 @@ private fun MealPane(vm: FormStore, cfg: AiConfig) {
                     Text("${jsRound(entry.cals)} kcal · ${jsNum(entry.p)}p · ${jsNum(entry.c)}c · ${jsNum(entry.f)}f",
                         style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     StepperField(grams, "grams", 10.0, 1.0..5000.0, { grams = it }, Modifier.fillMaxWidth())
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Fuel.SLOTS.forEach { s -> Pill(slot == s, { slot = s }, label = { Text(s) }) }
                     }
                     est.notes.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -302,7 +302,7 @@ private fun AiSetupSheet(current: AiConfig, onDismiss: () -> Unit, onSave: (AiCo
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("AI provider", style = MaterialTheme.typography.titleMediumEmphasized)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AiConfig.PROVIDERS.forEach { (id, p) -> Pill(provider == id, { provider = id; result = null }, label = { Text(p.first) }) }
             }
             OutlinedTextField(keys[provider].orEmpty(), { keys = keys + (provider to it.trim()) }, Modifier.fillMaxWidth(),

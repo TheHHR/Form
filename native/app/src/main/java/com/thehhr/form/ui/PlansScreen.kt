@@ -289,7 +289,7 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
                                 Stepper("reps", item.reps.toDouble(), 1.0, 0.0..100.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } })
                             }
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Pill(item.timed, { editItem(i) { it.copy(timed = !it.timed, reps = it.reps.coerceAtMost(60), distance = false) } }, label = { Text("Timed") })
                             if (item.timed) Pill(item.unit == "min", { editItem(i) { it.copy(unit = if (it.unit == "min") null else "min") } }, label = { Text("Minutes") })
                             Pill(item.weighted, { editItem(i) { it.copy(unweighted = !it.unweighted) } }, label = { Text("Weight") })

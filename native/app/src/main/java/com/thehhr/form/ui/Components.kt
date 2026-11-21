@@ -315,7 +315,7 @@ fun Pill(
     leadingIcon: (@Composable () -> Unit)? = null,
 ) {
     androidx.compose.material3.FilterChip(
-        selected = selected, onClick = onClick, label = label, modifier = modifier.height(40.dp),
+        selected = selected, onClick = onClick, label = label, modifier = modifier.height(32.dp),
         shape = CircleShape, border = null,
         leadingIcon = leadingIcon ?: if (selected) ({ Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }) else null,
         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(

@@ -2,6 +2,8 @@
 
 package com.thehhr.form.ui
 
+import androidx.compose.material3.CardDefaults
+
 import androidx.compose.foundation.layout.fillMaxSize
 
 import androidx.compose.foundation.clickable
@@ -103,37 +105,42 @@ fun FuelTab(vm: FormStore) {
                 { date = ld.plusDays(1).toString() }, !isToday, onLabel = { date = vm.todayKey })
         }
         item {
-            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        CircularWavyProgressIndicator(
-                            progress = { (cals / targets.cals).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.size(128.dp),
-                            stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f * androidx.compose.ui.platform.LocalDensity.current.density, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                            trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 12f * androidx.compose.ui.platform.LocalDensity.current.density, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(jsNum(jsRound(cals).toDouble()), style = MaterialTheme.typography.headlineMediumEmphasized)
-                            Text("of ${jsRound(targets.cals)} kcal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+            // Hero: calories left, with the ring; macros and water as matching tonal tiles below.
+            val left = targets.cals - cals
+            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Calories", style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary)
+                        Text("${jsRound(kotlin.math.abs(left))}", style = MaterialTheme.typography.displaySmallEmphasized)
+                        Text(if (left >= 0) "kcal left of ${jsRound(targets.cals)}" else "kcal over ${jsRound(targets.cals)}",
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Macro("Protein", p, targets.p, MaterialTheme.colorScheme.primary)
-                        Macro("Carbs", c, targets.c, FormColors.Carbs)
-                        Macro("Fat", f, targets.f, FormColors.Fats)
+                    Box(contentAlignment = Alignment.Center) {
+                        CircularWavyProgressIndicator(progress = { (cals / targets.cals).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.size(96.dp))
+                        Text("${jsRound(cals / targets.cals * 100)}%", style = MaterialTheme.typography.titleMediumEmphasized)
                     }
                 }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth().padding(vertical = 12.dp), shape = MaterialTheme.shapes.large) {
+            Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Macro("Protein", p, targets.p, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                Macro("Carbs", c, targets.c, FormColors.Carbs, Modifier.weight(1f))
+                Macro("Fat", f, targets.f, FormColors.Fats, Modifier.weight(1f))
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(44.dp).clip(androidx.compose.material3.MaterialShapes.Cookie9Sided.toShape()).background(FormColors.Carbs.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center) { Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs) }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("${jsRound(day.water)} ml", style = MaterialTheme.typography.titleLargeEmphasized)
-                            Text("of ${jsRound(targets.water)} ml water", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Water", style = MaterialTheme.typography.labelLargeEmphasized, color = FormColors.Carbs)
+                            Text("${jsRound(day.water)} / ${jsRound(targets.water)} ml", style = MaterialTheme.typography.titleMediumEmphasized)
                         }
                         androidx.compose.material3.FilledTonalIconButton(onClick = { vm.addWater(date, -250.0) }, enabled = day.water > 0,
                             shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Remove, "Remove 250 ml") }
@@ -177,10 +184,14 @@ fun FuelTab(vm: FormStore) {
 }
 
 @Composable
-private fun Macro(label: String, value: Double, target: Double, color: Color) {
-    Column {
-        Row { Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge); Text("${jsRound(value)} / ${jsRound(target)} g", style = MaterialTheme.typography.labelMedium) }
-        LinearWavyProgressIndicator(progress = { (value / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().padding(top = 6.dp), color = color)
+private fun Macro(label: String, value: Double, target: Double, color: Color, modifier: Modifier) {
+    Card(modifier, shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(label, style = MaterialTheme.typography.labelLargeEmphasized, color = color)
+            Text("${jsRound(value)}", style = MaterialTheme.typography.titleLargeEmphasized)
+            Text("of ${jsRound(target)} g", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LinearWavyProgressIndicator(progress = { (value / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth(), color = color)
+        }
     }
 }
 

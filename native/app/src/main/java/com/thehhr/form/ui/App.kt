@@ -72,7 +72,8 @@ sealed interface Pick {
 }
 
 sealed interface Route {
-    data class Library(val pick: Pick? = null) : Route
+    // Holds its own filter state so search survives opening an exercise and coming back.
+    data class Library(val pick: Pick? = null, val filters: LibraryFilters = LibraryFilters()) : Route
     data class Detail(val id: String) : Route
     data class RoutineEdit(val id: String) : Route
     data object Settings : Route
@@ -175,7 +176,7 @@ private fun MainScreen(vm: FormStore) {
         if (top != null) {
             Box(Modifier.fillMaxSize()) {
                 when (top) {
-                    is Route.Library -> LibraryScreen(vm, nav, top.pick)
+                    is Route.Library -> LibraryScreen(vm, nav, top.pick, top.filters)
                     is Route.Detail -> ExerciseDetailScreen(vm, nav, top.id)
                     is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
                     Route.Settings -> SettingsScreen(vm, nav)
@@ -223,4 +224,14 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
             }
         }
     }
+}
+
+/** Exercise library search + filters, kept per library route (not per composition). */
+class LibraryFilters {
+    var query by mutableStateOf("")
+    var category by mutableStateOf("")
+    var target by mutableStateOf("")
+    var equipment by mutableStateOf("")
+    var likedOnly by mutableStateOf(false)
+    var loggedOnly by mutableStateOf(false)
 }

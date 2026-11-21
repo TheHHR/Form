@@ -87,13 +87,13 @@ fun LikeButton(liked: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf("") }
-    var likedOnly by rememberSaveable { mutableStateOf(false) }
-    var loggedOnly by rememberSaveable { mutableStateOf(false) }
-    var target by rememberSaveable { mutableStateOf("") }
-    var equipment by rememberSaveable { mutableStateOf("") }
+fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
+    var query by f::query
+    var category by f::category
+    var likedOnly by f::likedOnly
+    var loggedOnly by f::loggedOnly
+    var target by f::target
+    var equipment by f::equipment
     val d = vm.data
     val logged = remember(d.logs) { d.logs.map { it.exerciseId }.toSet() }
     val list = remember(query, category, target, equipment, likedOnly, loggedOnly, d.liked, logged, d.customExercises, d.exerciseTags) {

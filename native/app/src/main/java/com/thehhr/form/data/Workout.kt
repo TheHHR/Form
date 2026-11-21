@@ -40,6 +40,8 @@ data class ActiveWorkout(
     val replacements: Map<String, String> = emptyMap(),
     val jumpTo: String? = null,
     val rest: Rest? = null,
+    /** When rest was skipped: the set clock counts up from here (after a finished rest it counts from rest.endsAt). */
+    val setClockFrom: Long? = null,
 ) {
     val token: String get() = startedAt.toString()
 

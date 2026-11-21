@@ -395,7 +395,7 @@ class FormStore private constructor(val app: Application) {
             WorkoutLogic.RestKind.BETWEEN_EXERCISES -> next.copy(rest = rest(p.restBetweenExercises.toInt(), "exercise", exerciseId))
             WorkoutLogic.RestKind.NONE -> next.copy(rest = null)
         }
-        putWorkout(next)
+        putWorkout(next.copy(setClockFrom = null)) // a logged set ends the set clock
         if (WorkoutLogic.nextTarget(next, r) == null) message = "All done!"
     }
 
@@ -456,7 +456,8 @@ class FormStore private constructor(val app: Application) {
         putWorkout(w.copy(rest = r.copy(endsAt = maxOf(r.endsAt, now) + seconds * 1000L, total = r.total + seconds)))
     }
 
-    fun skipRest() { workout?.let { putWorkout(it.copy(rest = null)) } }
+    // Skipping rest starts the set clock (counts up until the next set is logged).
+    fun skipRest() { workout?.let { putWorkout(it.copy(rest = null, setClockFrom = if (it.rest?.type == "set") null else System.currentTimeMillis())) } }
 
     /** Starts a countdown for a timed set; when it ends the set is checked (see [completeSetTimer]). */
     fun startSetTimer(exerciseId: String, index: Int) {

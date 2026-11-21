@@ -51,6 +51,7 @@ class DeviceStore(context: Context) {
         put("extras", JSONArray().apply { w.extras.forEach { put(item(it)) } })
         put("replacements", JSONObject(w.replacements as Map<*, *>))
         w.jumpTo?.let { put("jumpTo", it) }
+        w.setClockFrom?.let { put("setClockFrom", it) }
         w.rest?.let { r ->
             put("rest", JSONObject().apply {
                 put("endsAt", r.endsAt); put("total", r.total); put("type", r.type); r.exerciseId?.let { put("exerciseId", it) }
@@ -94,6 +95,7 @@ class DeviceStore(context: Context) {
             sets = sets, skipped = List(skippedArr.length()) { skippedArr.getString(it) }.toSet(), extras = extras,
             replacements = rep?.keys()?.asSequence()?.associateWith { rep.getString(it) } ?: emptyMap(),
             jumpTo = o.optString("jumpTo").ifEmpty { null }, rest = rest,
+            setClockFrom = if (o.has("setClockFrom")) o.getLong("setClockFrom") else null,
         )
     }
 }
