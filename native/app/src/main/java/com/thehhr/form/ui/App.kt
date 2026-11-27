@@ -24,6 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -203,21 +204,8 @@ private fun MainScreen(vm: FormStore) {
 
 @Composable
 private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackbar: SnackbarHostState) {
-    // One collapse state per tab: scrolling one tab must not hide the others' titles.
-    val barStates = Tab.entries.map { androidx.compose.material3.rememberTopAppBarState() }
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(barStates[tab.ordinal])
     val w = vm.workout
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = {
-            FormTopBar(
-                title = if (tab == Tab.Workout && w != null) w.routineName else tab.label,
-                scroll = scroll,
-                actions = {
-                    IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") }
-                },
-            )
-        },
         bottomBar = {
             ShortNavigationBar {
                 Tab.entries.forEach { t ->
@@ -230,13 +218,41 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
         },
         snackbarHost = { SwipeSnackbarHost(snackbar) },
     ) { pad ->
-        Crossfade(tab, Modifier.padding(pad).fillMaxSize(), animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tab") { t ->
-            when (t) {
-                Tab.Workout -> WorkoutTab(vm, nav)
-                Tab.Plans -> PlansTab(vm, nav)
-                Tab.Ai -> AiTab(vm, nav)
-                Tab.Fuel -> FuelTab(vm)
-                Tab.Progress -> ProgressTab(vm, nav)
+        // Fade through (M3 navigation-bar destinations): the old page fades out quickly, the new one fades and settles in.
+        // Each page carries its own top bar, so the bar and its list change together and a collapsed bar never sits
+        // over a list that starts back at the top.
+        AnimatedContent(
+            tab, Modifier.padding(bottom = pad.calculateBottomPadding()).fillMaxSize(), label = "tab",
+            transitionSpec = {
+                // M3 fade-through timings: out in 90 ms, then in over 210 ms from 92% scale, so the pages never overlap.
+                (fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 90)) +
+                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(210, delayMillis = 90), initialScale = 0.92f)) togetherWith
+                    fadeOut(androidx.compose.animation.core.tween(90))
+            },
+        ) { t ->
+            val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            Scaffold(
+                modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+                contentWindowInsets = androidx.compose.foundation.layout.WindowInsets.statusBars,
+                topBar = {
+                    FormTopBar(
+                        title = if (t == Tab.Workout && w != null) w.routineName else t.label,
+                        scroll = scroll,
+                        actions = {
+                            IconButton(onClick = { nav.push(Route.Settings) }) { Icon(Icons.Rounded.Settings, "Settings") }
+                        },
+                    )
+                },
+            ) { inner ->
+                Box(Modifier.padding(top = inner.calculateTopPadding()).fillMaxSize()) {
+                    when (t) {
+                        Tab.Workout -> WorkoutTab(vm, nav)
+                        Tab.Plans -> PlansTab(vm, nav)
+                        Tab.Ai -> AiTab(vm, nav)
+                        Tab.Fuel -> FuelTab(vm)
+                        Tab.Progress -> ProgressTab(vm, nav)
+                    }
+                }
             }
         }
     }
