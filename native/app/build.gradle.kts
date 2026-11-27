@@ -102,8 +102,6 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-gif:3.6.3")
     implementation("androidx.health.connect:connect-client:1.1.0")
-    // Barcode model bundled in the APK: works without Play Store module downloads.
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // Pin a current Fragment: ActivityResult APIs need >= 1.3 and some libraries pull an old one transitively.
     implementation("androidx.fragment:fragment:1.8.9")
     // NotificationCompat Live Updates API (setRequestPromotedOngoing, setShortCriticalText).

@@ -186,7 +186,7 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
             itemsIndexed(list, key = { _, e -> e.id }) { i, e ->
                 val added = e.id in already
                 GroupedItem(
-                    i, list.size, modifier = Modifier.alpha(if (added) 0.5f else 1f)
+                    i, list.size, modifier = Modifier.animateItem().alpha(if (added) 0.5f else 1f)
                         .semantics { if (added) stateDescription = if (pick is Pick.ToRoutine) "Already in routine" else "Already in workout" },
                     onClick = { if (added) vm.message = "${exTitle(e)} is already ${if (pick is Pick.ToRoutine) "in this routine" else "in this workout"}" else choose(e) },
                     leading = { ExerciseImage(e, size = 56.dp) },

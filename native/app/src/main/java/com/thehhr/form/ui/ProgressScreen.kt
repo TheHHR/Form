@@ -163,7 +163,13 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         }
         item {
             Box(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
-                when (scope) {
+                // Week bars, month calendar and year bars cross-fade while the card resizes, instead of snapping.
+                val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val size = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
+                androidx.compose.animation.AnimatedContent(scope, transitionSpec = {
+                    (androidx.compose.animation.fadeIn(fade) togetherWith androidx.compose.animation.fadeOut(fade)) using androidx.compose.animation.SizeTransform(clip = false) { _, _ -> size }
+                }, label = "chart") { sc ->
+                when (sc) {
                     "week" -> {
                         val days = (0..6).map { from.plusDays(it.toLong()) }
                         Bars(days.map { d -> byDate[d.toString()].orEmpty().sumOf(::setCount) },
@@ -182,6 +188,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                             months.map { it.atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy")) },
                             months.indexOf(YearMonth.from(today)), months.indexOfFirst { it.toString() == selected }) { select(months[it].toString()) }
                     }
+                }
                 }
             }
         }
@@ -218,7 +225,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                                 Text("$s set${if (s == 1) "" else "s"} · $ex exercise${if (ex == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            LinearProgressIndicator(progress = { s / top.toFloat() }, Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp),
+                            LinearProgressIndicator(progress = eased(s / top.toFloat()).let { v -> { v } }, Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp),
                                 gapSize = 0.dp, drawStopIndicator = {})
                         }
                     }

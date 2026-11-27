@@ -40,6 +40,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Trampoline for shortcut / notification / widget / tile actions (see LinkActivity). Own affinity, no UI, never in Recents. -->
+        <activity
+            android:name=".LinkActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Health Connect permission rationale (Android 13 and below) and usage screen (14+). -->
         <activity android:name=".HealthPrivacyActivity" android:exported="true">
             <intent-filter>

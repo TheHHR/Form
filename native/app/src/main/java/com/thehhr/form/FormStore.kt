@@ -467,7 +467,7 @@ class FormStore private constructor(val app: Application) {
 
     fun updateRow(exerciseId: String, index: Int, row: SetRow) {
         val before = workout?.rows(exerciseId)?.getOrNull(index) ?: return
-        editWorkout { w, _ -> w.copy(sets = w.sets + (exerciseId to w.rows(exerciseId).mapIndexed { i, r -> if (i == index) row else r })) }
+        editWorkout { w, _ -> w.copy(sets = w.sets + (exerciseId to WorkoutLogic.carryForward(w.rows(exerciseId), index, row))) }
         if (before.done || row.done) syncLog(exerciseId)
         if (!before.done && row.done) {
             workout?.let { checkPr(it, exerciseId, row) }

@@ -37,40 +37,27 @@ class MainActivity : ComponentActivity() {
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         setContent { FormApp(store) }
-        if (savedInstanceState == null) handle(intent)
+        // Handle the launch action unless this exact intent was already handled before a rotation or process restart
+        // (a restored activity also gets new shortcut/notification intents, which must not be dropped).
+        val key = intent?.toUri(0)
+        val fromRecents = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (!fromRecents && savedInstanceState?.getString(HANDLED) != key) handle(intent)
+        handledKey = key
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent); handledKey = intent.toUri(0) // a later rotation must not replay it
         handle(intent)
     }
 
     /** Shortcut, widget, tile, notification and reminder actions; vault work waits until it is loaded. */
-    private fun handle(intent: Intent?) {
-        when (intent?.action) {
-            ACTION_START_TODAY -> {
-                store.pendingDestination = "Workout"
-                store.launch { if (store.whenReady { startToday() } == false) store.message = "Nothing scheduled today. Pick a routine." }
-            }
-            ACTION_OPEN_WORKOUT -> store.pendingDestination = "Workout"
-            ACTION_START_ROUTINE -> {
-                store.pendingDestination = "Workout"
-                val id = intent.getStringExtra(EXTRA_ROUTINE)
-                store.launch { store.whenReady { data.routines.firstOrNull { it.id == id }?.let(::startWorkout) } }
-            }
-            ACTION_LOG_FOOD -> store.pendingDestination = "Fuel:log"
-            ACTION_OPEN_ROUTINES -> store.pendingDestination = "Plans"
-            ACTION_OPEN_PROGRESS -> store.pendingDestination = "Progress"
-            ACTION_LOG_WATER -> store.launch {
-                store.whenReady { addWater(today(), 250.0); message = "+250 ml · ${jsRound(data.history[today()]?.water ?: 0.0)} ml today" }
-            }
-        }
-    }
+    private fun handle(intent: Intent?) = handleAction(store, intent)
 
     private fun publishShortcuts() {
         fun shortcut(id: String, short: String, long: String, icon: Int, action: String, rank: Int) = ShortcutInfo.Builder(this, id)
             .setShortLabel(short).setLongLabel(long).setRank(rank).setIcon(Icon.createWithResource(this, icon))
-            .setIntent(Intent(this, MainActivity::class.java).setAction(action)).build()
+            .setIntent(LinkActivity.intent(this, action)).build()
         // Dynamic, not static XML: static shortcuts hard-code the package, and prod/beta ids differ.
         runCatching {
             getSystemService(ShortcutManager::class.java).dynamicShortcuts = listOf(
@@ -83,10 +70,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var handledKey: String? = null
+    override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); outState.putString(HANDLED, handledKey) }
+
     override fun onResume() { super.onResume(); AppVisibility.visible = true; store.onResume() }
     override fun onPause() { AppVisibility.visible = false; store.onPause(); super.onPause() }
 
     companion object {
+        /** Shortcut, widget, tile, notification and reminder actions; vault work waits until it is loaded. */
+        fun handleAction(store: FormStore, intent: Intent?) {
+            when (intent?.action) {
+                ACTION_START_TODAY -> {
+                    store.pendingDestination = "Workout"
+                    store.launch { if (store.whenReady { startToday() } == false) store.message = "Nothing scheduled today. Pick a routine." }
+                }
+                ACTION_OPEN_WORKOUT -> store.pendingDestination = "Workout"
+                ACTION_START_ROUTINE -> {
+                    store.pendingDestination = "Workout"
+                    val id = intent.getStringExtra(EXTRA_ROUTINE)
+                    store.launch { store.whenReady { data.routines.firstOrNull { it.id == id }?.let(::startWorkout) } }
+                }
+                ACTION_LOG_FOOD -> store.pendingDestination = "Fuel:log"
+                ACTION_OPEN_ROUTINES -> store.pendingDestination = "Plans"
+                ACTION_OPEN_PROGRESS -> store.pendingDestination = "Progress"
+                ACTION_LOG_WATER -> store.launch {
+                    store.whenReady { addWater(today(), 250.0); message = "+250 ml · ${jsRound(data.history[today()]?.water ?: 0.0)} ml today" }
+                }
+            }
+        }
+        private const val HANDLED = "handled_intent"
         const val ACTION_START_TODAY = "com.thehhr.form.START_TODAY"
         const val ACTION_LOG_WATER = "com.thehhr.form.LOG_WATER"
         const val ACTION_OPEN_WORKOUT = "com.thehhr.form.OPEN_WORKOUT"

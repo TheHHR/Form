@@ -26,7 +26,7 @@ class WorkoutTile : TileService() {
             store.status == Status.Ready && store.todaysRoutine() != null -> MainActivity.ACTION_START_TODAY
             else -> MainActivity.ACTION_OPEN_WORKOUT
         }
-        val intent = Intent(this, MainActivity::class.java).setAction(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = LinkActivity.intent(this, action)
         val open = { if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 30, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             else @Suppress("DEPRECATION") startActivityAndCollapse(intent) }
         if (isLocked) unlockAndRun { open() } else open()

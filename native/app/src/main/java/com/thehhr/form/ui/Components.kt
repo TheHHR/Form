@@ -391,3 +391,8 @@ fun Modifier.onHold(label: String?, action: () -> Unit): Modifier = this
             if (up == null) action()
         }
     }
+
+/** A progress value that glides to its new target with the theme's spatial spring (bars and rings fill, not jump). */
+@Composable
+fun eased(target: Float): Float =
+    androidx.compose.animation.core.animateFloatAsState(target.coerceIn(0f, 1f), MaterialTheme.motionScheme.defaultSpatialSpec(), label = "progress").value

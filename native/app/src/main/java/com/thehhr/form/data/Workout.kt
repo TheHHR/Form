@@ -123,6 +123,26 @@ object WorkoutLogic {
         return s.copy(sets = sets, skipped = s.skipped.filter { it in ids }.toSet(), jumpTo = jump)
     }
 
+
+    /**
+     * Sets row [index] to [row] and copies whatever value changed (reps, weight, time, distance) to the later sets
+     * that aren't done yet, so editing set 1 sets up the rest. Done sets and the done flag itself are never copied.
+     */
+    fun carryForward(rows: List<SetRow>, index: Int, row: SetRow): List<SetRow> {
+        val before = rows.getOrNull(index) ?: return rows
+        return rows.mapIndexed { i, r ->
+            when {
+                i == index -> row
+                i < index || r.done -> r
+                else -> r.copy(
+                    reps = if (row.reps != before.reps) row.reps else r.reps,
+                    weight = if (row.weight != before.weight) row.weight else r.weight,
+                    duration = if (row.duration != before.duration) row.duration else r.duration,
+                    distance = if (row.distance != before.distance) row.distance else r.distance,
+                )
+            }
+        }
+    }
     fun awLogId(s: ActiveWorkout, exerciseId: String) = "${s.token}-aw-$exerciseId"
 
     /** Rewrites this session's log for one exercise from its checked sets (syncAwLog). */

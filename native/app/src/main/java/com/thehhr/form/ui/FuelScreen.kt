@@ -60,12 +60,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.common.InputImage
 import androidx.compose.material.icons.rounded.PhotoCamera
-import com.thehhr.form.data.FoodLookup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -122,7 +117,7 @@ fun FuelTab(vm: FormStore) {
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box(contentAlignment = Alignment.Center) {
-                        CircularWavyProgressIndicator(progress = { (cals / targets.cals).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.size(96.dp))
+                        CircularWavyProgressIndicator(progress = eased((cals / targets.cals).toFloat()).let { v -> { v } }, modifier = Modifier.size(96.dp))
                         Text("${jsRound(cals / targets.cals * 100)}%", style = MaterialTheme.typography.titleMediumEmphasized)
                     }
                 }
@@ -153,7 +148,7 @@ fun FuelTab(vm: FormStore) {
                         androidx.compose.material3.FilledIconButton(onClick = { vm.addWater(date, 250.0) },
                             shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Add, "Add 250 ml") }
                     }
-                    LinearWavyProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth())
+                    LinearWavyProgressIndicator(progress = eased((day.water / targets.water).toFloat()).let { v -> { v } }, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -196,7 +191,7 @@ private fun Macro(label: String, value: Double, target: Double, color: Color, mo
             Text(label, style = MaterialTheme.typography.labelLargeEmphasized, color = color)
             Text("${jsRound(value)}", style = MaterialTheme.typography.titleLargeEmphasized)
             Text("of ${jsRound(target)} g", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LinearWavyProgressIndicator(progress = { (value / target.coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth(), color = color)
+            LinearWavyProgressIndicator(progress = eased((value / target.coerceAtLeast(1.0)).toFloat()).let { v -> { v } }, Modifier.fillMaxWidth(), color = color)
         }
     }
 }
@@ -226,10 +221,8 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
                 view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 vm.skipMeal(date, s); onClose()
             })
-            ChoiceGroup(listOf(0 to "Library", 1 to "Manual", 2 to "Barcode"), mode, { mode = it })
-            if (mode == 2) {
-                BarcodePane(vm) { meal, serving -> picked = meal; grams = serving; mode = 0 }
-            } else if (mode == 0) {
+            ChoiceGroup(listOf(0 to "Library", 1 to "Manual"), mode, { mode = it })
+            if (mode == 0) {
                 val meal = picked
                 if (meal == null) {
                     androidx.compose.material3.TextField(
@@ -241,7 +234,7 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
                     )
                     val list = vm.data.meals.filter { it.name.contains(query.trim(), true) }
                         .sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
-                    if (list.isEmpty()) EmptyNote("No meals yet. Add some in Plans → Meals, or try Manual or Barcode.")
+                    if (list.isEmpty()) EmptyNote("No meals yet. Add some in Plans → Meals, or try Manual.")
                     LazyColumn(Modifier.heightIn(max = 360.dp)) {
                         itemsIndexed(list, key = { _, m -> m.id }) { i, m ->
                             GroupedItem(i, list.size, onClick = { picked = m; grams = m.defaultGrams },
@@ -293,58 +286,3 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
     }
 }
 
-/** Photo the barcode with the phone camera (decoded on-device, no download) or type it; looks it up on Open Food Facts. */
-@Composable
-private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var code by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    fun lookup(c: String) {
-        if (!FoodLookup.validBarcode(c)) { error = "Barcodes are 8–14 digits"; return }
-        busy = true; error = null
-        scope.launch {
-            val found = withContext(Dispatchers.IO) { FoodLookup.lookup(c) }
-            busy = false
-            if (found == null) { error = "Not found on Open Food Facts (or offline). Add it manually instead."; return@launch }
-            // Keep the user's edits if this barcode was saved before.
-            val meal = vm.data.meals.firstOrNull { it.id == found.meal.id } ?: found.meal.also(vm::saveMeal)
-            onFound(meal, found.servingGrams)
-        }
-    }
-    // Same camera flow as the AI meal photo: the system camera app takes a picture, the bundled ML Kit model reads it.
-    val photoUri = remember { com.thehhr.form.data.AiVision.photoUri(ctx) }
-    val camera = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { ok ->
-        if (!ok) return@rememberLauncherForActivityResult
-        busy = true; error = null
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E).build()
-        val image = runCatching { InputImage.fromFilePath(ctx, photoUri) }.getOrNull()
-        if (image == null) { busy = false; error = "Couldn't read the photo. Try again."; return@rememberLauncherForActivityResult }
-        BarcodeScanning.getClient(options).process(image)
-            .addOnSuccessListener { list ->
-                val value = list.firstNotNullOfOrNull { it.rawValue }
-                if (value == null) { busy = false; error = "No barcode found. Fill the frame with the barcode and keep it sharp." }
-                else { code = value; lookup(value) }
-            }
-            .addOnFailureListener { e -> android.util.Log.w("Form", "barcode decode failed", e); busy = false; error = "Couldn't read the barcode. Type the code below." }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(
-            onClick = {
-                error = null
-                runCatching { camera.launch(photoUri) }.onFailure { error = "No camera app found. Type the code below." }
-            },
-            enabled = !busy, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth(),
-        ) { Icon(Icons.Rounded.PhotoCamera, null); Spacer(Modifier.width(8.dp)); Text("Scan barcode") }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(code, { code = it.filter(Char::isDigit).take(14) }, Modifier.weight(1f), label = { Text("Or type the code") },
-                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            FilledTonalButton(onClick = { lookup(code) }, enabled = !busy && code.isNotEmpty(), shapes = ButtonDefaults.shapes()) { Text("Look up") }
-        }
-        if (busy) LoadingIndicator(Modifier.align(Alignment.CenterHorizontally))
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-        Text("Food data © Open Food Facts contributors (ODbL).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}

@@ -124,7 +124,7 @@ class FormGlance : GlanceAppWidget() {
 }
 
 private fun open(ctx: Context, action: String? = null, routineId: String? = null) = actionStartActivity(
-    Intent(ctx, MainActivity::class.java).setAction(action ?: Intent.ACTION_MAIN).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    LinkActivity.intent(ctx, action)
         .apply { routineId?.let { putExtra(MainActivity.EXTRA_ROUTINE, it) } },
 )
 

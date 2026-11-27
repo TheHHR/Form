@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -334,24 +335,28 @@ private fun MealPane(vm: FormStore, cfg: AiConfig) {
         }, enabled = !task.busy && (description.isNotBlank() || AiSession.photo != null), shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Estimate") }
         AiStatus(vm, task)
         AiSession.meal?.let { est ->
+            // Same layout as the picked meal in Log meal: tonal summary card, grams, meal slot, then the actions.
             val entry = Fuel.entryFor(est.meal, AiSession.mealGrams, slot, "")
-            Card(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(est.meal.name, style = MaterialTheme.typography.titleMediumEmphasized)
-                    Text("${jsRound(entry.cals)} kcal · ${jsNum(entry.p)}p · ${jsNum(entry.c)}c · ${jsNum(entry.f)}f",
-                        style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                    StepperField(AiSession.mealGrams, "grams", 10.0, 1.0..5000.0, { AiSession.mealGrams = it }, Modifier.fillMaxWidth())
-                    ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it })
+            Card(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(est.meal.name, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 2)
+                    Text("${jsRound(entry.cals)} kcal", style = MaterialTheme.typography.headlineMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                    Text("${jsNum(entry.p)} g protein · ${jsNum(entry.c)} g carbs · ${jsNum(entry.f)} g fat", style = MaterialTheme.typography.bodyMedium)
                     est.notes.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { vm.saveMeal(est.meal); vm.message = "Saved to meal library" }, shapes = ButtonDefaults.shapes()) { Text("Save meal") }
-                        Button(onClick = {
-                            vm.logMeal(vm.todayKey, Fuel.entryFor(est.meal, AiSession.mealGrams, slot, vm.newMealEntryId()))
-                            AiSession.meal = null; AiSession.photo = null; description = ""
-                            vm.message = "Logged to $slot"
-                        }, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) { Text("Log to today") }
-                    }
                 }
+            }
+            Text("Grams", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+            StepperField(AiSession.mealGrams, "grams", 10.0, 1.0..5000.0, { AiSession.mealGrams = it }, Modifier.fillMaxWidth())
+            ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it })
+            Button(onClick = {
+                vm.logMeal(vm.todayKey, Fuel.entryFor(est.meal, AiSession.mealGrams, slot, vm.newMealEntryId()))
+                AiSession.meal = null; AiSession.photo = null; description = ""
+                vm.message = "Logged to $slot"
+            }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(ButtonDefaults.MediumContainerHeight)) {
+                Text("Add to $slot", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
+            }
+            TextButton(onClick = { vm.saveMeal(est.meal); vm.message = "Saved to meal library" }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Save to meal library")
             }
         }
     }

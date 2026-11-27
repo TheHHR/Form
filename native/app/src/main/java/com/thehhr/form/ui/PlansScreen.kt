@@ -3,6 +3,7 @@
 package com.thehhr.form.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,10 +80,19 @@ fun PlansTab(vm: FormStore, nav: Nav) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         ChoiceGroup(listOf(0 to "Routines", 1 to "Week", 2 to "Meals"), section, { section = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-        when (section) {
-            0 -> RoutineList(vm, nav)
-            1 -> WeekSchedule(vm)
-            else -> MealLibrary(vm)
+        // Sections slide in from the side they sit on (Routines | Week | Meals), with the theme's spring.
+        val slide = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntOffset>()
+        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        androidx.compose.animation.AnimatedContent(section, Modifier.weight(1f), transitionSpec = {
+            val dir = if (targetState > initialState) 1 else -1
+            (androidx.compose.animation.slideInHorizontally(slide) { it / 4 * dir } + androidx.compose.animation.fadeIn(fade)) togetherWith
+                (androidx.compose.animation.slideOutHorizontally(slide) { -it / 4 * dir } + androidx.compose.animation.fadeOut(fade))
+        }, label = "plans") { s ->
+            when (s) {
+                0 -> RoutineList(vm, nav)
+                1 -> WeekSchedule(vm)
+                else -> MealLibrary(vm)
+            }
         }
     }
 }

@@ -55,7 +55,7 @@ object RestNotifier {
     )
 
     fun openApp(ctx: Context, action: String? = null): PendingIntent = PendingIntent.getActivity(
-        ctx, action.hashCode(), Intent(ctx, MainActivity::class.java).setAction(action).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        ctx, action.hashCode(), LinkActivity.intent(ctx, action),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 

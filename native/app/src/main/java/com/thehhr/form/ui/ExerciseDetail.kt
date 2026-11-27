@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.animation.animateContentSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.rounded.Add
@@ -140,7 +141,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { routineMenu = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) {
+                        androidx.compose.material3.FilledTonalButton(onClick = { routineMenu = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(48.dp)) {
                             Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text("Routine")
                         }
                         DropdownMenu(expanded = routineMenu, onDismissRequest = { routineMenu = false }) {
@@ -152,7 +153,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
                             }
                         }
                     }
-                    Button(onClick = { logging = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) { Text("Log progress") }
+                    Button(onClick = { logging = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f).height(48.dp)) { Text("Log progress") }
                 }
             }
             if (pr != null) item {
@@ -271,7 +272,8 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? =
 
     FormSheet(onDismissRequest = onClose) {
         Column(
-            Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            // Height eases with the theme spring when switching Reps/Timed or adding sets.
+            Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(if (editing != null) "Edit log · ${exTitle(e)}" else exTitle(e), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1,
@@ -283,7 +285,7 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? =
                     Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                     Text(if (date == LocalDate.now()) "Today" else displayDate(date.toString()), maxLines = 1)
                 }
-                Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
+                Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) }, Modifier.weight(1f).height(48.dp))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Pill(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
@@ -310,15 +312,15 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? =
                     Text("${i + 1}", Modifier.width(24.dp), style = MaterialTheme.typography.labelLargeEmphasized, textAlign = TextAlign.Center)
                     if (timed) {
                         StepperField(durations[i], if (sec) "seconds" else "minutes", if (sec) 5.0 else 1.0, 0.0..(if (sec) 36000.0 else 600.0),
-                            { v -> durations = durations.toMutableList().also { it[i] = v } }, Modifier.weight(1f))
+                            { v -> durations = fromHere(durations, i, v) }, Modifier.weight(1f))
                         if (showDistance) StepperField(distances[i], units.distance, if (units.distance == "mi") 0.25 else 0.5, 0.0..500.0,
-                            { v -> distances = distances.toMutableList().also { it[i] = v } }, Modifier.weight(1f))
+                            { v -> distances = fromHere(distances, i, v) }, Modifier.weight(1f))
                         if (showWeight) StepperField(timedWeights[i], units.weight, if (units.weight == "lb") 5.0 else 2.5, 0.0..2000.0,
-                            { v -> timedWeights = timedWeights.toMutableList().also { it[i] = v } }, Modifier.weight(1f))
+                            { v -> timedWeights = fromHere(timedWeights, i, v) }, Modifier.weight(1f))
                     } else {
-                        StepperField(reps[i].toDouble(), "reps", 1.0, 1.0..100.0, { v -> reps = reps.toMutableList().also { it[i] = v.toInt() } }, Modifier.weight(1f))
+                        StepperField(reps[i].toDouble(), "reps", 1.0, 1.0..100.0, { v -> reps = fromHere(reps, i, v.toInt()) }, Modifier.weight(1f))
                         if (showWeight) StepperField(weights[i], units.weight, if (units.weight == "lb") 5.0 else 2.5, 0.0..2000.0,
-                            { v -> weights = weights.toMutableList().also { it[i] = v } }, Modifier.weight(1f))
+                            { v -> weights = fromHere(weights, i, v) }, Modifier.weight(1f))
                     }
                 }
             }
@@ -390,3 +392,6 @@ private fun TagsDialog(current: List<String>, known: List<String>, onDismiss: ()
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+/** Sets entry [i] and every later one to [v]: editing set 1 fills in the sets after it (as in the workout). */
+private fun <T> fromHere(list: List<T>, i: Int, v: T) = list.mapIndexed { j, x -> if (j >= i) v else x }
