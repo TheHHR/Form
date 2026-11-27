@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -285,7 +286,7 @@ private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, t
     val empty = MaterialTheme.colorScheme.surfaceContainerHighest
     val guide = MaterialTheme.colorScheme.outlineVariant
     val chart = 168.dp
-    val head = 32.dp // room above the tallest bar for the badge
+    val head = 12.dp // breathing room above the tallest bar
     Row(Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) {
             // Guide line at the top value.
@@ -311,12 +312,6 @@ private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, t
                     ) {
                         Column(Modifier.fillMaxWidth().height(chart + head), verticalArrangement = Arrangement.Bottom,
                             horizontalAlignment = Alignment.CenterHorizontally) {
-                            androidx.compose.animation.AnimatedVisibility(isSel && enabled,
-                                enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
-                                exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()) {
-                                Box(Modifier.padding(bottom = 4.dp).size(24.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(pick),
-                                    contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiary) }
-                            }
                             Box(
                                 Modifier.fillMaxWidth(0.72f)
                                     // At least as tall as wide, so an empty or tiny value is a dot, not a sliver.
@@ -329,7 +324,18 @@ private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, t
                                     .graphicsLayer { scaleX = squeeze; scaleY = squeeze; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f) }
                                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(corner))
                                     .background(color),
-                            )
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
+                                // The selection badge sits inside the bar's rounded top, scaled to the bar's width.
+                                androidx.compose.animation.AnimatedVisibility(isSel && enabled,
+                                    enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
+                                    exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()) {
+                                    Box(Modifier.padding(top = 3.dp).widthIn(max = 28.dp).fillMaxWidth(0.84f).aspectRatio(1f)
+                                        .clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.onTertiary),
+                                        contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.fillMaxSize(0.62f), tint = pick) }
+                                }
+                            }
+
                         }
                         Text(labels[i], Modifier.padding(top = 8.dp),
                             style = if (isSel || i == today) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge,

@@ -4,150 +4,176 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Form — Training &amp; Nutrition</title>
-<meta name="description" content="Offline-first training and nutrition tracker for Android. Guided workouts with rest timers, a 1,324-exercise animated library, macro tracking and progress charts. No ads, no accounts, no tracking.">
+<meta name="description" content="A native Android training and nutrition tracker. Guided workouts with rest timers, a 1,324-exercise library, macro tracking and progress charts. No ads, no accounts, no tracking — your data stays in plain files you own.">
 <meta property="og:title" content="Form — Training &amp; Nutrition">
-<meta property="og:description" content="Offline-first training & nutrition tracker for Android. No ads, no accounts, no tracking.">
+<meta property="og:description" content="Native Android training &amp; nutrition tracker. No ads, no accounts, no tracking.">
 <meta property="og:image" content="https://thehhr.github.io/Form/assets/og-banner.jpg?v=3">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Form — offline-first training &amp; nutrition tracker for Android">
+<meta property="og:image:alt" content="Form — training &amp; nutrition tracker for Android">
 <meta property="og:url" content="https://thehhr.github.io/Form/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Form — Training &amp; Nutrition">
-<meta name="twitter:description" content="Offline-first training &amp; nutrition tracker for Android. No ads, no accounts, no tracking.">
+<meta name="twitter:description" content="Native Android training &amp; nutrition tracker. No ads, no accounts, no tracking.">
 <meta name="twitter:image" content="https://thehhr.github.io/Form/assets/og-banner.jpg?v=3">
+<meta name="theme-color" content="#0a0b0d">
 <link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; --accent: #30d158; --bg: #0d0d0f; --card: #17171a; --border: #26262b; --muted: #9a9aa2; }
+  /* Form's dark scheme with the deep-blue accent (Material 3 Expressive: tonal containers, big soft corners, pill buttons). */
+  :root {
+    color-scheme: dark;
+    --accent: #0a84ff; --on-accent: #ffffff;
+    --accent-ink: #79b8ff;                 /* accent as text on dark surfaces */
+    --accent-container: #0f2742; --on-accent-container: #b9dcff;
+    --bg: #0a0b0d; --surface: #111215; --card: #15161a; --card-high: #1c1d22; --card-highest: #26272c;
+    --border: #26272c; --text: #f5f5f2; --muted: #a6a7a0;
+    --display: "Space Grotesk", system-ui, sans-serif;
+    --body: Roboto, -apple-system, "Segoe UI", sans-serif;
+    --spring: cubic-bezier(.34, 1.36, .64, 1);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: #e8e8ea; font: 16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
-  a { color: var(--accent); text-decoration: none; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.65 var(--body); }
+  a { color: var(--accent-ink); text-decoration: none; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 
-  nav { position: sticky; top: 0; z-index: 10; background: rgba(13,13,15,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-  .nav-in { max-width: 960px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 18px; }
-  .brand { display: flex; align-items: center; gap: 9px; color: #fff; font-weight: 700; font-size: 17px; }
-  .brand img { width: 26px; height: 26px; border-radius: 6px; }
-  .nav-links { display: flex; align-items: center; gap: 16px; margin-left: auto; font-size: 14px; }
-  .nav-links a:not(.btn) { color: var(--muted); }
-  .nav-links a:not(.btn):hover { color: #fff; }
-  .icon-btn { display: none; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; color: var(--muted); }
-  .icon-btn:hover { color: #fff; background: var(--card); }
-  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; padding: 9px 16px; font-weight: 650; font-size: 14px; cursor: pointer; }
-  .btn-primary { background: var(--accent); color: #08130c; }
-  .btn-primary:hover { filter: brightness(1.08); }
-  .btn-ghost { border: 1px solid var(--border); color: #e8e8ea; }
-  .btn-ghost:hover { background: var(--card); }
-  .btn-lg { padding: 13px 26px; font-size: 16px; border-radius: 12px; }
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(10,11,13,.82); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+  .nav-in { max-width: 1040px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 700 18px var(--display); }
+  .brand img { width: 30px; height: 30px; border-radius: 10px; }
+  .nav-links { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 14px; }
+  .nav-links a:not(.btn) { color: var(--muted); padding: 8px 12px; border-radius: 999px; transition: background .2s, color .2s; }
+  .nav-links a:not(.btn):hover { color: var(--text); background: var(--card-high); }
+  .icon-btn { display: none !important; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0 !important; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 20px; font: 600 14px var(--body); cursor: pointer; transition: transform .25s var(--spring), border-radius .25s var(--spring), filter .2s; }
+  .btn:active { transform: scale(.96); border-radius: 14px; }  /* expressive press: squeeze + square corners */
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-tonal { background: var(--accent-container); color: var(--on-accent-container); }
+  .btn-tonal:hover { filter: brightness(1.15); }
+  .btn-lg { padding: 15px 28px; font-size: 16px; }
 
-  .eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 12px; }
-  header.hero { padding: 40px 0 0; }
-  .hero-copy { max-width: 720px; margin: 0 auto; text-align: center; }
-  h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -.03em; line-height: 1.06; margin: 0 0 18px; }
+  .eyebrow { color: var(--accent-ink); font: 700 12px var(--body); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 12px; }
+  header.hero { padding: 56px 0 0; position: relative; overflow: hidden; }
+  header.hero::before { content: ""; position: absolute; inset: -40% -20% auto; height: 620px; background: radial-gradient(closest-side, rgba(10,132,255,.22), transparent); pointer-events: none; }
+  .hero-copy { max-width: 760px; margin: 0 auto; text-align: center; position: relative; }
+  h1 { font: 700 clamp(38px, 6vw, 64px)/1.02 var(--display); letter-spacing: -.035em; margin: 0 0 20px; }
   h1 .hl { color: var(--accent); }
-  .lead { font-size: 17px; color: #c9c9cf; max-width: 470px; margin: 0 auto; }
-  .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 22px 0 30px; }
-  .hero-badges span { font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; }
+  .lead { font-size: 18px; color: #c9c9c3; max-width: 540px; margin: 0 auto; }
+  .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 30px; }
+  .hero-badges span { font-size: 13px; color: var(--on-accent-container); background: var(--accent-container); border-radius: 999px; padding: 6px 14px; }
   .hero-cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-  .device { background: #000; border: 1px solid #2c2c31; border-radius: 26px; padding: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
-  .device img { display: block; width: 100%; border-radius: 18px; }
-  .stage-bleed { margin-top: 46px; }
-  .stage { display: flex; gap: 20px; overflow-x: auto; padding: 34px 24px 30px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+
+  /* Screenshot stage: the focused phone grows into the accent frame, the rest recede. */
+  .device { background: #000; border: 2px solid #2a2b30; border-radius: 30px; padding: 8px; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .device img { display: block; width: 100%; border-radius: 22px; }
+  .stage-bleed { margin-top: 44px; position: relative; }
+  .stage { display: flex; gap: 20px; overflow-x: auto; padding: 36px 24px 32px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .stage::-webkit-scrollbar { display: none; }
   .slide { flex: 0 0 auto; cursor: pointer; }
   .slide.focused { cursor: default; }
-  .stage .device { width: 235px; max-width: 64vw; opacity: .35; transform: scale(.8); filter: grayscale(1); transition: opacity .35s, transform .35s, filter .35s, border-color .35s; }
-  .stage .slide.focused .device { opacity: 1; transform: scale(1.12); filter: none; border-color: var(--accent); }
+  .stage .device { width: 240px; max-width: 64vw; opacity: .35; transform: scale(.8); filter: grayscale(1); transition: opacity .4s, transform .5s var(--spring), filter .4s, border-color .4s; }
+  .stage .slide.focused .device { opacity: 1; transform: scale(1.12); filter: none; border-color: var(--accent); box-shadow: 0 30px 80px rgba(10,132,255,.25); }
   .stage.teleporting .device { transition: none; }
-  .stage-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 0 0; }
-  .rnav { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: #e8e8ea; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; }
-  .rnav:hover { background: #222227; }
-  .dots { display: flex; gap: 7px; }
-  .dots button { width: 8px; height: 8px; border-radius: 50%; border: none; background: #3a3a40; cursor: pointer; padding: 0; }
-  .dots button.on { background: var(--accent); }
+  .stage-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 18px 0 0; }
+  .rnav { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-container); color: var(--on-accent-container); border: none; border-radius: 999px; cursor: pointer; transition: transform .25s var(--spring), border-radius .25s var(--spring); }
+  .rnav:active { transform: scale(.92); border-radius: 14px; }
+  .dots { display: flex; gap: 7px; align-items: center; }
+  .dots button { width: 8px; height: 8px; border-radius: 999px; border: none; background: var(--card-highest); cursor: pointer; padding: 0; transition: width .35s var(--spring), background .3s; }
+  .dots button.on { background: var(--accent); width: 26px; }
   .hero-fade { height: 64px; background: linear-gradient(180deg, transparent, var(--bg)); }
-  @media (prefers-reduced-motion: reduce) { .stage .device { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .stage .device, .dots button, .btn, .rnav { transition: none; } }
 
-  h2 { font-size: 28px; font-weight: 750; letter-spacing: -.02em; margin-bottom: 6px; }
-  .section { padding: 56px 0; border-top: 1px solid var(--border); }
-  .section-sub { color: var(--muted); margin-bottom: 30px; font-size: 15px; }
-  .sec-head { margin-bottom: 30px; }
+  h2 { font: 700 34px/1.15 var(--display); letter-spacing: -.025em; margin-bottom: 8px; }
+  .section { padding: 72px 0; }
+  .section-sub { color: var(--muted); margin-bottom: 32px; font-size: 16px; max-width: 620px; }
+  .sec-head { margin-bottom: 32px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
-  .feature { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-  .feature .f-icon { font-size: 24px; }
-  .feature h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
-  .feature p { color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+  .feature { background: var(--card); border-radius: 28px; padding: 24px; transition: background .25s, transform .35s var(--spring), border-radius .35s var(--spring); }
+  .feature:hover { background: var(--card-high); transform: translateY(-2px); border-radius: 34px; }
+  .f-icon { width: 52px; height: 52px; display: grid; place-items: center; background: var(--accent-container); color: var(--on-accent-container); border-radius: 40%; }
+  .f-icon svg { width: 24px; height: 24px; fill: currentColor; }
+  .feature h3 { font: 700 18px var(--display); margin: 14px 0 6px; }
+  .feature p { color: var(--muted); font-size: 14.5px; }
+  .wide { grid-column: 1 / -1; display: flex; gap: 20px; align-items: center; background: var(--accent-container); }
+  .wide:hover { background: #12304f; }
+  .wide .f-icon { flex: 0 0 auto; background: var(--accent); color: var(--on-accent); }
+  .wide h3 { margin-top: 0; color: var(--on-accent-container); }
+  .wide p { color: #c3d9ef; }
 
-  .donate-note { background: #241a10; border: 1px solid #4a3416; border-radius: 10px; padding: 12px 16px; color: #e8b56a; font-size: 13.5px; margin-bottom: 24px; }
-  .coin-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
-  .coin-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .cta { text-align: center; background: var(--card); border-radius: 36px; padding: 48px 24px; }
+  .cta h2 { margin-bottom: 10px; }
+  .cta p { color: var(--muted); margin-bottom: 24px; }
+
+  .donate-note { background: #2a1d0b; border-radius: 18px; padding: 14px 18px; color: #f0bd6e; font-size: 13.5px; margin-bottom: 24px; }
+  .coin-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
+  .coin-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--card); border-radius: 22px; padding: 14px 16px 14px 20px; }
   .coin-info { text-align: left; min-width: 0; }
-  .coin-info h3 { font-size: 15px; font-weight: 700; }
-  .coin-info .net { font-size: 11.5px; color: #8a8a92; display: block; margin-top: 2px; }
+  .coin-info h3 { font: 700 15px var(--display); }
+  .coin-info .net { font-size: 12px; color: #8a8a92; display: block; margin-top: 2px; }
   .coin-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto; }
-  .icon-action { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; background: #26262b; color: #e8e8ea; border: none; border-radius: 9px; cursor: pointer; }
+  .icon-action { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; background: var(--card-highest); color: var(--text); border: none; border-radius: 999px; cursor: pointer; transition: transform .25s var(--spring), border-radius .25s var(--spring); }
   .icon-action svg { width: 18px; height: 18px; }
-  .icon-action:hover { background: #333338; }
-  .icon-action:active { background: #3d3d43; }
+  .icon-action:hover { background: #33343a; }
+  .icon-action:active { transform: scale(.92); border-radius: 12px; }
   .icon-action .ic-check { display: none; }
-  .icon-action.copied { color: var(--accent); }
+  .icon-action.copied { color: var(--accent-ink); }
   .icon-action.copied .ic-copy { display: none; }
   .icon-action.copied .ic-check { display: block; }
-  .copy { background: #26262b; color: #e8e8ea; border: none; border-radius: 8px; padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .copy:active { background: #333338; }
+  .copy { background: var(--accent); color: var(--on-accent); border: none; border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
   .qr-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .qr-modal[hidden] { display: none; }
   .qr-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.66); }
-  .qr-modal-card { position: relative; width: 100%; max-width: 340px; max-height: calc(100vh - 40px); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 24px 22px 22px; text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
-  .qr-modal-card h3 { font-size: 17px; font-weight: 700; }
+  .qr-modal-card { position: relative; width: 100%; max-width: 340px; max-height: calc(100vh - 40px); overflow-y: auto; background: var(--card-high); border-radius: 28px; padding: 26px 22px 22px; text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .qr-modal-card h3 { font: 700 18px var(--display); }
   .qr-modal-card .net { display: block; font-size: 12px; color: #8a8a92; margin: 3px 0 16px; }
-  .qr-modal-card img { width: 220px; height: 220px; max-width: 100%; border-radius: 12px; display: block; margin: 0 auto 16px; }
-  .qr-skeleton { display: none; width: 220px; height: 220px; max-width: 100%; margin: 0 auto 16px; border-radius: 12px; background: linear-gradient(90deg, var(--card) 25%, #232328 37%, var(--card) 63%); background-size: 400% 100%; animation: qrShimmer 1.4s ease infinite; }
+  .qr-modal-card img { width: 220px; height: 220px; max-width: 100%; border-radius: 16px; display: block; margin: 0 auto 16px; }
+  .qr-skeleton { display: none; width: 220px; height: 220px; max-width: 100%; margin: 0 auto 16px; border-radius: 16px; background: linear-gradient(90deg, var(--card) 25%, #232328 37%, var(--card) 63%); background-size: 400% 100%; animation: qrShimmer 1.4s ease infinite; }
   .qr-modal.qr-loading .qr-modal-card img { display: none; }
   .qr-modal.qr-loading .qr-skeleton { display: block; }
   @keyframes qrShimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
   @media (prefers-reduced-motion: reduce) { .qr-skeleton { animation: none; } }
-  .qr-modal-card code { display: block; background: #0d0d0f; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #c9c9cf; word-break: break-all; user-select: all; margin-bottom: 14px; }
-  .qr-modal-card .copy { width: 100%; padding: 11px 18px; }
-  .qr-modal-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: #26262b; color: #e8e8ea; border: none; border-radius: 9px; cursor: pointer; }
+  .qr-modal-card code { display: block; background: var(--bg); border-radius: 14px; padding: 10px 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #c9c9cf; word-break: break-all; user-select: all; margin-bottom: 14px; }
+  .qr-modal-card .copy { width: 100%; padding: 12px 18px; }
+  .qr-modal-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: var(--card-highest); color: var(--text); border: none; border-radius: 999px; cursor: pointer; }
   .qr-modal-close svg { width: 16px; height: 16px; }
-  .qr-modal-close:hover { background: #333338; }
   body.modal-open { overflow: hidden; }
 
-  footer { border-top: 1px solid var(--border); padding: 18px 0 19px; text-align: center; color: var(--muted); font-size: 13.5px; }
+  footer { padding: 26px 0 28px; text-align: center; color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--border); }
   @media (max-width: 340px) { footer { font-size: 11px; } footer .wrap { padding: 0 10px; } }
-  footer a { color: var(--accent); }
-  @media (max-width: 640px) { .icon-btn { display: inline-flex; } .nav-links a:not(.btn):not(.icon-btn) { display: none; } }
+  @media (max-width: 680px) { .icon-btn { display: inline-flex !important; } .nav-links a:not(.btn):not(.icon-btn) { display: none; } .wide { flex-direction: column; align-items: flex-start; } h2 { font-size: 28px; } }
 </style>
 </head>
 <body id="top">
 
 <nav>
   <div class="nav-in">
-    <a class="brand" href="#top"><img src="assets/icon.png" alt="Form icon">Form</a>
+    <a class="brand" href="#top"><img src="assets/icon.png" alt="">Form</a>
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="#donate">Donate</a>
       <a href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <a class="icon-btn" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Form on GitHub"><svg viewBox="0 0 16 16" width="17" height="17" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="currentColor" stroke="none" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <a class="icon-btn" href="#donate" aria-label="Donate"><svg viewBox="0 0 24 24" width="17" height="17" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></a>
-      <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/download/v4.0.2/Form-4.0.2.apk">Download APK</a>
+      <a class="icon-btn" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer" aria-label="Form on GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <a class="icon-btn" href="#donate" aria-label="Donate"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></a>
+      <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/download/v4.0.2/Form-4.0.2.apk">Download</a>
     </div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="wrap hero-copy">
-    <p class="eyebrow">Form</p>
-    <h1>Train hard.<br>Eat right.<br><span class="hl">Let's get jacked.</span></h1>
-    <p class="lead">An offline-first training and nutrition tracker for Android. Plan routines, train with guided rest timers, log meals and macros, and watch your progress grow — all your data stays on your device.</p>
-    <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works fully offline</span></div>
+    <p class="eyebrow">Form for Android</p>
+    <h1>Train hard.<br>Eat right.<br><span class="hl">Own your data.</span></h1>
+    <p class="lead">A native training and nutrition tracker built with Material 3 Expressive. Plan routines, train with a rest timer that has your back, log meals and macros, and watch the trend — everything stays in plain files on your phone.</p>
+    <div class="hero-badges"><span>No ads</span><span>No accounts</span><span>No tracking</span><span>Works offline</span><span>Open source</span></div>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="https://github.com/TheHHR/Form/releases/download/v4.0.2/Form-4.0.2.apk">Download APK</a>
-      <a class="btn btn-ghost" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      <a class="btn btn-primary btn-lg" href="https://github.com/TheHHR/Form/releases/download/v4.0.2/Form-4.0.2.apk">Download APK</a>
+      <a class="btn btn-tonal btn-lg" href="https://github.com/TheHHR/Form" target="_blank" rel="noopener noreferrer">View on GitHub</a>
     </div>
   </div>
   <div class="stage-bleed">
@@ -185,20 +211,31 @@
     <div class="sec-head">
       <p class="eyebrow">Features</p>
       <h2>One app for the whole cycle.</h2>
-      <p class="section-sub">Plan the week, train with a timer that has your back, log what you ate, and watch the trend.</p>
+      <p class="section-sub">Plan the week, train with a timer that has your back, log what you ate, and watch months of work add up.</p>
     </div>
     <div class="grid">
-      <div class="feature"><div class="f-icon">🏋️</div><h3>Train &amp; track</h3><p>Scheduled routines, a focused active-workout screen with automatic rest timers and supersets — plus history, records and charts to watch months of work add up.</p></div>
-      <div class="feature"><div class="f-icon">📚</div><h3>1,324-exercise library</h3><p>Every exercise with an animated demo, category, target muscle and equipment — plus full support for your own custom exercises.</p></div>
-      <div class="feature"><div class="f-icon">🥗</div><h3>Nutrition &amp; macros</h3><p>Meal logging with a built-in food database, calorie and macro tracking per day, and water intake.</p></div>
-      <div class="feature"><div class="f-icon">🤖</div><h3>AI, your key</h3><p>Weekly and daily training reviews, meal macro estimates from a description, and an AI routine builder. Bring your own key — OpenRouter, OpenAI, Gemini, or a custom endpoint. It stays on your device and requests go straight to your provider.</p></div>
-      <div class="feature"><div class="f-icon">🔒</div><h3>Your data, your device</h3><p>Everything lives in a plain-text vault (.md) in a folder you pick on your own storage — and since it's just files, you can sync it between devices with Google Drive, Syncthing, or any folder-sync tool you like.</p></div>
-      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Obsidian"><path fill="#9d7cfa" stroke="none" d="M19.355 18.538a68.967 68.959 0 0 0 1.858-2.954.81.81 0 0 0-.062-.9c-.516-.685-1.504-2.075-2.042-3.362-.553-1.321-.636-3.375-.64-4.377a1.707 1.707 0 0 0-.358-1.05l-3.198-4.064a3.744 3.744 0 0 1-.076.543c-.106.503-.307 1.004-.536 1.5-.134.29-.29.6-.446.914l-.31.626c-.516 1.068-.997 2.227-1.132 3.59-.124 1.26.046 2.73.815 4.481.128.011.257.025.386.044a6.363 6.363 0 0 1 3.326 1.505c.916.79 1.744 1.922 2.415 3.5zM8.199 22.569c.073.012.146.02.22.02.78.024 2.095.092 3.16.29.87.16 2.593.64 4.01 1.055 1.083.316 2.198-.548 2.355-1.664.114-.814.33-1.735.725-2.58l-.01.005c-.67-1.87-1.522-3.078-2.416-3.849a5.295 5.295 0 0 0-2.778-1.257c-1.54-.216-2.952.19-3.84.45.532 2.218.368 4.829-1.425 7.531zM5.533 9.938c-.023.1-.056.197-.098.29L2.82 16.059a1.602 1.602 0 0 0 .313 1.772l4.116 4.24c2.103-3.101 1.796-6.02.836-8.3-.728-1.73-1.832-3.081-2.55-3.831zM9.32 14.01c.615-.183 1.606-.465 2.745-.534-.683-1.725-.848-3.233-.716-4.577.154-1.552.7-2.847 1.235-3.95.113-.235.223-.454.328-.664.149-.297.288-.577.419-.86.217-.47.379-.885.46-1.27.08-.38.08-.72-.014-1.043-.095-.325-.297-.675-.68-1.06a1.6 1.6 0 0 0-1.475.36l-4.95 4.452a1.602 1.602 0 0 0-.513.952l-.427 2.83c.672.59 2.328 2.316 3.335 4.711.09.21.175.43.253.653z"/></svg></div><h3>Your data, in plain text</h3><p>Routines, sets, meals and settings are stored as human-readable Markdown files in a folder you choose — drop the folder into <a href="https://obsidian.md" target="_blank" rel="noopener noreferrer">Obsidian</a> and browse your training history like a personal wiki.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg></div><h3>Guided workouts</h3><p>Scheduled routines and supersets, a fullscreen rest timer you tap to skip or log the next set, and values that carry to the sets after. A live notification keeps the timer on your lock screen.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg></div><h3>1,324-exercise library</h3><p>Every exercise with its target muscle, equipment, steps and a muscle map. Add your own exercises and tag them however you like.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg></div><h3>Nutrition &amp; macros</h3><p>A meal library, calories and macros against targets made for you, water, and skipped meals — hold a meal to skip it.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8c-1.45 0-2.26 1.44-1.93 2.51l-3.55 3.56c-.3-.09-.74-.09-1.04 0l-2.55-2.55C12.27 10.45 11.46 9 10 9c-1.45 0-2.27 1.44-1.93 2.52l-4.56 4.55C2.44 15.74 1 16.55 1 18c0 1.1.9 2 2 2 1.45 0 2.26-1.44 1.93-2.51l4.55-4.56c.3.09.74.09 1.04 0l2.55 2.55C12.73 16.55 13.54 18 15 18c1.45 0 2.27-1.44 1.93-2.52l3.56-3.55c1.07.33 2.51-.48 2.51-1.93 0-1.1-.9-2-2-2z"/></svg></div><h3>Progress that reads at a glance</h3><p>Week, month and year charts, sets per body part on a muscle map, and personal records — tap any day or month to drill in.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg></div><h3>AI, with your own key</h3><p>Training reviews, routines from a sentence, and meal estimates from a description or a photo. OpenRouter, OpenAI, Gemini and more — requests go straight from your phone to your provider.</p></div>
+      <div class="feature"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 13v8h8v-8h-8zM3 21h8v-8H3v8zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z"/></svg></div><h3>Made for Android</h3><p>Home-screen widget, Quick Settings tile, app shortcuts, workout reminders, Health Connect, and light, dark or wallpaper colours.</p></div>
+      <div class="feature wide"><div class="f-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div><div><h3>Your data, in plain text</h3><p>Routines, sets, meals and settings live in five Markdown files in a folder you choose. Sync them with Syncthing or Drive, open them in <a href="https://obsidian.md" target="_blank" rel="noopener noreferrer">Obsidian</a>, share a routine as text — no account, no server.</p></div></div>
     </div>
   </div>
 </section>
 
-<section class="section" id="donate">
+<section class="section">
+  <div class="wrap">
+    <div class="cta">
+      <h2>Ready when you are.</h2>
+      <p>Free and open source. Download the APK and point Form at a folder.</p>
+      <a class="btn btn-primary btn-lg" href="https://github.com/TheHHR/Form/releases/download/v4.0.2/Form-4.0.2.apk">Download APK</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="donate" style="padding-top: 24px">
   <div class="wrap">
     <div class="sec-head">
       <p class="eyebrow">Donate</p>

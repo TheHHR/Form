@@ -138,7 +138,7 @@ private fun StartWorkout(vm: FormStore, nav: Nav) {
             }
         }
         item { SectionTitle("Liked routines", action = { TextButton(onClick = { nav.selectTab(Tab.Plans) }) { Text("All routines") } }) }
-        if (routines.isEmpty()) item { EmptyNote("Like a routine (♥) in Plans to pin it here.") }
+        if (routines.isEmpty()) item { EmptyNote("No favorite routines") }
         itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
             GroupedItem(
                 i, routines.size,

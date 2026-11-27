@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.ui.draw.alpha
@@ -103,6 +104,8 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
     var equipment by f::equipment
     var tag by f::tag
     var creating by remember { mutableStateOf(false) }
+    // Adding to a routine: tap to select several, then Save (FAB) adds them in tap order.
+    var picked by rememberSaveable { mutableStateOf(listOf<String>()) }
     val d = vm.data
     val logged = remember(d.logs) { d.logs.map { it.exerciseId }.toSet() }
     val tags = vm.allTags
@@ -130,7 +133,7 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
     }
     fun choose(e: com.thehhr.form.data.Exercise) {
         when (pick) {
-            is Pick.ToRoutine -> { vm.addToRoutine(pick.routineId, e.id); vm.message = "Added ${exTitle(e)}" }
+            is Pick.ToRoutine -> picked = if (e.id in picked) picked - e.id else picked + e.id
             Pick.Extra -> { vm.addExtra(e.id); nav.pop() }
             is Pick.Replace -> { vm.replaceExercise(pick.fromId, e.id); nav.pop() }
             null -> nav.push(Route.Detail(e.id))
@@ -144,8 +147,19 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                 IconButton(onClick = { creating = true }) { Icon(Icons.Rounded.Add, "Create custom exercise") }
             }
         },
+        floatingActionButton = {
+            if (pick is Pick.ToRoutine) androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = {
+                    picked.forEach { vm.addToRoutine(pick.routineId, it) }
+                    if (picked.isNotEmpty()) vm.message = "Added ${picked.size} exercise${if (picked.size == 1) "" else "s"}"
+                    nav.pop()
+                },
+                icon = { Icon(Icons.Rounded.Check, null) },
+                text = { Text(if (picked.isEmpty()) "Save" else "Save ${picked.size}") },
+            )
+        },
     ) { pad ->
-        LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
+        LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, if (pick is Pick.ToRoutine) 96.dp else 24.dp)) {
             item {
                 TextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
@@ -193,6 +207,7 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                     supporting = { Text(if (added) "Added" else jsTitle("${e.target} · ${e.equipment}") + if (e.custom) " · custom" else "") },
                     trailing = {
                         if (added) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                        else if (pick is Pick.ToRoutine) androidx.compose.material3.Checkbox(e.id in picked, null)
                         else LikeButton(e.id in d.liked) { vm.toggleLike(e.id) }
                     },
                 ) { Text(exTitle(e), style = MaterialTheme.typography.titleMedium) }

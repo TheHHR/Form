@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -162,10 +164,11 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
 
             item { SectionTitle("Data") }
             item {
-                GroupedItem(0, 2, supporting = { Text(vm.folderName.ifEmpty { "—" }) },
+                GroupedItem(0, 1, supporting = { Text(vm.folderName.ifEmpty { "—" }) },
                     trailing = { FolderPicker(vm) { launch -> FilledTonalButton(onClick = launch, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Change") } } }) { Text("Vault folder") }
             }
-            item { GroupedItem(1, 2, supporting = { Text("Native · Kotlin + Compose") }) { Text("Form ${BuildConfig.VERSION_NAME}") } }
+            item { SectionTitle("About") }
+            item { AboutItems() }
         }
     }
 }
@@ -320,4 +323,47 @@ private fun ValueItem(index: Int, count: Int, title: String, display: String, va
     GroupedItem(index, count, onClick = { editing = true },
         trailing = { Text(display, style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) }) { Text(title) }
     if (editing) NumberDialog(title, value, range, { editing = false }, onSet)
+}
+
+/** Last update check this process, so reopening Settings doesn't hit GitHub again. */
+private object UpdateState { var result by mutableStateOf<com.thehhr.form.data.Updates.Release?>(null); var checked by mutableStateOf(false) }
+
+/** Version with an update check (GitHub releases), plus GitHub and Donate links. */
+@Composable
+private fun AboutItems() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var checking by remember { mutableStateOf(false) }
+    fun open(url: String) = runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+    fun check() {
+        checking = true
+        scope.launch {
+            UpdateState.result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.thehhr.form.data.Updates.latest() }
+            UpdateState.checked = true; checking = false
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { if (!UpdateState.checked) check() }
+    val latest = UpdateState.result
+    val newer = latest != null && com.thehhr.form.data.Updates.isNewer(latest.version, BuildConfig.VERSION_NAME)
+    Column {
+        GroupedItem(0, 3,
+            supporting = {
+                Text(when {
+                    checking -> "Checking for updates…"
+                    newer -> "Version ${latest!!.version} is available"
+                    UpdateState.checked && latest == null -> "Couldn't check for updates (offline?)"
+                    UpdateState.checked -> "You're up to date"
+                    else -> "Native · Kotlin + Compose"
+                }, color = if (newer) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Unspecified)
+            },
+            trailing = {
+                if (newer) androidx.compose.material3.Button(onClick = { open(latest!!.apkUrl ?: latest.pageUrl) }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Download") }
+                else TextButton(onClick = ::check, enabled = !checking) { Text("Check") }
+            },
+        ) { Text("Form ${BuildConfig.VERSION_NAME}") }
+        GroupedItem(1, 3, onClick = { open(com.thehhr.form.data.Updates.REPO) },
+            leading = { Icon(Icons.Rounded.Code, null) }, supporting = { Text("Source code, releases and issues") }) { Text("GitHub") }
+        GroupedItem(2, 3, onClick = { open(com.thehhr.form.data.Updates.DONATE) },
+            leading = { Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.primary) }, supporting = { Text("Support development") }) { Text("Donate") }
+    }
 }
