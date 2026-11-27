@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MealType
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -32,6 +33,11 @@ object HealthSync {
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
         HealthPermission.getWritePermission(NutritionRecord::class),
         HealthPermission.getReadPermission(WeightRecord::class),
+    )
+    /** Read-only, for filling the profile (onboarding / Settings import). */
+    val profilePermissions = setOf(
+        HealthPermission.getReadPermission(WeightRecord::class),
+        HealthPermission.getReadPermission(HeightRecord::class),
     )
 
     fun available(ctx: Context) = HealthConnectClient.getSdkStatus(ctx) == HealthConnectClient.SDK_AVAILABLE
@@ -92,5 +98,40 @@ object HealthSync {
             client(ctx).readRecords(ReadRecordsRequest(WeightRecord::class, TimeRangeFilter.before(Instant.now()), ascendingOrder = false, pageSize = 1))
                 .records.firstOrNull()?.weight?.inKilograms
         }.getOrNull()
+    }
+
+    /** Latest height in metres, or null. */
+    suspend fun latestHeightM(ctx: Context): Double? = withContext(Dispatchers.IO) {
+        runCatching {
+            client(ctx).readRecords(ReadRecordsRequest(HeightRecord::class, TimeRangeFilter.before(Instant.now()), ascendingOrder = false, pageSize = 1))
+                .records.firstOrNull()?.height?.inMeters
+        }.getOrNull()
+    }
+
+    /**
+     * Fills current weight and height from Health Connect, only where permission was granted and a value exists.
+     * Overwrites the two profile fields in place (no new records), in the profile's display units. Returns what was set.
+     */
+    suspend fun importProfile(store: FormStore): String {
+        val ctx = store.app
+        if (!available(ctx)) return "Health Connect isn't available"
+        val granted = granted(ctx)
+        val kg = if (HealthPermission.getReadPermission(WeightRecord::class) in granted) latestWeightKg(ctx)?.takeIf { it in 20.0..400.0 } else null
+        val m = if (HealthPermission.getReadPermission(HeightRecord::class) in granted) latestHeightM(ctx)?.takeIf { it in 0.9..2.6 } else null
+        if (kg == null && m == null) return if (granted.none { it in profilePermissions }) "Health Connect access not granted" else "No weight or height found in Health Connect"
+        val units = store.data.prefs.units
+        var p = store.data.profile
+        val parts = mutableListOf<String>()
+        if (kg != null) {
+            val w = Math.round((if (units.weight == "lb") kg * com.thehhr.form.data.Fuel.LB_PER_KG else kg) * 10) / 10.0
+            p = p.copy(currentWeight = w); parts += "weight ${com.thehhr.form.ui.num(w)} ${units.weight}"
+        }
+        if (m != null) {
+            // heightCm holds inches when the height unit is ft/in (the web app stores display units).
+            val h = if (units.height == "ftin") Math.round(m * 100 / 2.54 * 10) / 10.0 else Math.round(m * 1000) / 10.0
+            p = p.copy(heightCm = h); parts += if (units.height == "ftin") "height ${(h / 12).toInt()}′${Math.round(h % 12)}″" else "height ${com.thehhr.form.ui.num(h)} cm"
+        }
+        store.setProfile(p)
+        return "Imported " + parts.joinToString(" and ") + " from Health Connect"
     }
 }

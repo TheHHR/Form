@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark launch window (the app is dark-only); avoids the platform's default teal/white flash before Compose draws. -->
-    <style name="Theme.Form" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#FF0A0B0D</item>
-        <item name="android:colorBackground">#FF0A0B0D</item>
-        <item name="android:colorAccent">#FF26272C</item>
+    <!-- Light launch window (system light mode); values-night has the dark one. -->
+    <style name="Theme.Form" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFFAFAF7</item>
+        <item name="android:colorBackground">#FFFAFAF7</item>
+        <item name="android:colorAccent">#FFE3E3DE</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowSplashScreenBackground">#FF0A0B0D</item>
+        <item name="android:windowSplashScreenBackground">#FFFAFAF7</item>
     </style>
 </resources>

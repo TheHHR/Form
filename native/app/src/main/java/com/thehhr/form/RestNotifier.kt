@@ -100,7 +100,7 @@ object RestNotifier {
                 val ex = rest.exerciseId?.let { exTitle(store.exercise(it)) } ?: "Set"
                 b.setContentText("Set ${(rest.setIndex ?: 0) + 1} · $ex").setShortCriticalText("Set")
                     .setWhen(rest.endsAt).setUsesChronometer(true).setChronometerCountDown(true)
-                    .addAction(0, "Complete set", broadcast(ctx, ACTION_SET_DONE, 5))
+                    .addAction(0, "Finish set", broadcast(ctx, ACTION_SET_DONE, 5))
             }
             rest != null -> {
                 b.setContentText((if (rest.warmup) "Warm-up" else "Rest") + (current?.let { " · next: $it${setInfo?.let { s -> " ($s)" } ?: ""}" } ?: ""))
@@ -113,8 +113,8 @@ object RestNotifier {
                 b.setContentText(current?.let { "$it · ${setInfo.orEmpty()}" } ?: "All done · tap to finish").setShortCriticalText(setInfo?.removePrefix("Set ") ?: "Done")
                     .setWhen(now - w.elapsedMs(now)).setUsesChronometer(true)
                 if (after != null) b.setSubText("Next: $after")
-                if (next != null) b.addAction(0, "Complete set", broadcast(ctx, ACTION_LOG, 4))
-                    .addAction(0, "Skip exercise", broadcast(ctx, ACTION_SKIP_EXERCISE, 7))
+                if (next != null) b.addAction(0, "Log set", broadcast(ctx, ACTION_LOG, 4))
+                    .addAction(0, "Skip", broadcast(ctx, ACTION_SKIP_EXERCISE, 7))
             }
         }
         return b.build()

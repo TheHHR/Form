@@ -25,8 +25,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Media.hasVideos = assets.list("videos")?.isNotEmpty() == true
-        // The app is dark-only: light status/nav bar icons regardless of the system theme.
-        enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
+
+        enableEdgeToEdge() // FormApp re-applies the bar style when the in-app theme differs from the system one
         RestNotifier.channels(this)
         publishShortcuts()
         // Rest alerts and reminders need this on Android 13+; ask once.

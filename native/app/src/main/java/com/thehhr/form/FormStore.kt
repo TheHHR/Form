@@ -71,6 +71,12 @@ class FormStore private constructor(val app: Application) {
     var message by mutableStateOf<String?>(null)
     /** Where an outside entry point (notification, shortcut, tile, widget) wants the UI to go: a tab name, or "library". */
     var pendingDestination by mutableStateOf<String?>(null)
+    var themeMode by mutableStateOf(device.themeMode); private set
+    var dynamicColor by mutableStateOf(device.dynamicColor); private set
+    fun updateTheme(mode: String = themeMode, dynamic: Boolean = dynamicColor) {
+        themeMode = mode; dynamicColor = dynamic; device.themeMode = mode; device.dynamicColor = dynamic
+        FormWidget.updateAll(app)
+    }
     val folderName: String get() = vault.folderName()
 
     /** Completes once the first load attempt ends (check [status] for the result). */
@@ -117,6 +123,14 @@ class FormStore private constructor(val app: Application) {
     private fun syncOutside() {
         RestNotifier.sync(app, this)
         FormWidget.updateAll(app)
+        // One reminder switch everywhere: config.md's workout-reminder (shared with the web app) drives it; the device
+        // copy only lets the boot receiver re-arm without loading the vault.
+        if (status == Status.Ready && device.reminderEnabled != data.prefs.workoutReminder) {
+            device.reminderEnabled = data.prefs.workoutReminder
+            Reminders.schedule(app, device)
+        }
+        if (workout != null) Reminders.cancel(app)
+        WorkoutTile.refresh(app)
     }
 
     fun exercise(id: String): Exercise? = catalog.byId(id)
@@ -148,6 +162,7 @@ class FormStore private constructor(val app: Application) {
                 if (missing.isNotEmpty()) message = "Missing: ${missing.joinToString { it.fileName }}. Check your vault folder."
             }
             status = Status.Ready
+            if (device.healthImportPending) { device.healthImportPending = false; scope.launch { message = HealthSync.importProfile(this@FormStore) } }
             device.lastAccent = data.prefs.accent
             putWorkout(workout?.takeIf { w -> data.routines.any { it.id == w.routineId } && recent(w) })
             completeExpiredSetTimer()

@@ -51,6 +51,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
@@ -75,17 +77,34 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
         LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 32.dp)) {
             item { SectionTitle("Appearance") }
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ChoiceGroup(listOf("system" to "System", "light" to "Light", "dark" to "Dark"), vm.themeMode, { vm.updateTheme(mode = it) },
+                    Modifier.padding(bottom = 12.dp))
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 31) item {
+                Box(Modifier.padding(bottom = 12.dp)) {
+                    SwitchItem(0, 1, "Wallpaper colors", "Use your phone's Material You palette instead of the accent", vm.dynamicColor) { vm.updateTheme(dynamic = it) }
+                }
+            }
+            item {
+                // Selection grows and morphs to a cookie with the expressive spring; dimmed while wallpaper colors win.
+                Row(Modifier.fillMaxWidth().alpha(if (vm.dynamicColor) 0.4f else 1f), horizontalArrangement = Arrangement.SpaceBetween) {
                     Accents.forEach { (name, colors) ->
                         val selected = prefs.accent == name
+                        val scale by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0.82f,
+                            MaterialTheme.motionScheme.fastSpatialSpec(), label = "accent")
                         Box(
-                            Modifier.size(38.dp)
+                            Modifier.size(44.dp).graphicsLayer { scaleX = scale; scaleY = scale }
                                 .clip((if (selected) MaterialShapes.Cookie9Sided else MaterialShapes.Circle).toShape())
                                 .background(colors.first)
-                                .clickable { vm.setPrefs(prefs.copy(accent = name)) }
+                                .clickable(enabled = !vm.dynamicColor) { vm.setPrefs(prefs.copy(accent = name)) }
                                 .semantics { role = Role.RadioButton; contentDescription = "Accent $name" + if (selected) ", selected" else "" },
                             contentAlignment = Alignment.Center,
-                        ) { if (selected) Icon(Icons.Rounded.Check, null, Modifier.size(20.dp), tint = colors.second) }
+                        ) {
+                            androidx.compose.animation.AnimatedVisibility(selected, enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()) {
+                                Icon(Icons.Rounded.Check, null, Modifier.size(20.dp), tint = colors.second)
+                            }
+                        }
                     }
                 }
             }
@@ -230,12 +249,12 @@ private fun TargetItem(vm: FormStore, index: Int, count: Int, key: String, name:
 @Composable
 private fun ReminderSettings(vm: FormStore) {
     val ctx = LocalContext.current
-    var enabled by remember { mutableStateOf(vm.device.reminderEnabled) }
+    var enabled by remember { mutableStateOf(vm.data.prefs.workoutReminder) }
     var minutes by remember { mutableIntStateOf(vm.device.reminderMinutes) }
     var picking by remember { mutableStateOf(false) }
     fun apply() = Reminders.schedule(ctx, vm.device)
     SwitchItem(0, 2, "Workout reminder", "On days with scheduled routine", enabled) {
-        enabled = it; vm.device.reminderEnabled = it; apply()
+        enabled = it; vm.setPrefs(vm.data.prefs.copy(workoutReminder = it)) // syncs the device copy and re-arms
     }
     GroupedItem(1, 2, onClick = { picking = true },
         trailing = { Text("%02d:%02d".format(minutes / 60, minutes % 60), style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) }) {
@@ -276,17 +295,16 @@ private fun HealthSettings(vm: FormStore) {
             else request.launch(HealthSync.permissions)
         }
     }
+    val askProfile = rememberLauncherForActivityResult(HealthSync.permissionContract()) { granted ->
+        if (granted.any { it in HealthSync.profilePermissions }) scope.launch { vm.message = HealthSync.importProfile(vm) }
+        else vm.message = "Health Connect access not granted"
+    }
     GroupedItem(1, 2, onClick = {
         scope.launch {
-            val kg = HealthSync.latestWeightKg(ctx)
-            if (kg == null) { vm.message = "No weight found in Health Connect"; return@launch }
-            // Profile weights are stored in the display unit.
-            val value = if (vm.data.prefs.units.weight == "lb") kg * com.thehhr.form.data.Fuel.LB_PER_KG else kg
-            val rounded = Math.round(value * 10) / 10.0
-            vm.setProfile(vm.data.profile.copy(currentWeight = rounded))
-            vm.message = "Weight set to ${num(rounded)} ${vm.data.prefs.units.weight}"
+            if (HealthSync.granted(ctx).any { it in HealthSync.profilePermissions }) vm.message = HealthSync.importProfile(vm)
+            else askProfile.launch(HealthSync.profilePermissions)
         }
-    }, supporting = { Text("Use your latest weight as current weight") }) { Text("Import weight") }
+    }, supporting = { Text("Fill current weight and height from your latest records") }) { Text("Import weight and height") }
 }
 
 @Composable

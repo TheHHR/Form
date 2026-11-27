@@ -372,7 +372,7 @@ private fun clockOf(w: ActiveWorkout, now: Long): Clock {
         return Clock(label, fmtTime(left + 999), true, (left / (rest.total * 1000f)).coerceIn(0f, 1f), if (rest.type == "set") "set" else "rest")
     }
     // Up-counting set clock: from the end of a finished rest, or from when rest was skipped; a forgotten one stops showing.
-    val from = (if (rest != null && rest.type != "set") rest.endsAt else w.setClockFrom)?.takeIf { now - it < 15 * 60_000 }
+    val from = (if (rest != null && rest.type != "set") rest.endsAt else w.setClockFrom)?.takeIf { now - it < 15 * 60_000 && !w.paused }
     if (from != null) return Clock("Set", fmtTime(now - from), false, null, "up")
     return Clock(if (w.paused) "Paused" else "Workout", fmtTime(w.elapsedMs(now)), false, null, "session")
 }
@@ -430,11 +430,11 @@ private fun FullscreenTimer(vm: FormStore, w: ActiveWorkout, now: Long, targetId
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
                     val p = clock.progress
-                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = with(androidx.compose.ui.platform.LocalDensity.current) { 14.dp.toPx() },
+                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = with(androidx.compose.ui.platform.LocalDensity.current) { 10.dp.toPx() },
                         cap = androidx.compose.ui.graphics.StrokeCap.Round)
                     if (p != null) CircularWavyProgressIndicator(progress = { p }, Modifier.fillMaxSize(), stroke = stroke, trackStroke = stroke,
-                        wavelength = 36.dp, amplitude = { 1f })
-                    else androidx.compose.material3.CircularProgressIndicator(progress = { 1f }, Modifier.fillMaxSize(), strokeWidth = 14.dp,
+                        wavelength = 48.dp, amplitude = { 0.6f })
+                    else androidx.compose.material3.CircularProgressIndicator(progress = { 1f }, Modifier.fillMaxSize(), strokeWidth = 10.dp,
                         color = MaterialTheme.colorScheme.surfaceContainerHighest, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(clock.label, style = MaterialTheme.typography.titleLargeEmphasized, color = MaterialTheme.colorScheme.primary)
@@ -453,9 +453,9 @@ private fun FullscreenTimer(vm: FormStore, w: ActiveWorkout, now: Long, targetId
                 }
                 Spacer(Modifier.weight(1f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val big = Modifier.weight(1f).height(ButtonDefaults.LargeContainerHeight)
-                    val bigPad = ButtonDefaults.contentPaddingFor(ButtonDefaults.LargeContainerHeight)
-                    val bigText = ButtonDefaults.textStyleFor(ButtonDefaults.LargeContainerHeight)
+                    val big = Modifier.weight(1f).height(ButtonDefaults.MediumContainerHeight)
+                    val bigPad = PaddingValues(horizontal = 16.dp)
+                    val bigText = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight)
                     when (clock.kind) {
                         "rest" -> {
                             FilledTonalButton(onClick = { com.thehhr.form.Haptics.tick(view); vm.extendRest(30) }, shapes = ButtonDefaults.shapes(), modifier = big,

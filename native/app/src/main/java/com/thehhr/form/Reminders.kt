@@ -51,6 +51,8 @@ object Reminders {
         alarm.setWindow(AlarmManager.RTC_WAKEUP, millis, 10 * 60_000L, pi(ctx))
     }
 
+    fun cancel(ctx: Context) { ctx.getSystemService(NotificationManager::class.java).cancel(20) }
+
     fun notify(ctx: Context, routine: Routine) {
         channel(ctx)
         val n = Notification.Builder(ctx, CH)

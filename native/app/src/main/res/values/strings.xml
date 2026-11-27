@@ -2,4 +2,5 @@
 <resources>
     <string name="widget_description">Today\'s workout and calories</string>
     <string name="tile_water">Log water</string>
+    <string name="tile_workout">Workout</string>
 </resources>

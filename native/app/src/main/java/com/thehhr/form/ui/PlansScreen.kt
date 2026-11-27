@@ -315,13 +315,14 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
                                 Icon(Icons.Rounded.KeyboardArrowDown, "Move down")
                             }
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Stepper("sets", item.sets.toDouble(), 1.0, 1.0..20.0, { v -> editItem(i) { it.copy(sets = v.toInt()) } })
+                        // Two steppers share the row edge to edge (no dead space after them).
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Stepper("sets", item.sets.toDouble(), 1.0, 1.0..20.0, { v -> editItem(i) { it.copy(sets = v.toInt()) } }, Modifier.weight(1f))
                             if (item.timed) {
                                 val sec = item.unitOrDefault == "sec"
-                                Stepper(if (sec) "sec" else "min", item.reps.toDouble(), if (sec) 5.0 else 1.0, 0.0..60.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } })
+                                Stepper(if (sec) "sec" else "min", item.reps.toDouble(), if (sec) 5.0 else 1.0, 0.0..60.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } }, Modifier.weight(1f))
                             } else {
-                                Stepper("reps", item.reps.toDouble(), 1.0, 0.0..100.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } })
+                                Stepper("reps", item.reps.toDouble(), 1.0, 0.0..100.0, { v -> editItem(i) { it.copy(reps = v.toInt()) } }, Modifier.weight(1f))
                             }
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

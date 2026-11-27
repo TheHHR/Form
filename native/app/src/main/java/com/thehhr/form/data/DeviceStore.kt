@@ -31,6 +31,21 @@ class DeviceStore(context: Context) {
     var aiTab: String
         get() = prefs.getString("ai_tab", null)?.takeIf { it in listOf("coach", "routine", "meal") } ?: "coach"
         set(v) = prefs.edit().putString("ai_tab", v).apply()
+    /** "system", "light" or "dark" (device-only: config.md stays byte-compatible with the web app). */
+    var themeMode: String
+        get() = prefs.getString("theme_mode", null)?.takeIf { it in listOf("system", "light", "dark") } ?: "system"
+        set(v) = prefs.edit().putString("theme_mode", v).apply()
+    var dynamicColor: Boolean
+        get() = prefs.getBoolean("dynamic_color", false)
+        set(v) = prefs.edit().putBoolean("dynamic_color", v).apply()
+    /** First-run welcome finished (or skipped). */
+    var onboarded: Boolean
+        get() = prefs.getBoolean("onboarded", false)
+        set(v) = prefs.edit().putBoolean("onboarded", v).apply()
+    /** Import profile details from Health Connect once the vault is open (set during onboarding). */
+    var healthImportPending: Boolean
+        get() = prefs.getBoolean("health_import_pending", false)
+        set(v) = prefs.edit().putBoolean("health_import_pending", v).apply()
     var notificationsAsked: Boolean
         get() = prefs.getBoolean("notifications_asked", false)
         set(v) = prefs.edit().putBoolean("notifications_asked", v).apply()

@@ -304,11 +304,12 @@ private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, t
             }
         }
         // Scale: top value, half, zero.
-        Column(Modifier.padding(start = 6.dp).height(chart + 16.dp + 4.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Spacer(Modifier.height(8.dp))
-            Text("$max", style = MaterialTheme.typography.labelMediumEmphasized)
-            Text("${max / 2}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("0", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Each label is centred on its line: the top on the dashed guide (16 dp down), 0 on the baseline.
+        Column(Modifier.padding(start = 6.dp, top = 8.dp).height(chart + 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text("$max", Modifier.height(16.dp), style = MaterialTheme.typography.labelMediumEmphasized)
+            if (max >= 4) Text("${max / 2}", Modifier.height(16.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("0", Modifier.height(16.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         }
     }
 }

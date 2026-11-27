@@ -179,7 +179,7 @@ fun Stepper(
     var typing by remember { mutableStateOf(false) }
     Row(
         modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = { onChange((value - step).coerceIn(range)) }, enabled = value > range.start, shapes = IconButtonDefaults.shapes()) {
             Icon(Icons.Rounded.Remove, "Decrease $label")

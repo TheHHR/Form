@@ -3,6 +3,7 @@
 package com.thehhr.form.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -99,13 +100,28 @@ class Nav {
 
 @Composable
 fun FormApp(vm: FormStore) {
+    val dark = when (vm.themeMode) { "light" -> false; "dark" -> true; else -> androidx.compose.foundation.isSystemInDarkTheme() }
+    // Status/nav bar icons follow the in-app theme, which may differ from the system one.
+    val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
+    LaunchedEffect(dark) {
+        val t = android.graphics.Color.TRANSPARENT
+        activity?.enableEdgeToEdge(
+            if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+            if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+        )
+    }
     // Until the vault loads, use the accent remembered on this device (not the lime default).
-    FormTheme(accent = if (vm.status == Status.Ready) vm.data.prefs.accent else vm.device.lastAccent) {
-        when (val s = vm.status) {
-            Status.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
-            Status.NeedsFolder -> WelcomeScreen(vm)
-            is Status.Error -> WelcomeScreen(vm, error = s.message)
-            Status.Ready -> MainScreen(vm)
+    FormTheme(accent = if (vm.status == Status.Ready) vm.data.prefs.accent else vm.device.lastAccent, dark = dark, dynamic = vm.dynamicColor) {
+        // Surface so the background colour animates with the theme too.
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Crossfade(vm.status::class, animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "status") { _ ->
+                when (val s = vm.status) {
+                    Status.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
+                    Status.NeedsFolder -> OnboardingScreen(vm)
+                    is Status.Error -> OnboardingScreen(vm, error = s.message)
+                    Status.Ready -> MainScreen(vm)
+                }
+            }
         }
     }
 }
@@ -114,39 +130,6 @@ fun FormApp(vm: FormStore) {
 fun FolderPicker(vm: FormStore, content: @Composable (launch: () -> Unit) -> Unit) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(vm::onFolderPicked) }
     content { launcher.launch(null) }
-}
-
-@Composable
-private fun WelcomeScreen(vm: FormStore, error: String? = null) {
-    Scaffold { pad ->
-        Column(
-            Modifier.fillMaxSize().padding(pad).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                Modifier.size(132.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Folder, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary) }
-            Text("Choose your Form folder", style = MaterialTheme.typography.headlineMediumEmphasized, textAlign = TextAlign.Center)
-            Text(
-                "Form keeps everything in 5 plain .md files in a folder you pick: routines, meals, training logs, " +
-                    "nutrition diary and settings. Pick your existing folder to keep your data, or an empty one to start fresh.",
-                textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "Beta: point this at a COPY of your folder until the native app is proven.",
-                textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
-            )
-            if (error != null) Text(error, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
-            FolderPicker(vm) { launch ->
-                Button(onClick = launch, shapes = ButtonDefaults.shapes(), modifier = Modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight)) {
-                    Text("Pick folder", style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
-                }
-            }
-        }
-    }
 }
 
 @Composable

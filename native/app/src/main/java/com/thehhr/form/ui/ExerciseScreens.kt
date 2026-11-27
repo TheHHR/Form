@@ -151,7 +151,7 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
                     trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, "Clear search") } }) else null,
-                    placeholder = { Text("Name, muscle, equipment, tag or #id") },
+                    placeholder = { Text("Search name, muscle or tag", maxLines = 1) },
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = TextFieldDefaults.colors(focusedIndicatorColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                         unfocusedIndicatorColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f)),

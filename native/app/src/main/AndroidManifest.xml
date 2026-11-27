@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_HEIGHT" />
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
@@ -98,6 +99,19 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Workout tile: active while training; updates only when the app asks (ACTIVE_TILE), no polling. -->
+        <service
+            android:name=".WorkoutTile"
+            android:exported="true"
+            android:icon="@drawable/ic_start"
+            android:label="@string/tile_workout"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true" />
+        </service>
 
         <!-- Google code scanner downloads its UI module on demand. -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
