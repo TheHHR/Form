@@ -83,6 +83,13 @@ class FormGlance : GlanceAppWidget() {
         }
     }
 
+    /** Picker preview (Android 15+): sample numbers, real layout. */
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        val sample = WidgetData("lime", false, "Push day", "6 exercises", true, 1240.0, 2100.0, 96.0, 140.0, 3, 54,
+            listOf("a" to "Push day", "b" to "Pull day", "c" to "Legs"))
+        provideContent { GlanceTheme { WidgetContent(context, sample) } }
+    }
+
     private fun FormStore.snapshot(): WidgetData {
         val d = data
         val day = d.history[today()] ?: DayLog()

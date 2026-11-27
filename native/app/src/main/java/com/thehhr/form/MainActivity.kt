@@ -29,6 +29,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge() // FormApp re-applies the bar style when the in-app theme differs from the system one
         RestNotifier.channels(this)
         publishShortcuts()
+        // Generated widget-picker preview on Android 15+ (rate-limited by the system, so once per launch is fine).
+        if (Build.VERSION.SDK_INT >= 35) store.launch { runCatching { androidx.glance.appwidget.GlanceAppWidgetManager(this@MainActivity).setWidgetPreviews(FormWidget::class) } }
         // Rest alerts and reminders need this on Android 13+; ask once.
         if (Build.VERSION.SDK_INT >= 33 && !store.device.notificationsAsked) {
             store.device.notificationsAsked = true

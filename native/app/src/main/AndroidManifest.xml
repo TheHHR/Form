@@ -74,7 +74,7 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".FormWidget" android:exported="true" android:label="Form · Today">
+        <receiver android:name=".FormWidget" android:exported="true" android:label="Today">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
