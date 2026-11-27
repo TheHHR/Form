@@ -238,10 +238,12 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         dates.take(shownDays).forEach { date ->
             item(key = "d-$date") {
                 Text(displayDate(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp))
+                    modifier = Modifier.animateItem().padding(start = 4.dp, top = 16.dp, bottom = 8.dp))
             }
             val dayLogs = byDate[date].orEmpty().sortedBy(ProgressLog::createdAt)
-            itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, dayLogs.size) { nav.push(Route.Detail(log.exerciseId)) } }
+            itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log ->
+                Box(Modifier.animateItem()) { LogRow(vm, log, i, dayLogs.size) { nav.push(Route.Detail(log.exerciseId)) } }
+            }
         }
         if (dates.size > shownDays) item { TextButton(onClick = { shownDays += 14 }, modifier = Modifier.fillMaxWidth()) { Text("Show more") } }
     }

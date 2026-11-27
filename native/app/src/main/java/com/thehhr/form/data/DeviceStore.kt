@@ -25,7 +25,7 @@ class DeviceStore(context: Context) {
         set(v) = prefs.edit().putString("ai_config", v.toJson()).apply()
     /** Accent from config.md, remembered so the loading screen isn't the default lime. */
     var lastAccent: String
-        get() = prefs.getString("last_accent", null) ?: "lime"
+        get() = prefs.getString("last_accent", null) ?: "blue"
         set(v) = prefs.edit().putString("last_accent", v).apply()
     /** Last AI pane: coach, routine or meal. */
     var aiTab: String

@@ -119,7 +119,9 @@ private fun RoutineList(vm: FormStore, nav: Nav) {
                     onClick = { if (selecting) picked = if (on) picked - r.id else picked + r.id else nav.push(Route.RoutineEdit(r.id)) },
                     leading = { if (selecting) androidx.compose.material3.Checkbox(on, null) else RoutineBadge(r, i) },
                     supporting = {
-                        Text(r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
+                        val mins = com.thehhr.form.data.WorkoutLogic.minMinutes(r, vm.data.prefs)
+                        Text((if (mins > 0) "Over $mins min${if (mins == 1) "" else "s"} · " else "") +
+                            r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     },
                     trailing = { if (!selecting) LikeButton(r.liked) { vm.saveRoutine(r.copy(liked = !r.liked)) } },
@@ -371,7 +373,7 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
         icon = { Icon(Icons.Rounded.Delete, null) },
         title = { Text("Delete ${routine.name}?") },
         text = { Text("Logs from past workouts are kept.") },
-        confirmButton = { TextButton(onClick = { deleting = false; nav.pop(); vm.deleteRoutine(id) }) { Text("Delete") } },
+        confirmButton = { TextButton(onClick = { deleting = false; nav.pop(); vm.deleteRoutine(id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
     )
 }

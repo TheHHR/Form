@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,9 +20,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,7 +96,8 @@ fun SettingsScreen(vm: FormStore, nav: Nav) {
                         val scale by androidx.compose.animation.core.animateFloatAsState(if (selected) 1f else 0.82f,
                             MaterialTheme.motionScheme.fastSpatialSpec(), label = "accent")
                         Box(
-                            Modifier.size(44.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                            // Shrinks to fit: eight 44 dp swatches overflow a phone-width row.
+                            Modifier.weight(1f, fill = false).widthIn(max = 44.dp).aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }
                                 .clip((if (selected) MaterialShapes.Cookie9Sided else MaterialShapes.Circle).toShape())
                                 .background(colors.first)
                                 .clickable(enabled = !vm.dynamicColor) { vm.setPrefs(prefs.copy(accent = name)) }
@@ -358,12 +360,14 @@ private fun AboutItems() {
             },
             trailing = {
                 if (newer) androidx.compose.material3.Button(onClick = { open(latest!!.apkUrl ?: latest.pageUrl) }, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Download") }
-                else TextButton(onClick = ::check, enabled = !checking) { Text("Check") }
+                else FilledTonalButton(onClick = ::check, enabled = !checking, shapes = androidx.compose.material3.ButtonDefaults.shapes()) { Text("Check") }
             },
         ) { Text("Form ${BuildConfig.VERSION_NAME}") }
+        // Links read like the other rows; the trailing arrow says "opens in the browser".
+        val external = @androidx.compose.runtime.Composable { Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Opens in browser", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
         GroupedItem(1, 3, onClick = { open(com.thehhr.form.data.Updates.REPO) },
-            leading = { Icon(Icons.Rounded.Code, null) }, supporting = { Text("Source code, releases and issues") }) { Text("GitHub") }
+            supporting = { Text("Source code, releases and issues") }, trailing = external) { Text("GitHub") }
         GroupedItem(2, 3, onClick = { open(com.thehhr.form.data.Updates.DONATE) },
-            leading = { Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.primary) }, supporting = { Text("Support development") }) { Text("Donate") }
+            supporting = { Text("Support development") }, trailing = external) { Text("Donate") }
     }
 }

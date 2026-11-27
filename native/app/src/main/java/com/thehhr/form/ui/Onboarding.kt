@@ -214,10 +214,12 @@ private fun FolderStep(vm: FormStore, error: String?) = StepPage({
     Text("Choose your Form folder", style = MaterialTheme.typography.headlineMediumEmphasized, textAlign = TextAlign.Center)
     Text(
         "Form keeps everything in 5 plain .md files in a folder you pick: routines, meals, training logs, " +
-            "nutrition diary and settings. Pick your existing folder to keep your data, or an empty one to start fresh.",
+            "nutrition diary and settings. Pick your existing folder to keep your data, or an empty one to start fresh. " +
+            "Skip it and Form makes a Form folder in Documents.",
         textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (error != null) Text(error, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
 }) {
     FolderPicker(vm) { launch -> BigButton("Pick folder", launch) }
+    TextButton(onClick = vm::useLocalFolder, modifier = Modifier.fillMaxWidth()) { Text("Skip, use Documents/Form") }
 }

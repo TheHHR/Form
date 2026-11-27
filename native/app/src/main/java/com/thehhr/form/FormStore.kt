@@ -139,6 +139,16 @@ class FormStore private constructor(val app: Application) {
 
     // ------------------------------------------------------------------ vault I/O
 
+    /** Onboarding "skip": keep the vault in Documents/Form without picking a folder. */
+    fun useLocalFolder() {
+        scope.launch {
+            flushNow()
+            vault.useLocal()
+            onDisk.clear(); backedUp.clear()
+            load()
+        }
+    }
+
     fun onFolderPicked(uri: Uri) {
         scope.launch {
             flushNow()

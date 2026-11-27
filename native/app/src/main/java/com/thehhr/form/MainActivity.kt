@@ -61,10 +61,10 @@ class MainActivity : ComponentActivity() {
         // Dynamic, not static XML: static shortcuts hard-code the package, and prod/beta ids differ.
         runCatching {
             getSystemService(ShortcutManager::class.java).dynamicShortcuts = listOf(
-                shortcut("start", "Start workout", "Start today's workout", R.drawable.ic_start, ACTION_START_TODAY, 0),
-                shortcut("food", "Log food", "Log a meal", R.drawable.ic_food, ACTION_LOG_FOOD, 1),
-                shortcut("routines", "Routines", "Open routines", R.drawable.ic_routines, ACTION_OPEN_ROUTINES, 2),
-                shortcut("progress", "Progress", "View progress", R.drawable.ic_progress, ACTION_OPEN_PROGRESS, 3),
+                shortcut("start", "Start workout", "Start today's workout", R.drawable.sc_start, ACTION_START_TODAY, 0),
+                shortcut("food", "Log food", "Log a meal", R.drawable.sc_food, ACTION_LOG_FOOD, 1),
+                shortcut("routines", "Routines", "Open routines", R.drawable.sc_routines, ACTION_OPEN_ROUTINES, 2),
+                shortcut("progress", "Progress", "View progress", R.drawable.sc_progress, ACTION_OPEN_PROGRESS, 3),
                 shortcut("water", "Log water", "Log 250 ml water", R.drawable.ic_water, ACTION_LOG_WATER, 4),
             )
         }

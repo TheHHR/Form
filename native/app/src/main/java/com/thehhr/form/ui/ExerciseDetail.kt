@@ -194,7 +194,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             }
             item { SectionTitle("History") }
             if (logs.isEmpty()) item { EmptyNote("No logs yet") }
-            itemsIndexed(logs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, logs.size, showName = false) { editingLog = log } }
+            itemsIndexed(logs, key = { _, l -> l.id }) { i, log -> Box(Modifier.animateItem()) { LogRow(vm, log, i, logs.size, showName = false) { editingLog = log } } }
         }
     }
     if (logging && e != null) LogProgressSheet(vm, e) { logging = false }
@@ -206,7 +206,7 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
         icon = { Icon(Icons.Rounded.Delete, null) },
         title = { Text("Delete ${exTitle(e)}?") },
         text = { Text("It's removed from your routines. Past logs are kept.") },
-        confirmButton = { TextButton(onClick = { deletingCustom = false; nav.pop(); vm.deleteCustomExercise(id) }) { Text("Delete") } },
+        confirmButton = { TextButton(onClick = { deletingCustom = false; nav.pop(); vm.deleteCustomExercise(id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { deletingCustom = false }) { Text("Cancel") } },
     )
 }
@@ -309,7 +309,10 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? =
             }
             for (i in 0 until count) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${i + 1}", Modifier.width(24.dp), style = MaterialTheme.typography.labelLargeEmphasized, textAlign = TextAlign.Center)
+                    // Same numbered badge as the How-to steps, so the set number reads as a label, not a stray digit.
+                    Box(Modifier.size(24.dp).clip(MaterialShapes.Circle.toShape()).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
+                        Text("${i + 1}", style = MaterialTheme.typography.labelMediumEmphasized, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
                     if (timed) {
                         StepperField(durations[i], if (sec) "seconds" else "minutes", if (sec) 5.0 else 1.0, 0.0..(if (sec) 36000.0 else 600.0),
                             { v -> durations = fromHere(durations, i, v) }, Modifier.weight(1f))

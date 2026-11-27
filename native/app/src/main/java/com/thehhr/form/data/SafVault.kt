@@ -1,9 +1,12 @@
 package com.thehhr.form.data
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import java.io.File
 import java.io.IOException
 
@@ -18,11 +21,20 @@ class SafVault(private val context: Context) {
 
     val treeUri: Uri? get() = prefs.getString("tree_uri", null)?.takeIf { it.isNotEmpty() }?.let(Uri::parse)
 
-    fun hasGrant(uri: Uri? = treeUri): Boolean = uri != null && resolver.persistedUriPermissions.any {
+    /**
+     * No folder picked: the vault lives in Documents/Form, written through MediaStore, which needs no storage permission
+     * for files the app created itself. shortcut: after a reinstall those files belong to the old install and can't be
+     * read back, so the user re-picks the folder (Settings > Vault folder > Change) to get them.
+     */
+    val local: Boolean get() = prefs.getBoolean("local", false)
+
+    fun useLocal() { prefs.edit().putBoolean("local", true).apply() }
+
+    fun hasGrant(uri: Uri? = treeUri): Boolean = (uri == treeUri && local) || uri != null && resolver.persistedUriPermissions.any {
         it.uri == uri && it.isReadPermission && it.isWritePermission
     }
 
-    fun folderName(uri: Uri? = treeUri): String = uri?.let {
+    fun folderName(uri: Uri? = treeUri): String = if (uri == treeUri && local) "Documents/Form" else uri?.let {
         query(rootDoc(it), DocumentsContract.Document.COLUMN_DISPLAY_NAME)
     } ?: ""
 
@@ -31,7 +43,7 @@ class SafVault(private val context: Context) {
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         resolver.takePersistableUriPermission(uri, flags)
         val old = treeUri
-        prefs.edit().putString("tree_uri", uri.toString()).apply()
+        prefs.edit().putString("tree_uri", uri.toString()).putBoolean("local", false).apply()
         if (old != null && old != uri) runCatching { resolver.releasePersistableUriPermission(old, flags) }
     }
 
@@ -58,8 +70,22 @@ class SafVault(private val context: Context) {
         return tree
     }
 
+    private val localFiles get() = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+    private val localDir = "Documents/Form/"
+
+    private fun findLocal(name: String): Uri? {
+        val cursor = resolver.query(localFiles, arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.RELATIVE_PATH}=? AND ${MediaStore.MediaColumns.DISPLAY_NAME}=?", arrayOf(localDir, name), null)
+            ?: throw IOException("Can't list vault folder")
+        return cursor.use { c -> if (c.moveToFirst()) ContentUris.withAppendedId(localFiles, c.getLong(0)) else null }
+    }
+
     /** File text, or null when the file doesn't exist. */
     fun read(name: String): String? {
+        if (local) {
+            val doc = findLocal(name) ?: return null
+            return (resolver.openInputStream(doc) ?: throw IOException("Can't open $name")).use { it.readBytes().toString(Charsets.UTF_8) }
+        }
         val tree = requireTree()
         val doc = findChild(tree, name) ?: return null
         val stream = resolver.openInputStream(doc) ?: throw IOException("Can't open $name")
@@ -67,10 +93,16 @@ class SafVault(private val context: Context) {
     }
 
     fun write(name: String, text: String) {
-        val tree = requireTree()
-        val doc = findChild(tree, name)
-            ?: DocumentsContract.createDocument(resolver, rootDoc(tree), "text/markdown", name)
-            ?: throw IOException("Can't create $name")
+        val doc = if (local) findLocal(name) ?: resolver.insert(localFiles, ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/markdown")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, localDir)
+        }) ?: throw IOException("Can't create $name") else {
+            val tree = requireTree()
+            findChild(tree, name)
+                ?: DocumentsContract.createDocument(resolver, rootDoc(tree), "text/markdown", name)
+                ?: throw IOException("Can't create $name")
+        }
         val out = resolver.openOutputStream(doc, "wt") ?: throw IOException("Can't write $name")
         out.use { it.write(text.toByteArray(Charsets.UTF_8)); it.flush() }
     }

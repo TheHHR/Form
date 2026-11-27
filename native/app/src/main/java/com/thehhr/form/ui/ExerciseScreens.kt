@@ -109,15 +109,26 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
     val d = vm.data
     val logged = remember(d.logs) { d.logs.map { it.exerciseId }.toSet() }
     val tags = vm.allTags
-    val list = remember(query, category, target, equipment, likedOnly, loggedOnly, tag, d.liked, logged, d.customExercises, d.exerciseTags) {
-        vm.catalog.all.filter { e ->
-            (category.isEmpty() || e.category == category) && (target.isEmpty() || e.target == target) &&
-                (equipment.isEmpty() || e.equipment == equipment) &&
-                (!likedOnly || e.id in d.liked) && (!loggedOnly || e.id in logged) &&
-                (tag.isEmpty() || d.exerciseTags[e.id].orEmpty().any { it.equals(tag, true) }) &&
-                matches(e, query, d.exerciseTags[e.id].orEmpty())
-        }.sortedBy { it.name.lowercase() }
+    // Each filter row is checked against all the *other* filters, so a pill that would empty the list can be dimmed.
+    fun passes(e: com.thehhr.form.data.Exercise, skip: String = "") =
+        (skip == "category" || category.isEmpty() || e.category == category) && (skip == "target" || target.isEmpty() || e.target == target) &&
+            (skip == "equipment" || equipment.isEmpty() || e.equipment == equipment) &&
+            (skip == "liked" || !likedOnly || e.id in d.liked) && (skip == "logged" || !loggedOnly || e.id in logged) &&
+            (skip == "tag" || tag.isEmpty() || d.exerciseTags[e.id].orEmpty().any { it.equals(tag, true) }) &&
+            matches(e, query, d.exerciseTags[e.id].orEmpty())
+    val filterKeys = arrayOf<Any>(query, category, target, equipment, likedOnly, loggedOnly, tag, d.liked, logged, d.customExercises, d.exerciseTags)
+    val list = remember(*filterKeys) { vm.catalog.all.filter { passes(it) }.sortedBy { it.name.lowercase() } }
+    val open = remember(*filterKeys) {
+        fun values(skip: String, f: (com.thehhr.form.data.Exercise) -> Iterable<String>) = vm.catalog.all.filter { passes(it, skip) }.flatMap(f).toSet()
+        mapOf(
+            "category" to values("category") { listOf(it.category) }, "target" to values("target") { listOf(it.target) },
+            "equipment" to values("equipment") { listOf(it.equipment) },
+            "tag" to values("tag") { d.exerciseTags[it.id].orEmpty().map(String::lowercase) },
+            "liked" to values("liked") { e -> listOfNotNull("y".takeIf { e.id in d.liked }) },
+            "logged" to values("logged") { e -> listOfNotNull("y".takeIf { e.id in logged }) },
+        )
     }
+    fun has(row: String, v: String) = v.lowercase() in open.getValue(row) || v in open.getValue(row)
     // Exercises already in the routine / session: shown greyed with a check, not added twice.
     val already: Set<String> = when (pick) {
         is Pick.ToRoutine -> d.routines.firstOrNull { it.id == pick.routineId }?.items?.map { it.exerciseId }?.toSet().orEmpty()
@@ -178,21 +189,37 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                 val muscles = remember { vm.catalog.builtIn.map { it.target }.distinct().sorted() }
                 Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PillRow {
-                        if (d.liked.isNotEmpty()) Pill(likedOnly, { likedOnly = !likedOnly }, { Text("Liked") },
-                            leadingIcon = { Icon(Icons.Rounded.Favorite, null, Modifier.size(18.dp)) })
-                        if (d.logs.isNotEmpty()) Pill(loggedOnly, { loggedOnly = !loggedOnly }, { Text("Logged") })
-                        selectedFirst(Exercise.CATEGORIES, category).forEach { c ->
-                            Pill(category == c, { category = if (category == c) "" else c }, { Text(jsTitle(c)) })
+                        val likedOk = likedOnly || has("liked", "y")
+                        val loggedOk = loggedOnly || has("logged", "y")
+                        val liked = @Composable {
+                            if (d.liked.isNotEmpty()) Pill(likedOnly, { likedOnly = !likedOnly }, { Text("Liked") },
+                                leadingIcon = { Icon(Icons.Rounded.Favorite, null, Modifier.size(18.dp)) }, enabled = likedOk)
+                        }
+                        val loggedPill = @Composable { if (d.logs.isNotEmpty()) Pill(loggedOnly, { loggedOnly = !loggedOnly }, { Text("Logged") }, enabled = loggedOk) }
+                        // Toggles lead the row while they still narrow the list; as dead ends they trail it like the other pills.
+                        if (likedOk) liked()
+                        if (loggedOk) loggedPill()
+                        selectedFirst(Exercise.CATEGORIES, category) { has("category", it) }.forEach { c ->
+                            Pill(category == c, { category = if (category == c) "" else c }, { Text(jsTitle(c)) }, enabled = category == c || has("category", c))
+                        }
+                        if (!likedOk) liked()
+                        if (!loggedOk) loggedPill()
+                    }
+                    PillRow {
+                        selectedFirst(muscles, target) { has("target", it) }.forEach { m ->
+                            Pill(target == m, { target = if (target == m) "" else m }, { Text(jsTitle(m)) }, enabled = target == m || has("target", m))
                         }
                     }
                     PillRow {
-                        selectedFirst(muscles, target).forEach { m -> Pill(target == m, { target = if (target == m) "" else m }, { Text(jsTitle(m)) }) }
-                    }
-                    PillRow {
-                        selectedFirst(vm.catalog.equipmentOptions, equipment).forEach { q -> Pill(equipment == q, { equipment = if (equipment == q) "" else q }, { Text(jsTitle(q)) }) }
+                        selectedFirst(vm.catalog.equipmentOptions, equipment) { has("equipment", it) }.forEach { q ->
+                            Pill(equipment == q, { equipment = if (equipment == q) "" else q }, { Text(jsTitle(q)) }, enabled = equipment == q || has("equipment", q))
+                        }
                     }
                     if (tags.isNotEmpty()) PillRow {
-                        selectedFirst(tags, tag).forEach { t -> Pill(tag.equals(t, true), { tag = if (tag.equals(t, true)) "" else t }, { Text("#$t") }) }
+                        selectedFirst(tags, tag) { has("tag", it) }.forEach { t ->
+                            val on = tag.equals(t, true)
+                            Pill(on, { tag = if (on) "" else t }, { Text("#$t") }, enabled = on || has("tag", t))
+                        }
                     }
                 }
             }
@@ -279,7 +306,7 @@ fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Bo
         onDismissRequest = { confirm = false },
         icon = { Icon(Icons.Rounded.Delete, null) },
         title = { Text("Delete this log?") },
-        confirmButton = { TextButton(onClick = { confirm = false; vm.deleteLog(log.id) }) { Text("Delete") } },
+        confirmButton = { TextButton(onClick = { confirm = false; vm.deleteLog(log.id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } },
     )
 }
@@ -299,5 +326,8 @@ private fun PillRow(content: @Composable androidx.compose.foundation.layout.RowS
     )
 }
 
-private fun selectedFirst(options: List<String>, selected: String) =
-    if (selected.isEmpty()) options else listOf(selected) + (options - selected)
+/** Selected pill first, then the ones that still have results, then the dead ends (dimmed by the caller). */
+private fun selectedFirst(options: List<String>, selected: String, available: (String) -> Boolean): List<String> {
+    val rest = options.filterNot { it.equals(selected, true) }.partition(available)
+    return (if (selected.isEmpty()) emptyList() else listOf(selected)) + rest.first + rest.second
+}

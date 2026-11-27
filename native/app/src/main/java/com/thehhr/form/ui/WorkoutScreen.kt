@@ -74,6 +74,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -273,12 +274,16 @@ private fun ExerciseCard(
             containerColor = if (isTarget) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(Modifier.clickable(onClick = onToggleOpen).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ExerciseImage(ex, size = 56.dp, animated = open)
+        // Skipped exercises shrink to one dimmed line (tap it, or Restore, to bring it back).
+        Row(Modifier.clickable(onClick = onToggleOpen).padding(horizontal = 12.dp, vertical = if (skipped) 6.dp else 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            ExerciseImage(ex, size = if (skipped) 40.dp else 56.dp, animated = open && !skipped,
+                modifier = Modifier.alpha(if (skipped) 0.5f else 1f))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(exTitle(ex), style = if (open) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleSmall,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(exTitle(ex), style = if (open && !skipped) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleSmall,
+                    maxLines = if (skipped) 1 else 2, overflow = TextOverflow.Ellipsis,
+                    color = if (skipped) MaterialTheme.colorScheme.onSurfaceVariant else androidx.compose.ui.graphics.Color.Unspecified)
                 val status = when {
                     skipped -> "Skipped"
                     complete -> "Done"
@@ -291,6 +296,7 @@ private fun ExerciseCard(
                 Modifier.size(32.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(FormColors.Positive),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.Check, "Done", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.surface) }
+            if (skipped) TextButton(onClick = { vm.toggleSkip(id) }) { Text("Restore") }
         }
         AnimatedVisibility(open && !skipped) {
             Column(Modifier.padding(start = 10.dp, end = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -304,9 +310,9 @@ private fun ExerciseCard(
                 }
             }
         }
-        if (open || skipped) Row(Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp)) {
+        if (open && !skipped) Row(Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp)) {
             // Once a set is logged the exercise has started; skipping would hide logged work.
-            TextButton(onClick = { vm.toggleSkip(id) }, enabled = skipped || rows.none { it.done }) { Text(if (skipped) "Restore" else "Skip") }
+            TextButton(onClick = { vm.toggleSkip(id) }, enabled = rows.none { it.done }) { Text("Skip") }
             TextButton(onClick = { nav.push(Route.Detail(id)) }) { Text("Details") }
         }
     }

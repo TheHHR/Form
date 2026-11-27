@@ -73,10 +73,14 @@ class FormGlance : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(120.dp, 120.dp), DpSize(250.dp, 120.dp), DpSize(250.dp, 260.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = FormStore.get(context).whenReady { snapshot() }
+        val store = FormStore.get(context)
+        store.whenReady { } // wait for the vault once; after that the content reads live store state
         provideContent {
+            // Read inside the composition so store changes recompose the widget while its session stays open
+            // (a value captured outside it went stale: the current exercise didn't follow skips).
+            val data = if (store.status == Status.Ready) store.snapshot() else null
             val accent = data?.accent ?: FormStore.get(context).device.lastAccent
-            val (p, onP) = Accents[accent] ?: Accents.getValue("lime")
+            val (p, onP) = Accents[accent] ?: Accents.getValue("blue")
             val t = Accents.getValue(Complement[accent] ?: "cyan").first
             // Wallpaper colours on Android 12+, Form's accent before that.
             val colors = if (android.os.Build.VERSION.SDK_INT >= 31) GlanceTheme.colors else ColorProviders(light = lightScheme(p, t), dark = darkScheme(p, onP, t))
@@ -86,7 +90,7 @@ class FormGlance : GlanceAppWidget() {
 
     /** Picker preview (Android 15+): sample numbers, real layout. */
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        val sample = WidgetData("lime", false, "Push day", "6 exercises", true, 1240.0, 2100.0, 96.0, 140.0, 1500.0, 2500.0, 3, 54,
+        val sample = WidgetData("blue", false, "Push day", "6 exercises", true, 1240.0, 2100.0, 96.0, 140.0, 1500.0, 2500.0, 3, 54,
             listOf("a" to "Push day", "b" to "Pull day", "c" to "Legs"))
         provideContent { GlanceTheme { WidgetContent(context, sample) } }
     }

@@ -137,7 +137,7 @@ data class Units(val weight: String = "kg", val distance: String = "km", val hei
 }
 
 data class Prefs(
-    val accent: String = "lime",
+    val accent: String = "blue",
     val weekStart: Int = 1,
     val defaultView: String = "week",
     val workoutReminder: Boolean = true,

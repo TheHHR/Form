@@ -612,7 +612,7 @@ class VaultFormat(private val catalog: Catalog) {
                         customs.lastOrNull()?.put(key, if (key == "description") v.replace(" / ", "\n") else v)
                 }
                 "preferences" -> when (key) {
-                    "accent" -> prefs["accent"] = if (v in ACCENTS) v else "lime"
+                    "accent" -> prefs["accent"] = if (v in ACCENTS) v else "blue"
                     "liked" -> liked = v.split(",").map { it.trim().removePrefix("#") }.filter(::valid)
                     "week-start" -> prefs["weekStart"] = jsNumber(v).let { if (it == 0.0 || it == 1.0 || it == 6.0) it.toInt() else 1 }
                     "default-view" -> prefs["defaultView"] = if (v in listOf("week", "month", "all")) v else "week"

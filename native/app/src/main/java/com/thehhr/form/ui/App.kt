@@ -2,7 +2,7 @@
 
 package com.thehhr.form.ui
 
-import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
@@ -148,20 +148,44 @@ private fun MainScreen(vm: FormStore) {
         Tab.entries.firstOrNull { it.name == dest.substringBefore(':') }?.let { nav.stack.clear(); tab = it }
         if (!dest.contains(':')) vm.pendingDestination = null // "Fuel:log" is consumed by the Fuel tab
     }
-    BackHandler(enabled = nav.stack.isNotEmpty()) { nav.pop() }
+    // Predictive back: the back gesture scrubs the pop transition (the screen below peeks in); release commits it.
+    val current = nav.stack.lastOrNull()
+    val seek = remember { androidx.compose.animation.core.SeekableTransitionState(current) }
+    LaunchedEffect(current) { seek.animateTo(current) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var gesturing by remember { mutableStateOf(false) }
+    androidx.activity.compose.PredictiveBackHandler(enabled = nav.stack.isNotEmpty()) { events ->
+        val below = nav.stack.getOrNull(nav.stack.size - 2)
+        gesturing = true
+        try {
+            events.collect { seek.seekTo(it.progress, targetState = below) }
+            nav.pop()
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            scope.launch { seek.animateTo(seek.currentState) } // gesture cancelled: settle back on the open screen
+            throw e
+        } finally { gesturing = false }
+    }
 
     // Pushed screens slide over the tabs with the theme's expressive spring.
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    AnimatedContent(
-        targetState = nav.stack.lastOrNull(),
+    androidx.compose.animation.core.rememberTransition(seek, label = "route").AnimatedContent(
         transitionSpec = {
-            // Push keeps the old screen on the stack (or comes from the tabs); pop removes it.
-            val forward = targetState != null && (initialState == null || initialState in nav.stack)
+            // Forward = going deeper in the stack (or out of the tabs); a pop, or a back gesture in progress, goes the other way.
+            val forward = targetState != null && (initialState == null ||
+                initialState in nav.stack && nav.stack.indexOf(targetState) > nav.stack.indexOf(initialState))
             val dir = if (forward) 1 else -1
+            if (gesturing) {
+                // Scrubbed by the finger: linear specs so the peek tracks the gesture (a spring jumps to its end), and
+                // the closing screen shrinks a little like the system's own back preview.
+                val lin = androidx.compose.animation.core.tween<IntOffset>(300, easing = androidx.compose.animation.core.LinearEasing)
+                val linF = androidx.compose.animation.core.tween<Float>(300, easing = androidx.compose.animation.core.LinearEasing)
+                // The screen below stays solid underneath; the closing one rides on top and follows the finger off screen.
+                return@AnimatedContent (slideInHorizontally(lin) { -it / 4 } togetherWith
+                    (slideOutHorizontally(lin) { it } + androidx.compose.animation.scaleOut(linF, targetScale = 0.9f))).apply { targetContentZIndex = -1f }
+            }
             (slideInHorizontally(spatial) { it / 4 * dir } + fadeIn(effects)) togetherWith (slideOutHorizontally(spatial) { -it / 4 * dir } + fadeOut(effects))
         },
-        label = "route",
     ) { top ->
         if (top != null) {
             Box(Modifier.fillMaxSize()) {
@@ -179,7 +203,9 @@ private fun MainScreen(vm: FormStore) {
 
 @Composable
 private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackbar: SnackbarHostState) {
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // One collapse state per tab: scrolling one tab must not hide the others' titles.
+    val barStates = Tab.entries.map { androidx.compose.material3.rememberTopAppBarState() }
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(barStates[tab.ordinal])
     val w = vm.workout
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),

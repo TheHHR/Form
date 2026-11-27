@@ -54,6 +54,19 @@ data class ActiveWorkout(
 
 /** Pure workout rules, ported from www/app.js (awSessionEntries, seedAwSets, syncAwLog, awRestDecision...). */
 object WorkoutLogic {
+    /**
+     * Lower bound for a routine's length in whole minutes: rest between sets and exercises (when rest is on, a superset
+     * resting once per round) plus the time of timed sets. Lifting time itself is unknown, so the UI says "Over N mins".
+     */
+    fun minMinutes(routine: Routine, prefs: Prefs): Int {
+        val groups = routine.items.withIndex().groupBy { it.value.superset ?: "#${it.index}" }.values
+        val rest = if (!prefs.restEnabled) 0.0 else
+            groups.sumOf { g -> (g.maxOf { it.value.sets } - 1).coerceAtLeast(0) * prefs.restBetweenSets } +
+                (groups.size - 1).coerceAtLeast(0) * prefs.restBetweenExercises
+        val work = routine.items.filter { it.timed }.sumOf { it.sets * it.reps * (if (it.unitOrDefault == "min") 60.0 else 1.0) }
+        return ((rest + work) / 60).toInt()
+    }
+
 
     data class Entry(val item: RoutineItem, val added: Boolean)
 
@@ -232,7 +245,8 @@ object WorkoutLogic {
         val w = log.setWeights?.filter { it > 0 }?.takeIf { it.isNotEmpty() } ?: listOfNotNull(log.weight?.takeIf { it > 0 })
         val wt = if (w.isNotEmpty()) " × ${range(w, " ${units.weight}")}" else ""
         val reps = log.setReps?.takeIf { it.isNotEmpty() }?.map { it.toDouble() }
-        return if (reps != null) "${log.sets} sets × ${range(reps, " reps")}$wt" else "${log.sets} sets × ${log.reps} reps$wt"
+        val sets = "${log.sets} set${if (log.sets == 1) "" else "s"}"
+        return if (reps != null) "$sets × ${range(reps, " reps")}$wt" else "$sets × ${log.reps} reps$wt"
     }
 
     /** Training volume (kg·reps) of a strength log. */

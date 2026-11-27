@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App icon background, reused by the launcher shortcut icons. -->
+    <color name="shortcut_background">#FF20211F</color>
+</resources>

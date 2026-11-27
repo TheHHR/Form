@@ -159,7 +159,7 @@ private fun ColorScheme.animated(): ColorScheme {
  */
 @Composable
 fun FormTheme(accent: String, dark: Boolean = true, dynamic: Boolean = false, content: @Composable () -> Unit) {
-    val (primary, onPrimary) = Accents[accent] ?: Accents.getValue("lime")
+    val (primary, onPrimary) = Accents[accent] ?: Accents.getValue("blue")
     val tertiary = Accents.getValue(Complement[accent] ?: "cyan").first
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val target = remember(accent, dark, dynamic) {
