@@ -114,8 +114,9 @@ fun FormApp(vm: FormStore) {
     FormTheme(accent = if (vm.status == Status.Ready) vm.data.prefs.accent else vm.device.lastAccent, dark = dark, dynamic = vm.dynamicColor) {
         // Surface so the background colour animates with the theme too.
         androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Crossfade(vm.status::class, animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "status") { _ ->
-                when (val s = vm.status) {
+            // Each slot renders its own state, so an outgoing slot never builds a second MainScreen.
+            Crossfade(vm.status, animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "status") { s ->
+                when (s) {
                     Status.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(64.dp)) }
                     Status.NeedsFolder -> OnboardingScreen(vm)
                     is Status.Error -> OnboardingScreen(vm, error = s.message)
