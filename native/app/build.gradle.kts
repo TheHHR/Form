@@ -78,8 +78,8 @@ fun wwwAssets(name: String, vararg patterns: String) = tasks.register<WwwAssets>
     out.set(layout.buildDirectory.dir("generated/$name"))
 }
 val catalogAssets = wwwAssets("catalogAssets", "data/exercises.js", "images/**")
-// Exercise videos are left out of every APK for now (owner request, 2026-11-27); build with -Pform.videos=true to bundle them in prod.
-val withVideos = providers.gradleProperty("form.videos").orNull == "true"
+// Exercise videos are bundled in prod (owner re-enabled them 2026-11-27); -Pform.videos=false leaves them out.
+val withVideos = providers.gradleProperty("form.videos").orNull != "false"
 val videoAssets = wwwAssets("videoAssets", "videos/**")
 
 androidComponents {

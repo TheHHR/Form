@@ -406,10 +406,10 @@ private fun WorkoutBar(vm: FormStore, w: ActiveWorkout, now: Long, modifier: Mod
                 modifier = Modifier.padding(start = 4.dp).width(112.dp).heightIn(min = 44.dp)
                     .semantics { contentDescription = "${clock.label} ${clock.time}. Open fullscreen timer" },
             ) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Column {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(clock.label, style = MaterialTheme.typography.labelSmall)
                         // Tabular digits: the text width (and the icon beside it) no longer jumps as the seconds change.
                         Text(clock.time, style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = "tnum"))
@@ -496,7 +496,7 @@ private fun FullscreenTimer(vm: FormStore, nav: Nav, w: ActiveWorkout, now: Long
                     if (exId == null) Button(onClick = onFinish, shapes = ButtonDefaults.shapes(), modifier = big, contentPadding = bigPad) {
                         Icon(Icons.Rounded.Flag, null); Spacer(Modifier.width(8.dp)); Text("Finish workout", style = bigText)
                     } else {
-                        FilledTonalButton(onClick = { com.thehhr.form.Haptics.tick(view); vm.extendRest(30) }, enabled = clock.counting,
+                        FilledTonalButton(onClick = { com.thehhr.form.Haptics.tick(view); vm.extendRest(30) }, enabled = !w.paused,
                             shapes = ButtonDefaults.shapes(), modifier = big, contentPadding = bigPad) { Text("+30s", style = bigText) }
                         Button(onClick = { onClose(); nav.push(Route.Detail(exId)) }, shapes = ButtonDefaults.shapes(), modifier = big, contentPadding = bigPad) {
                             Text("Details", style = bigText)

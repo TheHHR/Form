@@ -520,8 +520,14 @@ class FormStore private constructor(val app: Application) {
         if (idx < 0 || rows.size <= 1) w else w.copy(sets = w.sets + (exerciseId to rows.filterIndexed { i, _ -> i != idx }))
     }
 
-    fun toggleSkip(exerciseId: String) = editWorkout { w, _ ->
-        w.copy(skipped = if (exerciseId in w.skipped) w.skipped - exerciseId else w.skipped + exerciseId)
+    fun toggleSkip(exerciseId: String) {
+        editWorkout { w, r ->
+            val next = w.copy(skipped = if (exerciseId in w.skipped) w.skipped - exerciseId else w.skipped + exerciseId)
+            // Skipping the last open exercise stops the rest / set clocks, same as logging its last set.
+            if (WorkoutLogic.nextTarget(next, r) == null) next.copy(rest = null, setClockFrom = null, jumpTo = null) else next
+        }
+        val w = workout ?: return
+        if (exerciseId in w.skipped && routineOf(w)?.let { WorkoutLogic.nextTarget(w, it) } == null) message = "All done!"
     }
 
     fun jumpTo(exerciseId: String) = editWorkout { w, _ -> w.copy(jumpTo = if (w.jumpTo == exerciseId) null else exerciseId) }
@@ -563,11 +569,17 @@ class FormStore private constructor(val app: Application) {
         })
     }
 
+    /** Adds time to the running rest / set countdown; with none running (set clock counting up), starts a short rest. */
     fun extendRest(seconds: Int) {
         val w = workout ?: return
-        val r = w.rest ?: return
+        val r = w.rest
         val now = System.currentTimeMillis()
-        putWorkout(w.copy(rest = r.copy(endsAt = maxOf(r.endsAt, now) + seconds * 1000L, total = r.total + seconds)))
+        if (r != null && (r.pausedRemaining != null || r.endsAt > now)) {
+            putWorkout(w.copy(rest = r.copy(endsAt = maxOf(r.endsAt, now) + seconds * 1000L, total = r.total + seconds)))
+            return
+        }
+        val id = r?.exerciseId ?: routineOf(w)?.let { WorkoutLogic.nextTarget(w, it)?.exerciseId } ?: return
+        putWorkout(w.copy(rest = rest(seconds, "sets", id), setClockFrom = null))
     }
 
     // Skipping rest starts the set clock (counts up until the next set is logged).

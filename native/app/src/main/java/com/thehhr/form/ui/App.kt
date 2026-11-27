@@ -171,7 +171,7 @@ private fun MainScreen(vm: FormStore) {
                     is Route.RoutineEdit -> RoutineEditorScreen(vm, nav, top.id)
                     Route.Settings -> SettingsScreen(vm, nav)
                 }
-                SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+                SwipeSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
             }
         } else Tabs(vm, nav, tab, { tab = it }, snackbar)
     }
@@ -202,7 +202,7 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
                 }
             }
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SwipeSnackbarHost(snackbar) },
     ) { pad ->
         Crossfade(tab, Modifier.padding(pad).fillMaxSize(), animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(), label = "tab") { t ->
             when (t) {
@@ -225,4 +225,17 @@ class LibraryFilters {
     var likedOnly by mutableStateOf(false)
     var loggedOnly by mutableStateOf(false)
     var tag by mutableStateOf("")
+}
+
+/** Snackbar host whose snackbars can be swiped away sideways. */
+@Composable
+private fun SwipeSnackbarHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
+    SnackbarHost(state, modifier) { data ->
+        androidx.compose.runtime.key(data) {
+            androidx.compose.material3.SwipeToDismissBox(
+                androidx.compose.material3.rememberSwipeToDismissBoxState(), backgroundContent = {},
+                onDismiss = { data.dismiss() },
+            ) { androidx.compose.material3.Snackbar(data) }
+        }
+    }
 }
