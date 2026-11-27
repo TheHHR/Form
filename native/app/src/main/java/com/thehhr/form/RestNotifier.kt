@@ -32,6 +32,7 @@ object RestNotifier {
     const val ACTION_ALARM = "com.thehhr.form.REST_ALARM"
     const val ACTION_SET_DONE = "com.thehhr.form.SET_DONE"
     const val ACTION_PAUSE = "com.thehhr.form.PAUSE"
+    const val ACTION_SKIP_EXERCISE = "com.thehhr.form.SKIP_EXERCISE"
     const val ID_LIVE = ID_WORKOUT
 
     fun channels(ctx: Context) {
@@ -68,11 +69,16 @@ object RestNotifier {
         channels(ctx)
         val now = System.currentTimeMillis()
         val routine = store.data.routines.firstOrNull { it.id == w.routineId }
+        val entries = routine?.let { r -> WorkoutLogic.entries(w, r).map { it.item }.filter { it.exerciseId !in w.skipped } }.orEmpty()
         val next = routine?.let { WorkoutLogic.nextTarget(w, it) }
         val current = next?.let { exTitle(store.exercise(it.exerciseId)) }
+        // The exercise after the current one, for "Next: …" while resting or training.
+        val after = next?.let { n -> entries.firstOrNull { it.exerciseId != n.exerciseId && !w.complete(it.exerciseId) } }?.let { exTitle(store.exercise(it.exerciseId)) }
         val rest = w.rest?.takeIf { it.pausedRemaining == null && !w.paused && it.endsAt > now }
-        val counted = routine?.let { r -> WorkoutLogic.entries(w, r).filter { it.item.exerciseId !in w.skipped } }.orEmpty()
-        val done = counted.count { w.complete(it.item.exerciseId) }
+        val done = entries.count { w.complete(it.exerciseId) }
+        val setsTotal = entries.sumOf { w.rows(it.exerciseId).size }
+        val setsDone = entries.sumOf { w.rows(it.exerciseId).count { r -> r.done } }
+        val setInfo = next?.let { n -> val rows = w.rows(n.exerciseId); "Set ${(rows.count { it.done } + 1).coerceAtMost(rows.size)}/${rows.size}" }
 
         val b = NotificationCompat.Builder(ctx, CH_WORKOUT)
             .setSmallIcon(R.drawable.ic_stat_form)
@@ -82,29 +88,33 @@ object RestNotifier {
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setContentIntent(openApp(ctx))
+            .setContentIntent(openApp(ctx, MainActivity.ACTION_OPEN_WORKOUT))
             .setColorized(false) // promotion requires a non-colorized notification
-            .setRequestPromotedOngoing(true) // Live Update on Android 16+, ignored before
+            .setRequestPromotedOngoing(true) // Live Update on Android 16+ (One UI 8 shows these in the Now Bar), ignored before
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setProgress(setsTotal.coerceAtLeast(1), setsDone, false)
             .addAction(0, if (w.paused) "Resume" else "Pause", broadcast(ctx, ACTION_PAUSE, 6))
         when {
-            w.paused -> b.setContentText("Paused · $done/${counted.size} done").setShowWhen(false).setShortCriticalText("Paused")
+            w.paused -> b.setContentText("Paused · $done/${entries.size} exercises").setShowWhen(false).setShortCriticalText("Paused")
             rest?.type == "set" -> {
                 val ex = rest.exerciseId?.let { exTitle(store.exercise(it)) } ?: "Set"
                 b.setContentText("Set ${(rest.setIndex ?: 0) + 1} · $ex").setShortCriticalText("Set")
                     .setWhen(rest.endsAt).setUsesChronometer(true).setChronometerCountDown(true)
-                    .addAction(0, "Done", broadcast(ctx, ACTION_SET_DONE, 5))
+                    .addAction(0, "Complete set", broadcast(ctx, ACTION_SET_DONE, 5))
             }
             rest != null -> {
-                b.setContentText((if (rest.warmup) "Warm-up" else "Rest") + (current?.let { " · next: $it" } ?: "")).setShortCriticalText("Rest")
+                b.setContentText((if (rest.warmup) "Warm-up" else "Rest") + (current?.let { " · next: $it${setInfo?.let { s -> " ($s)" } ?: ""}" } ?: ""))
+                    .setShortCriticalText(if (rest.warmup) "Warm" else "Rest")
                     .setWhen(rest.endsAt).setUsesChronometer(true).setChronometerCountDown(true)
                     .addAction(0, "+30s", broadcast(ctx, ACTION_EXTEND, 1))
-                    .addAction(0, "Skip", broadcast(ctx, ACTION_SKIP, 2))
+                    .addAction(0, "Skip rest", broadcast(ctx, ACTION_SKIP, 2))
             }
             else -> {
-                b.setContentText(current?.let { "$it · $done/${counted.size} done" } ?: "All done · tap to finish").setShortCriticalText("Gym")
+                b.setContentText(current?.let { "$it · ${setInfo.orEmpty()}" } ?: "All done · tap to finish").setShortCriticalText(setInfo?.removePrefix("Set ") ?: "Done")
                     .setWhen(now - w.elapsedMs(now)).setUsesChronometer(true)
-                if (next != null) b.addAction(0, "Log set", broadcast(ctx, ACTION_LOG, 4))
+                if (after != null) b.setSubText("Next: $after")
+                if (next != null) b.addAction(0, "Complete set", broadcast(ctx, ACTION_LOG, 4))
+                    .addAction(0, "Skip exercise", broadcast(ctx, ACTION_SKIP_EXERCISE, 7))
             }
         }
         return b.build()
@@ -180,6 +190,7 @@ class RestReceiver : BroadcastReceiver() {
                     RestNotifier.ACTION_EXTEND -> store.whenReady { extendRest(30) }
                     RestNotifier.ACTION_SKIP -> store.whenReady { skipRest() }
                     RestNotifier.ACTION_LOG -> store.whenReady { logNextSet() }
+                    RestNotifier.ACTION_SKIP_EXERCISE -> store.whenReady { skipCurrentExercise() }
                 }
             } finally { pending.finish() }
         }

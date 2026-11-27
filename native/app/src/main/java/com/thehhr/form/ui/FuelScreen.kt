@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.LoadingIndicator
@@ -91,6 +92,7 @@ import java.time.format.DateTimeFormatter
 fun FuelTab(vm: FormStore) {
     var date by rememberSaveable { mutableStateOf(vm.todayKey) }
     var logging by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.pendingDestination) { if (vm.pendingDestination == "Fuel:log") { vm.pendingDestination = null; date = vm.todayKey; logging = true } }
     val day = vm.data.history[date] ?: DayLog()
     val targets = Fuel.effective(vm.data.profile, vm.data.prefs.units)
     val cals = day.meals.sumOf { it.cals }

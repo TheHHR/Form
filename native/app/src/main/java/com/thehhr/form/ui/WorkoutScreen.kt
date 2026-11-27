@@ -3,6 +3,8 @@
 package com.thehhr.form.ui
 
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.systemBars
 
 import android.content.Context
 import android.media.AudioManager
@@ -154,7 +156,9 @@ private fun ActiveWorkoutView(vm: FormStore, nav: Nav, w: ActiveWorkout) {
     val doneCount = counted.count { w.complete(it.item.exerciseId) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var finishing by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(setOf<String>()) }
+    // Only one card is open: the active exercise, or a finished/skipped one opened to look back at.
+    var peek by remember { mutableStateOf<String?>(null) }
+    var timerOpen by remember { mutableStateOf(false) }
 
     val view = LocalView.current
     DisposableEffect(Unit) { view.keepScreenOn = true; onDispose { view.keepScreenOn = false } }
@@ -187,16 +191,22 @@ private fun ActiveWorkoutView(vm: FormStore, nav: Nav, w: ActiveWorkout) {
                 val isTarget = target?.exerciseId == id
                 ExerciseCard(
                     vm, nav, w, entry.item, entry.added,
-                    open = isTarget || id in expanded, isTarget = isTarget,
-                    onToggleOpen = { expanded = if (id in expanded) expanded - id else expanded + id },
+                    open = if (peek != null) peek == id else isTarget, isTarget = isTarget,
+                    onToggleOpen = {
+                        com.thehhr.form.Haptics.tick(view)
+                        // A pending exercise becomes the temporary active one; tapping it again (or finishing or
+                        // skipping it) hands the turn back. Finished and skipped cards just open to look back at.
+                        if (w.complete(id) || id in w.skipped) peek = if (peek == id) null else id
+                        else { peek = null; if (!isTarget || w.jumpTo == id) vm.jumpTo(id) }
+                    },
                     modifier = Modifier.animateItem(),
                 )
             }
         }
-        WorkoutBar(vm, w, now, target != null, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
-            onAdd = { nav.push(Route.Library(Pick.Extra)) }, onFinish = { finishing = true },
-            onCheck = { com.thehhr.form.Haptics.setDone(view); vm.logNextSet() })
+        WorkoutBar(vm, w, now, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            onAdd = { nav.push(Route.Library(Pick.Extra)) }, onFinish = { finishing = true }, onTimer = { timerOpen = true })
     }
+    if (timerOpen) FullscreenTimer(vm, w, now, target?.exerciseId, onClose = { timerOpen = false })
 
     if (finishing) AlertDialog(
         onDismissRequest = { finishing = false },
@@ -259,7 +269,6 @@ private fun ExerciseCard(
             ExerciseImage(ex, size = 56.dp, animated = open)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                if (isTarget) Text("Up next", style = MaterialTheme.typography.labelMediumEmphasized, color = MaterialTheme.colorScheme.primary)
                 Text(exTitle(ex), style = if (open) MaterialTheme.typography.titleMediumEmphasized else MaterialTheme.typography.titleSmall,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val status = when {
@@ -288,10 +297,8 @@ private fun ExerciseCard(
             }
         }
         if (open || skipped) Row(Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp)) {
-            TextButton(onClick = { vm.toggleSkip(id) }) { Text(if (skipped) "Unskip" else "Skip") }
+            TextButton(onClick = { vm.toggleSkip(id) }) { Text(if (skipped) "Restore" else "Skip") }
             TextButton(onClick = { nav.push(Route.Detail(id)) }) { Text("Details") }
-            Spacer(Modifier.weight(1f))
-            if (!isTarget && !complete && !skipped) TextButton(onClick = { vm.jumpTo(id) }) { Text("Do next") }
         }
     }
 }
@@ -353,75 +360,119 @@ private fun SetHeader(item: RoutineItem, wUnit: String, dUnit: String) {
     }
 }
 
-/**
- * Active-workout bar: [add · pause · finish · timer] [Skip/Check with rest ring] [+30s].
- * While rest (or a set timer) counts down the big button skips it (or finishes the set) and its ring
- * drains; once rest ends or is skipped, the timer counts the set up and the button logs the set.
- */
-@Composable
-private fun WorkoutBar(
-    vm: FormStore, w: ActiveWorkout, now: Long, hasNext: Boolean, modifier: Modifier,
-    onAdd: () -> Unit, onFinish: () -> Unit, onCheck: () -> Unit,
-) {
+
+/** What the workout clock shows right now: a rest / warm-up / set-timer countdown, the up-counting set clock, or the session. */
+private class Clock(val label: String, val time: String, val counting: Boolean, val progress: Float?, val kind: String)
+
+private fun clockOf(w: ActiveWorkout, now: Long): Clock {
     val rest = w.rest
     val left = rest?.let { it.pausedRemaining ?: (it.endsAt - now) }
-    val counting = rest != null && left != null && left > 0
-    // Up-counting set clock: from the end of a finished rest, or from when rest was skipped.
-    val clockFrom = when {
-        rest != null && !counting && rest.type != "set" -> rest.endsAt
-        rest == null -> w.setClockFrom
-        else -> null
-    }?.takeIf { now - it < 15 * 60_000 } // a forgotten clock stops showing
-    val label = when {
-        counting && rest!!.type == "set" -> "Set ${(rest.setIndex ?: 0) + 1}"
-        counting && rest!!.warmup -> "Warm-up"
-        counting -> "Rest"
-        clockFrom != null -> "Set"
-        else -> null
+    if (rest != null && left != null && left > 0) {
+        val label = when { rest.type == "set" -> "Set ${(rest.setIndex ?: 0) + 1}"; rest.warmup -> "Warm-up"; else -> "Rest" }
+        return Clock(label, fmtTime(left + 999), true, (left / (rest.total * 1000f)).coerceIn(0f, 1f), if (rest.type == "set") "set" else "rest")
     }
-    val time = when {
-        counting -> fmtTime(left!! + 999)
-        clockFrom != null -> fmtTime(now - clockFrom)
-        else -> null
-    }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer, shadowElevation = 6.dp) {
-            Row(Modifier.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onAdd, modifier = Modifier.size(40.dp)) { Icon(Icons.Rounded.Add, "Add exercise") }
-                IconButton(onClick = vm::togglePause, modifier = Modifier.size(40.dp)) {
-                    Icon(if (w.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (w.paused) "Resume" else "Pause")
-                }
-                IconButton(onClick = onFinish, modifier = Modifier.size(40.dp)) { Icon(Icons.Rounded.Flag, "Finish workout") }
-                if (time != null) Column(Modifier.padding(start = 4.dp, end = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(label.orEmpty(), style = MaterialTheme.typography.labelSmall)
-                    Text(time, style = MaterialTheme.typography.titleMediumEmphasized)
-                }
+    // Up-counting set clock: from the end of a finished rest, or from when rest was skipped; a forgotten one stops showing.
+    val from = (if (rest != null && rest.type != "set") rest.endsAt else w.setClockFrom)?.takeIf { now - it < 15 * 60_000 }
+    if (from != null) return Clock("Set", fmtTime(now - from), false, null, "up")
+    return Clock(if (w.paused) "Paused" else "Workout", fmtTime(w.elapsedMs(now)), false, null, "session")
+}
+
+/** Active-workout bar: add · pause · finish, then the clock. Tap the clock for the fullscreen timer. */
+@Composable
+private fun WorkoutBar(vm: FormStore, w: ActiveWorkout, now: Long, modifier: Modifier, onAdd: () -> Unit, onFinish: () -> Unit, onTimer: () -> Unit) {
+    val clock = clockOf(w, now)
+    androidx.compose.material3.Surface(modifier, shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer, shadowElevation = 6.dp) {
+        Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onAdd) { Icon(Icons.Rounded.Add, "Add exercise") }
+            IconButton(onClick = vm::togglePause) {
+                Icon(if (w.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, if (w.paused) "Resume" else "Pause")
             }
-        }
-        Box(Modifier.size(60.dp), contentAlignment = Alignment.Center) {
-            if (counting) CircularWavyProgressIndicator(
-                progress = { (left!! / (rest!!.total * 1000f)).coerceIn(0f, 1f) }, modifier = Modifier.size(60.dp),
-            )
-            androidx.compose.material3.FilledIconButton(
-                onClick = {
-                    when {
-                        counting && rest!!.type == "set" -> vm.completeSetTimer()
-                        counting -> vm.skipRest()
-                        hasNext && !w.paused -> onCheck()
-                    }
-                },
-                shapes = IconButtonDefaults.shapes(),
-                modifier = Modifier.size(if (counting) 48.dp else 56.dp),
+            IconButton(onClick = onFinish) { Icon(Icons.Rounded.Flag, "Finish workout") }
+            androidx.compose.material3.Surface(
+                onClick = onTimer, shape = androidx.compose.foundation.shape.CircleShape,
+                color = if (clock.counting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = if (clock.counting) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 4.dp).heightIn(min = 48.dp)
+                    .semantics { contentDescription = "${clock.label} ${clock.time}. Open fullscreen timer" },
             ) {
-                when {
-                    counting && rest!!.type == "set" -> Icon(Icons.Rounded.Check, "Finish set now")
-                    counting -> Icon(Icons.Rounded.SkipNext, "Skip rest")
-                    else -> Icon(Icons.Rounded.Check, if (hasNext) "Log next set" else "All done")
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(clock.label, style = MaterialTheme.typography.labelSmall)
+                        Text(clock.time, style = MaterialTheme.typography.titleMediumEmphasized)
+                    }
                 }
             }
         }
-        FilledTonalButton(onClick = { vm.extendRest(30) }, enabled = counting && rest?.type != "set", shapes = ButtonDefaults.shapes(),
-            contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.height(40.dp)) { Text("+30s") }
+    }
+}
+
+/** Fullscreen rest / set timer: one big readable clock with the actions that matter at that moment. */
+@Composable
+private fun FullscreenTimer(vm: FormStore, w: ActiveWorkout, now: Long, targetId: String?, onClose: () -> Unit) {
+    val clock = clockOf(w, now)
+    val view = LocalView.current
+    val target = targetId?.let { vm.exercise(it) }
+    val rows = targetId?.let { w.rows(it) }.orEmpty()
+    val restingFor = w.rest?.exerciseId?.takeIf { clock.kind == "set" }
+    androidx.compose.ui.window.Dialog(onClose, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(
+                Modifier.fillMaxSize().padding(androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues()).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(w.routineName, Modifier.weight(1f), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    androidx.compose.material3.FilledTonalIconButton(onClick = onClose, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Close, "Close timer") }
+                }
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
+                    val p = clock.progress
+                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = with(androidx.compose.ui.platform.LocalDensity.current) { 14.dp.toPx() },
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    if (p != null) CircularWavyProgressIndicator(progress = { p }, Modifier.fillMaxSize(), stroke = stroke, trackStroke = stroke,
+                        wavelength = 36.dp, amplitude = { 1f })
+                    else androidx.compose.material3.CircularProgressIndicator(progress = { 1f }, Modifier.fillMaxSize(), strokeWidth = 14.dp,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(clock.label, style = MaterialTheme.typography.titleLargeEmphasized, color = MaterialTheme.colorScheme.primary)
+                        Text(clock.time, style = MaterialTheme.typography.displayLargeEmphasized.copy(fontSize = androidx.compose.ui.unit.TextUnit(76f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                            maxLines = 1, modifier = Modifier.semantics { contentDescription = "${clock.label} ${clock.time}" })
+                        if (clock.kind == "up") Text("since rest ended", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+                val ex = restingFor?.let { vm.exercise(it) } ?: target
+                if (ex != null) {
+                    Text(if (clock.kind == "rest") "Next: ${exTitle(ex)}" else exTitle(ex), style = MaterialTheme.typography.titleMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (restingFor == null && rows.isNotEmpty()) Text("Set ${(rows.count { it.done } + 1).coerceAtMost(rows.size)} of ${rows.size}",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val big = Modifier.weight(1f).height(ButtonDefaults.LargeContainerHeight)
+                    val bigPad = ButtonDefaults.contentPaddingFor(ButtonDefaults.LargeContainerHeight)
+                    val bigText = ButtonDefaults.textStyleFor(ButtonDefaults.LargeContainerHeight)
+                    when (clock.kind) {
+                        "rest" -> {
+                            FilledTonalButton(onClick = { com.thehhr.form.Haptics.tick(view); vm.extendRest(30) }, shapes = ButtonDefaults.shapes(), modifier = big,
+                                contentPadding = bigPad) { Text("+30s", style = bigText) }
+                            Button(onClick = { com.thehhr.form.Haptics.tick(view); vm.skipRest() }, shapes = ButtonDefaults.shapes(), modifier = big, contentPadding = bigPad) {
+                                Icon(Icons.Rounded.SkipNext, null); Spacer(Modifier.width(8.dp)); Text("Skip", style = bigText)
+                            }
+                        }
+                        "set" -> Button(onClick = { com.thehhr.form.Haptics.setDone(view); vm.completeSetTimer() }, shapes = ButtonDefaults.shapes(), modifier = big,
+                            contentPadding = bigPad) { Icon(Icons.Rounded.Check, null); Spacer(Modifier.width(8.dp)); Text("Finish set", style = bigText) }
+                        else -> Button(onClick = { com.thehhr.form.Haptics.setDone(view); vm.logNextSet() }, enabled = targetId != null && !w.paused,
+                            shapes = ButtonDefaults.shapes(), modifier = big, contentPadding = bigPad) {
+                            Icon(Icons.Rounded.Check, null); Spacer(Modifier.width(8.dp)); Text(if (targetId != null) "Log set" else "All done", style = bigText)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

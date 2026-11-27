@@ -158,6 +158,12 @@ private fun MainScreen(vm: FormStore) {
     LaunchedEffect(vm.message) {
         vm.message?.let { snackbar.showSnackbar(it); vm.message = null }
     }
+    // Notification, shortcut, tile and widget entry points land on their tab, above any pushed screen.
+    LaunchedEffect(vm.pendingDestination) {
+        val dest = vm.pendingDestination ?: return@LaunchedEffect
+        Tab.entries.firstOrNull { it.name == dest.substringBefore(':') }?.let { nav.stack.clear(); tab = it }
+        if (!dest.contains(':')) vm.pendingDestination = null // "Fuel:log" is consumed by the Fuel tab
+    }
     BackHandler(enabled = nav.stack.isNotEmpty()) { nav.pop() }
 
     // Pushed screens slide over the tabs with the theme's expressive spring.

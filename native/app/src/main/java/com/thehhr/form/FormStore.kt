@@ -67,6 +67,8 @@ class FormStore private constructor(val app: Application) {
     // Restored straight away so rest +30s / skip from the notification work before the vault loads.
     var workout by mutableStateOf(device.loadWorkout()?.takeIf { System.currentTimeMillis() - it.startedAt < 18 * 3600_000L }); private set
     var message by mutableStateOf<String?>(null)
+    /** Where an outside entry point (notification, shortcut, tile, widget) wants the UI to go: a tab name, or "library". */
+    var pendingDestination by mutableStateOf<String?>(null)
     val folderName: String get() = vault.folderName()
 
     /** Completes once the first load attempt ends (check [status] for the result). */
@@ -388,7 +390,7 @@ class FormStore private constructor(val app: Application) {
         val session = WorkoutLogic.sessionRoutine(w, r)
         val item = session.items.firstOrNull { it.exerciseId == exerciseId } ?: return
         var next = w
-        if (w.complete(exerciseId) && w.jumpTo == exerciseId) next = next.copy(jumpTo = null)
+        if (w.complete(exerciseId)) { Haptics.exerciseDone(app); if (w.jumpTo == exerciseId) next = next.copy(jumpTo = null) }
         val p = data.prefs
         next = if (!p.restEnabled) next.copy(rest = null) else when (WorkoutLogic.restDecision(next, r, item)) {
             WorkoutLogic.RestKind.BETWEEN_SETS -> next.copy(rest = rest(p.restBetweenSets.toInt(), "sets", exerciseId))
@@ -418,6 +420,13 @@ class FormStore private constructor(val app: Application) {
     }
 
     fun jumpTo(exerciseId: String) = editWorkout { w, _ -> w.copy(jumpTo = if (w.jumpTo == exerciseId) null else exerciseId) }
+
+    /** Notification action: skips whichever exercise is up now. */
+    fun skipCurrentExercise() {
+        val w = workout ?: return
+        val r = routineOf(w) ?: return
+        WorkoutLogic.nextTarget(w, r)?.let { if (it.exerciseId !in w.skipped) toggleSkip(it.exerciseId) }
+    }
 
     fun addExtra(exerciseId: String) {
         val ex = exercise(exerciseId) ?: return
@@ -501,7 +510,7 @@ class FormStore private constructor(val app: Application) {
             total = items.size
             done = items.count { w.complete(it.exerciseId) }
             update(VaultFile.TrainingLogs) { d -> d.copy(logs = items.fold(d.logs) { acc, item -> WorkoutLogic.syncLog(acc, w, item) }) }
-            if (done > 0) HealthSync.writeWorkout(this, w, System.currentTimeMillis())
+            if (done > 0) { HealthSync.writeWorkout(this, w, System.currentTimeMillis()); Haptics.workoutDone(app) }
         }
         putWorkout(null)
         return done to total
