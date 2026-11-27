@@ -64,6 +64,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -124,7 +129,11 @@ fun FormTopBar(
 
 /** Single-choice connected button group (replaces segmented buttons in M3 Expressive). */
 @Composable
-fun <T> ChoiceGroup(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun <T> ChoiceGroup(
+    options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    /** Optional hold action per option (with its accessibility label), e.g. hold a meal slot to skip it. */
+    onLongPress: ((T) -> Unit)? = null, longPressLabel: String? = null,
+) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
         options.forEachIndexed { i, (value, label) ->
             ToggleButton(
@@ -136,7 +145,8 @@ fun <T> ChoiceGroup(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
-                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton }
+                    .then(if (onLongPress != null) Modifier.onHold(longPressLabel) { onLongPress(value) } else Modifier),
                 // Tighter than the default so four options (e.g. meal slots) fit a 360 dp phone without truncating.
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
             ) { Text(label, maxLines = 1, softWrap = false) }
@@ -345,7 +355,7 @@ fun PeriodNav(label: String, what: String, onPrev: () -> Unit, onNext: () -> Uni
         androidx.compose.material3.FilledTonalIconButton(onClick = onPrev, shapes = IconButtonDefaults.shapes()) {
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $what")
         }
-        Text(label, (if (onLabel != null) Modifier.weight(1f).clickable(onClick = onLabel) else Modifier.weight(1f)),
+        Text(label, (if (onLabel != null) Modifier.weight(1f).clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onLabel) else Modifier.weight(1f)),
             style = MaterialTheme.typography.titleMediumEmphasized, textAlign = TextAlign.Center)
         androidx.compose.material3.FilledTonalIconButton(onClick = onNext, enabled = nextEnabled, shapes = IconButtonDefaults.shapes()) {
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next $what")
@@ -365,3 +375,19 @@ fun FormSheet(onDismissRequest: () -> Unit, content: @Composable androidx.compos
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) { androidx.compose.runtime.CompositionLocalProvider(LocalInSheet provides true) { content() } }
 }
+
+/**
+ * Long-press that coexists with the element's own click: watches on the Initial pass without consuming, so the
+ * button still presses normally. Adds an accessibility long-click action too.
+ */
+fun Modifier.onHold(label: String?, action: () -> Unit): Modifier = this
+    .semantics { onLongClick(label) { action(); true } }
+    .pointerInput(action) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            }
+            if (up == null) action()
+        }
+    }

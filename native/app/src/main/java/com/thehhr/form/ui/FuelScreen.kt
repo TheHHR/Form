@@ -31,10 +31,9 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.animation.animateContentSize
 import com.thehhr.form.data.isSkipPlaceholder
-import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -57,14 +56,15 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import androidx.compose.material.icons.rounded.PhotoCamera
 import com.thehhr.form.data.FoodLookup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -140,11 +140,11 @@ fun FuelTab(vm: FormStore) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(44.dp).clip(androidx.compose.material3.MaterialShapes.Cookie9Sided.toShape()).background(FormColors.Carbs.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center) { Icon(Icons.Rounded.WaterDrop, null, tint = FormColors.Carbs) }
+                        Box(Modifier.size(44.dp).clip(androidx.compose.material3.MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center) { Icon(Icons.Rounded.LocalDrink, null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Water", style = MaterialTheme.typography.labelLargeEmphasized, color = FormColors.Carbs)
+                            Text("Water", style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary)
                             Text("${jsRound(day.water)} / ${jsRound(targets.water)} ml", style = MaterialTheme.typography.titleMediumEmphasized)
                         }
                         androidx.compose.material3.FilledTonalIconButton(onClick = { vm.addWater(date, -250.0) }, enabled = day.water > 0,
@@ -153,7 +153,7 @@ fun FuelTab(vm: FormStore) {
                         androidx.compose.material3.FilledIconButton(onClick = { vm.addWater(date, 250.0) },
                             shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Add, "Add 250 ml") }
                     }
-                    LinearWavyProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth(), color = FormColors.Carbs)
+                    LinearWavyProgressIndicator(progress = { (day.water / targets.water).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -215,14 +215,17 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
         // Height follows the content with the theme's spring, so switching tabs grows/shrinks the sheet instead of jumping.
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text("Log meal", Modifier.weight(1f), style = MaterialTheme.typography.titleMediumEmphasized)
-                // Web parity: a main meal slot with nothing in it can be marked skipped (a zero "Skipped" entry).
-                if (slot != "Snacks" && day.meals.none { it.category == slot }) TextButton(onClick = { vm.skipMeal(date, slot); onClose() }) {
-                    Icon(Icons.Rounded.DoNotDisturbOn, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Skip $slot")
-                }
+                Text("Hold a meal to skip it", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it })
+            val view = androidx.compose.ui.platform.LocalView.current
+            // Web parity: holding Breakfast / Lunch / Dinner logs a zero "Skipped" entry for that slot.
+            ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it }, longPressLabel = "Skip this meal", onLongPress = { s ->
+                if (s == "Snacks") return@ChoiceGroup
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                vm.skipMeal(date, s); onClose()
+            })
             ChoiceGroup(listOf(0 to "Library", 1 to "Manual", 2 to "Barcode"), mode, { mode = it })
             if (mode == 2) {
                 BarcodePane(vm) { meal, serving -> picked = meal; grams = serving; mode = 0 }
@@ -290,7 +293,7 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
     }
 }
 
-/** Scan with Google's code scanner (no camera permission needed) or type the code; looks it up on Open Food Facts. */
+/** Photo the barcode with the phone camera (decoded on-device, no download) or type it; looks it up on Open Food Facts. */
 @Composable
 private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
     val ctx = LocalContext.current
@@ -310,46 +313,31 @@ private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
             onFound(meal, found.servingGrams)
         }
     }
+    // Same camera flow as the AI meal photo: the system camera app takes a picture, the bundled ML Kit model reads it.
+    val photoUri = remember { com.thehhr.form.data.AiVision.photoUri(ctx) }
+    val camera = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { ok ->
+        if (!ok) return@rememberLauncherForActivityResult
+        busy = true; error = null
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E).build()
+        val image = runCatching { InputImage.fromFilePath(ctx, photoUri) }.getOrNull()
+        if (image == null) { busy = false; error = "Couldn't read the photo. Try again."; return@rememberLauncherForActivityResult }
+        BarcodeScanning.getClient(options).process(image)
+            .addOnSuccessListener { list ->
+                val value = list.firstNotNullOfOrNull { it.rawValue }
+                if (value == null) { busy = false; error = "No barcode found. Fill the frame with the barcode and keep it sharp." }
+                else { code = value; lookup(value) }
+            }
+            .addOnFailureListener { e -> android.util.Log.w("Form", "barcode decode failed", e); busy = false; error = "Couldn't read the barcode. Type the code below." }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Button(
             onClick = {
                 error = null
-                val options = GmsBarcodeScannerOptions.Builder()
-                    .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
-                    .enableAutoZoom().build()
-                val scanner = GmsBarcodeScanning.getClient(ctx, options)
-                fun scan() = scanner.startScan()
-                    .addOnSuccessListener { b -> b.rawValue?.let { code = it; lookup(it) } }
-                    .addOnCanceledListener { busy = false }
-                    .addOnFailureListener { e -> android.util.Log.w("Form", "scan failed", e); busy = false
-                        error = if (e.message?.contains("download", true) == true) "The scanner is still downloading. Try again in a moment, or type the code below."
-                        else "Couldn't open the scanner. Type the code below." }
-                // The scanner UI is a Play services module downloaded on demand; until it is installed startScan()
-                // never calls back. Install it first (with progress), then scan.
-                val modules = com.google.android.gms.common.moduleinstall.ModuleInstall.getClient(ctx)
-                busy = true
-                modules.areModulesAvailable(scanner).addOnSuccessListener { r ->
-                    if (r.areModulesAvailable()) { busy = false; scan(); return@addOnSuccessListener }
-                    error = "Downloading the scanner…"
-                    // installModules() succeeding only means "queued"; the listener says when the module is really there.
-                    lateinit var listener: com.google.android.gms.common.moduleinstall.InstallStatusListener
-                    listener = com.google.android.gms.common.moduleinstall.InstallStatusListener { u ->
-                        u.progressInfo?.let { p -> if (p.totalBytesToDownload > 0) error = "Downloading the scanner… ${p.bytesDownloaded * 100 / p.totalBytesToDownload}%" }
-                        when (u.installState) {
-                            com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_COMPLETED -> { modules.unregisterListener(listener); busy = false; error = null; scan() }
-                            com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_FAILED, com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_CANCELED -> { modules.unregisterListener(listener); busy = false
-                                error = "Couldn't download the scanner (needs the Play Store and internet). Type the code below." }
-                        }
-                    }
-                    val req = com.google.android.gms.common.moduleinstall.ModuleInstallRequest.newBuilder().addApi(scanner).setListener(listener).build()
-                    modules.installModules(req).addOnSuccessListener { resp -> if (resp.areModulesAlreadyInstalled()) { busy = false; error = null; scan() } }
-                        .addOnFailureListener { e -> android.util.Log.w("Form", "scanner install failed", e); busy = false
-                            error = "Couldn't download the scanner (needs Google Play services and internet). Type the code below." }
-                }.addOnFailureListener { e -> android.util.Log.w("Form", "scanner check failed", e); busy = false
-                    error = "Scanner unavailable (needs Google Play services). Type the code below." }
+                runCatching { camera.launch(photoUri) }.onFailure { error = "No camera app found. Type the code below." }
             },
             enabled = !busy, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth(),
-        ) { Icon(Icons.Rounded.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Scan barcode") }
+        ) { Icon(Icons.Rounded.PhotoCamera, null); Spacer(Modifier.width(8.dp)); Text("Scan barcode") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(code, { code = it.filter(Char::isDigit).take(14) }, Modifier.weight(1f), label = { Text("Or type the code") },
                 singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))

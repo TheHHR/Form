@@ -112,7 +112,5 @@
             </intent-filter>
         </service>
 
-        <!-- Google code scanner downloads its UI module on demand. -->
-        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
     </application>
 </manifest>

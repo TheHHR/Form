@@ -222,7 +222,8 @@ fun CustomExerciseDialog(vm: FormStore, existing: Exercise?, onDone: (Exercise?)
                 androidx.compose.material3.OutlinedTextField(name, { name = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
                 MenuField("Body part", jsTitle(category), Exercise.CATEGORIES.map { it to jsTitle(it) }) { category = it }
                 MenuField("Equipment", jsTitle(equipment), vm.catalog.equipmentOptions.map { it to jsTitle(it) }) { equipment = it }
-                androidx.compose.material3.OutlinedTextField(target, { target = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Target muscle (optional)") }, singleLine = true)
+                val muscles = remember { listOf("" to "Same as body part") + vm.catalog.builtIn.map { it.target }.distinct().sorted().map { it to jsTitle(it) } }
+                MenuField("Target muscle", if (target.isEmpty()) "Same as body part" else jsTitle(target), muscles) { target = it }
                 androidx.compose.material3.OutlinedTextField(description, { description = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Notes (optional)") }, minLines = 2)
             }
         },

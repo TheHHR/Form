@@ -3,6 +3,10 @@
 package com.thehhr.form.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Spacer
@@ -125,7 +129,11 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         item {
             // Header like M3 Expressive health apps: period title with its arrows, one big number, a plain-language line.
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(selLabel ?: periodLabel, Modifier.weight(1f).animateContentSize(), style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
+                // Tap the title to jump back to the current period (plain text: no press effect).
+                Text(selLabel ?: periodLabel, Modifier.weight(1f).animateContentSize()
+                    .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+                        enabled = offset != 0 || selected != null, onClickLabel = "Go to current $scope") { offset = 0; selected = null },
+                    style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
                 if (scope != "all") {
                     FilledTonalIconButton(onClick = { offset--; selected = null }, shapes = IconButtonDefaults.shapes()) {
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $scope")
@@ -256,8 +264,9 @@ private fun compact(v: Double) = if (v >= 10_000) "${jsRound(v / 100) / 10.0}k".
 private fun setCount(l: ProgressLog) = if (l.timed) l.intervals ?: 0 else l.sets ?: 0
 
 /**
- * Tappable pill bars (no track), right-hand scale, the selected column in the complement colour with a
- * cookie badge on top. Each column selects its day / month.
+ * Tappable pill bars (no track) with a right-hand scale. The selected column turns the complement colour with a
+ * cookie badge just above it; today's label takes the accent. Pressing a bar squeezes it and squares its corners
+ * (the M3 Expressive press morph). Empty columns are dots and can't be selected.
  */
 @Composable
 private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, today: Int, selected: Int, onTap: (Int) -> Unit) {
@@ -267,49 +276,64 @@ private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, t
     val empty = MaterialTheme.colorScheme.surfaceContainerHighest
     val guide = MaterialTheme.colorScheme.outlineVariant
     val chart = 168.dp
+    val head = 32.dp // room above the tallest bar for the badge
     Row(Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) {
             // Guide line at the top value.
-            Canvas(Modifier.fillMaxWidth().padding(top = 16.dp).height(chart)) {
+            Canvas(Modifier.fillMaxWidth().padding(top = head).height(1.dp)) {
                 drawLine(guide, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx(),
                     pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 8f)))
             }
             Row(Modifier.fillMaxWidth()) {
                 values.forEachIndexed { i, v ->
                     val isSel = i == selected
+                    val enabled = v > 0
                     val h = androidx.compose.animation.core.animateFloatAsState(v / max.toFloat(), MaterialTheme.motionScheme.defaultSpatialSpec(), label = "bar").value
+                    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val pressed by interaction.collectIsPressedAsState()
+                    val corner by androidx.compose.animation.core.animateIntAsState(if (pressed) 30 else 50, MaterialTheme.motionScheme.fastSpatialSpec(), label = "corner")
+                    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.9f else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "squeeze")
+                    val color by androidx.compose.animation.animateColorAsState(if (!enabled) empty else if (isSel) pick else bar,
+                        MaterialTheme.motionScheme.defaultEffectsSpec(), label = "barColor")
                     Column(
-                        Modifier.weight(1f).clip(MaterialTheme.shapes.medium).clickable { onTap(i) }
+                        Modifier.weight(1f).clickable(interaction, indication = null, enabled = enabled, onClickLabel = "Select") { onTap(i) }
                             .semantics { contentDescription = "${names[i]}, $v sets"; this.selected = isSel },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Box(Modifier.fillMaxWidth().height(chart + 16.dp), contentAlignment = Alignment.BottomCenter) {
-                            val color = if (isSel) pick else bar
-                            Canvas(Modifier.fillMaxWidth(0.72f).height(chart)) {
-                                val w = size.width
-                                val barH = if (v == 0) w else (h * size.height).coerceAtLeast(w)
-                                drawRoundRect(if (v == 0) empty else color, Offset(0f, size.height - barH), Size(w, barH), CornerRadius(w / 2))
+                        Column(Modifier.fillMaxWidth().height(chart + head), verticalArrangement = Arrangement.Bottom,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            androidx.compose.animation.AnimatedVisibility(isSel && enabled,
+                                enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()) {
+                                Box(Modifier.padding(bottom = 4.dp).size(24.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(pick),
+                                    contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiary) }
                             }
-                            if (isSel && v > 0) Box(
-                                Modifier.align(Alignment.TopCenter).offset(y = chart + 16.dp - (chart * h) - 16.dp).size(32.dp)
-                                    .clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.onTertiary),
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Rounded.Check, null, Modifier.size(18.dp), tint = pick) }
+                            Box(
+                                Modifier.fillMaxWidth(0.72f)
+                                    // At least as tall as wide, so an empty or tiny value is a dot, not a sliver.
+                                    .layout { m, c ->
+                                        val w = c.maxWidth
+                                        val bh = if (enabled) maxOf((chart.toPx() * h).toInt(), w) else w
+                                        val p = m.measure(androidx.compose.ui.unit.Constraints.fixed(w, bh))
+                                        layout(w, bh) { p.place(0, 0) }
+                                    }
+                                    .graphicsLayer { scaleX = squeeze; scaleY = squeeze; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f) }
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(corner))
+                                    .background(color),
+                            )
                         }
                         Text(labels[i], Modifier.padding(top = 8.dp),
                             style = if (isSel || i == today) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge,
-                            color = if (isSel) pick else if (i == today) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                            color = when { isSel -> pick; i == today -> MaterialTheme.colorScheme.primary; else -> MaterialTheme.colorScheme.onSurfaceVariant })
                     }
                 }
             }
         }
-        // Scale: top value, half, zero.
-        // Each label is centred on its line: the top on the dashed guide (16 dp down), 0 on the baseline.
-        Column(Modifier.padding(start = 6.dp, top = 8.dp).height(chart + 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        // Scale: each label is centred on its line, the top on the dashed guide, 0 on the baseline.
+        Column(Modifier.padding(start = 6.dp, top = head - 8.dp).height(chart + 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Text("$max", Modifier.height(16.dp), style = MaterialTheme.typography.labelMediumEmphasized)
             if (max >= 4) Text("${max / 2}", Modifier.height(16.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("0", Modifier.height(16.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
         }
     }
 }
@@ -337,6 +361,7 @@ private fun MonthGrid(month: YearMonth, weekStart: Int, logged: Set<String>, tod
                         val sel = key == selected
                         Box(
                             Modifier.size(36.dp).clip(CircleShape)
+                                .then(if (day == today && !sel) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
                                 .background(when { sel -> MaterialTheme.colorScheme.primary; has -> MaterialTheme.colorScheme.primaryContainer; else -> MaterialTheme.colorScheme.surface.copy(alpha = 0f) })
                                 .clickable(enabled = has) { onDay(key) }
                                 .semantics { contentDescription = displayDate(key) + if (has) ", trained" else "" },
@@ -344,7 +369,8 @@ private fun MonthGrid(month: YearMonth, weekStart: Int, logged: Set<String>, tod
                         ) {
                             Text("${day.dayOfMonth}", style = MaterialTheme.typography.labelLarge,
                                 color = when { sel -> MaterialTheme.colorScheme.onPrimary; has -> MaterialTheme.colorScheme.primary
-                                    day == today -> MaterialTheme.colorScheme.onSurface; else -> MaterialTheme.colorScheme.onSurfaceVariant })
+                                    day == today -> MaterialTheme.colorScheme.primary; else -> MaterialTheme.colorScheme.onSurfaceVariant },
+                                fontWeight = if (day == today) androidx.compose.ui.text.font.FontWeight.Bold else null)
                         }
                     }
                 }

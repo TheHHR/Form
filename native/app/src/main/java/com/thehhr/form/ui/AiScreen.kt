@@ -36,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -185,7 +186,9 @@ private fun AiStatus(vm: FormStore, task: AiTask) {
             contentColor = MaterialTheme.colorScheme.onErrorContainer)) {
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(msg, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = { task.retry(vm) }) { Text("Retry") }
+                TextButton(onClick = { task.retry(vm) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onErrorContainer)) {
+                    Text("Retry", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -301,23 +304,21 @@ private fun MealPane(vm: FormStore, cfg: AiConfig) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(description, { description = it.take(500) }, Modifier.fillMaxWidth(), label = { Text("What did you eat?") },
-            placeholder = { Text("e.g. 200 g chicken breast, a cup of rice, salad with olive oil") })
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilledTonalIconButton(onClick = { camera.launch(photoUri) }, enabled = vision != false && !task.busy,
-                shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.PhotoCamera, "Take a photo of the meal") }
-            val photo = AiSession.photo
-            when {
-                vision == false -> Text("Photos need a vision model. ${cfg.model} can't read images; pick one like gemini-2.5-flash or gpt-4o.",
-                    Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                photo != null -> {
-                    val bmp = remember(photo) { android.graphics.BitmapFactory.decodeByteArray(photo, 0, photo.size)?.asImageBitmap() }
-                    if (bmp != null) androidx.compose.foundation.Image(bmp, "Meal photo", Modifier.size(56.dp).clip(MaterialTheme.shapes.medium),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                    Text("Photo added", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = { AiSession.photo = null }) { Text("Remove") }
+            placeholder = { Text("e.g. 200 g chicken breast, a cup of rice, salad with olive oil") },
+            trailingIcon = {
+                IconButton(onClick = { camera.launch(photoUri) }, enabled = vision != false && !task.busy) {
+                    Icon(Icons.Rounded.PhotoCamera, "Take a photo of the meal")
                 }
-                else -> Text(if (vision == null) "Add a photo (if your model reads images)" else "Add a photo, a description, or both",
-                    Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            supportingText = if (vision == false) ({ Text("Photos need a vision model. ${cfg.model} can't read images; pick one like gemini-2.5-flash or gpt-4o.") }) else null,
+        )
+        AiSession.photo?.let { photo ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val bmp = remember(photo) { android.graphics.BitmapFactory.decodeByteArray(photo, 0, photo.size)?.asImageBitmap() }
+                if (bmp != null) androidx.compose.foundation.Image(bmp, "Meal photo", Modifier.size(56.dp).clip(MaterialTheme.shapes.medium),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                Text("Photo added", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { AiSession.photo = null }) { Text("Remove") }
             }
         }
         Button(onClick = {

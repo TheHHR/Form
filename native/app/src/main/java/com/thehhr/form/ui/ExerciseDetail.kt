@@ -127,8 +127,14 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
                     listOfNotNull(e?.category, e?.muscleGroup?.takeIf { it.isNotEmpty() }).plus(e?.secondary.orEmpty()).distinct()
                         .forEach { Tag(jsTitle(it)) }
                     tags.forEach { Tag("#$it", accent = true) }
-                    androidx.compose.material3.FilledTonalIconButton(onClick = { editingTags = true }, shapes = androidx.compose.material3.IconButtonDefaults.shapes(),
-                        modifier = Modifier.size(36.dp)) { Icon(Icons.Rounded.Sell, if (tags.isEmpty()) "Add tags" else "Edit tags", Modifier.size(18.dp)) }
+                    // Same height and shape as the badges beside it (touch target still 48 dp via Surface).
+                    androidx.compose.material3.Surface(onClick = { editingTags = true }, shape = androidx.compose.foundation.shape.CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest, contentColor = MaterialTheme.colorScheme.onSurface) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (tags.isEmpty()) Icons.Rounded.Add else Icons.Rounded.Edit, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp))
+                            Text(if (tags.isEmpty()) "Tag" else "Tags", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
                 }
             }
             item {

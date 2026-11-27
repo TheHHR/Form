@@ -402,15 +402,19 @@ fun shareText(ctx: android.content.Context, title: String, text: String) {
     ctx.startActivity(android.content.Intent.createChooser(send, title))
 }
 
-/** Header for Routines / Meals: new, import, and a select-to-share mode. */
+/** Header for Routines / Meals: a New menu (create, or import from text) and a select-to-share mode. */
 @Composable
 private fun ListHeader(newLabel: String, onNew: () -> Unit, onImport: () -> Unit, selecting: Boolean, onSelecting: (Boolean) -> Unit) {
+    var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(onClick = onNew, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) {
-            Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text(newLabel)
-        }
-        androidx.compose.material3.FilledTonalIconButton(onClick = onImport, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
-            Icon(Icons.Rounded.Download, "Import")
+        Box(Modifier.weight(1f)) {
+            FilledTonalButton(onClick = { menu = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text(newLabel)
+            }
+            DropdownMenu(menu, { menu = false }) {
+                DropdownMenuItem(text = { Text(newLabel) }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; onNew() })
+                DropdownMenuItem(text = { Text("Import from text") }, leadingIcon = { Icon(Icons.Rounded.Download, null) }, onClick = { menu = false; onImport() })
+            }
         }
         androidx.compose.material3.FilledTonalIconToggleButton(checked = selecting, onCheckedChange = onSelecting,
             shapes = androidx.compose.material3.IconButtonDefaults.toggleableShapes()) {
