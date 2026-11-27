@@ -367,7 +367,7 @@ private fun AiSetupSheet(current: AiConfig, onDismiss: () -> Unit, onSave: (AiCo
     var testing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<String?>(null) }
     fun cfg() = AiConfig(provider, keys, models, baseUrl)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    FormSheet(onDismissRequest = onDismiss) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("AI provider", style = MaterialTheme.typography.titleMediumEmphasized)

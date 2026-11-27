@@ -211,7 +211,7 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
     var name by remember { mutableStateOf("") }
     var mp by remember { mutableStateOf(0.0) }; var mc by remember { mutableStateOf(0.0) }; var mf by remember { mutableStateOf(0.0) }
     val addLabel = "Add to $slot"
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    FormSheet(onDismissRequest = onClose) {
         // Height follows the content with the theme's spring, so switching tabs grows/shrinks the sheet instead of jumping.
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -317,9 +317,36 @@ private fun BarcodePane(vm: FormStore, onFound: (Meal, Double) -> Unit) {
                 val options = GmsBarcodeScannerOptions.Builder()
                     .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
                     .enableAutoZoom().build()
-                GmsBarcodeScanning.getClient(ctx, options).startScan()
+                val scanner = GmsBarcodeScanning.getClient(ctx, options)
+                fun scan() = scanner.startScan()
                     .addOnSuccessListener { b -> b.rawValue?.let { code = it; lookup(it) } }
-                    .addOnFailureListener { error = "Scanner unavailable (needs Google Play services). Type the code below." }
+                    .addOnCanceledListener { busy = false }
+                    .addOnFailureListener { e -> android.util.Log.w("Form", "scan failed", e); busy = false
+                        error = if (e.message?.contains("download", true) == true) "The scanner is still downloading. Try again in a moment, or type the code below."
+                        else "Couldn't open the scanner. Type the code below." }
+                // The scanner UI is a Play services module downloaded on demand; until it is installed startScan()
+                // never calls back. Install it first (with progress), then scan.
+                val modules = com.google.android.gms.common.moduleinstall.ModuleInstall.getClient(ctx)
+                busy = true
+                modules.areModulesAvailable(scanner).addOnSuccessListener { r ->
+                    if (r.areModulesAvailable()) { busy = false; scan(); return@addOnSuccessListener }
+                    error = "Downloading the scanner…"
+                    // installModules() succeeding only means "queued"; the listener says when the module is really there.
+                    lateinit var listener: com.google.android.gms.common.moduleinstall.InstallStatusListener
+                    listener = com.google.android.gms.common.moduleinstall.InstallStatusListener { u ->
+                        u.progressInfo?.let { p -> if (p.totalBytesToDownload > 0) error = "Downloading the scanner… ${p.bytesDownloaded * 100 / p.totalBytesToDownload}%" }
+                        when (u.installState) {
+                            com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_COMPLETED -> { modules.unregisterListener(listener); busy = false; error = null; scan() }
+                            com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_FAILED, com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState.STATE_CANCELED -> { modules.unregisterListener(listener); busy = false
+                                error = "Couldn't download the scanner (needs the Play Store and internet). Type the code below." }
+                        }
+                    }
+                    val req = com.google.android.gms.common.moduleinstall.ModuleInstallRequest.newBuilder().addApi(scanner).setListener(listener).build()
+                    modules.installModules(req).addOnSuccessListener { resp -> if (resp.areModulesAlreadyInstalled()) { busy = false; error = null; scan() } }
+                        .addOnFailureListener { e -> android.util.Log.w("Form", "scanner install failed", e); busy = false
+                            error = "Couldn't download the scanner (needs Google Play services and internet). Type the code below." }
+                }.addOnFailureListener { e -> android.util.Log.w("Form", "scanner check failed", e); busy = false
+                    error = "Scanner unavailable (needs Google Play services). Type the code below." }
             },
             enabled = !busy, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth(),
         ) { Icon(Icons.Rounded.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Scan barcode") }

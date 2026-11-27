@@ -263,7 +263,7 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? =
         onClose()
     }
 
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    FormSheet(onDismissRequest = onClose) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

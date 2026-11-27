@@ -40,7 +40,7 @@ val Accents = linkedMapOf(
     "purple" to (Color(0xFFBF5AF2) to Color.White),
     "pink" to (Color(0xFFFF375F) to Color.White),
 )
-private val Complement = mapOf("lime" to "cyan", "cyan" to "lime", "red" to "blue", "blue" to "red",
+internal val Complement = mapOf("lime" to "cyan", "cyan" to "lime", "red" to "blue", "blue" to "red",
     "green" to "orange", "orange" to "green", "purple" to "pink", "pink" to "purple")
 
 /** True when the app is drawing its dark scheme (set by [FormTheme]). */
@@ -92,7 +92,7 @@ fun onLight(c: Color, ratio: Double = 4.5): Color {
     return x
 }
 
-private fun darkScheme(primary: Color, onPrimary: Color, tertiary: Color): ColorScheme {
+internal fun darkScheme(primary: Color, onPrimary: Color, tertiary: Color): ColorScheme {
     val surface = Color(0xFF15161A)
     return darkColorScheme(
         primary = primary, onPrimary = onPrimary,
@@ -115,7 +115,7 @@ private fun darkScheme(primary: Color, onPrimary: Color, tertiary: Color): Color
 }
 
 /** Light scheme: the accent stays the fill colour of containers; text/icon roles use a darkened accent for 4.5:1 contrast. */
-private fun lightScheme(accent: Color, tertiaryAccent: Color): ColorScheme {
+internal fun lightScheme(accent: Color, tertiaryAccent: Color): ColorScheme {
     val ink = onLight(accent)
     val tInk = onLight(tertiaryAccent)
     val white = Color(0xFFFFFFFF)

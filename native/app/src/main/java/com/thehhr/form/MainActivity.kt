@@ -51,6 +51,11 @@ class MainActivity : ComponentActivity() {
                 store.launch { if (store.whenReady { startToday() } == false) store.message = "Nothing scheduled today. Pick a routine." }
             }
             ACTION_OPEN_WORKOUT -> store.pendingDestination = "Workout"
+            ACTION_START_ROUTINE -> {
+                store.pendingDestination = "Workout"
+                val id = intent.getStringExtra(EXTRA_ROUTINE)
+                store.launch { store.whenReady { data.routines.firstOrNull { it.id == id }?.let(::startWorkout) } }
+            }
             ACTION_LOG_FOOD -> store.pendingDestination = "Fuel:log"
             ACTION_OPEN_ROUTINES -> store.pendingDestination = "Plans"
             ACTION_OPEN_PROGRESS -> store.pendingDestination = "Progress"
@@ -86,5 +91,7 @@ class MainActivity : ComponentActivity() {
         const val ACTION_LOG_FOOD = "com.thehhr.form.LOG_FOOD"
         const val ACTION_OPEN_ROUTINES = "com.thehhr.form.OPEN_ROUTINES"
         const val ACTION_OPEN_PROGRESS = "com.thehhr.form.OPEN_PROGRESS"
+        const val ACTION_START_ROUTINE = "com.thehhr.form.START_ROUTINE"
+        const val EXTRA_ROUTINE = "routineId"
     }
 }

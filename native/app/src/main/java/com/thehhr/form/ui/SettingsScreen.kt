@@ -198,7 +198,7 @@ private fun OptionItem(index: Int, count: Int, title: String, options: List<Pair
     var open by remember { mutableStateOf(false) }
     val current = options.firstOrNull { it.first == value }?.second?.first ?: "Custom (${num(value)})"
     GroupedItem(index, count, onClick = { open = true }, supporting = { Text(current) }) { Text(title) }
-    if (open) ModalBottomSheet(onDismissRequest = { open = false }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (open) FormSheet(onDismissRequest = { open = false }) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text(title, style = MaterialTheme.typography.titleMediumEmphasized, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
             options.forEachIndexed { i, (v, labels) ->

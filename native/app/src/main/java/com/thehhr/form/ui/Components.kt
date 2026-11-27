@@ -159,7 +159,7 @@ fun GroupedItem(
     val shapes = ListItemDefaults.segmentedShapes(index, count)
     val m = modifier.padding(bottom = if (index < count - 1) ListItemDefaults.SegmentedGap else 0.dp)
     // Rows sit on surfaceContainer so the group reads as one block against the near-black background.
-    val colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    val colors = if (LocalInSheet.current) ListItemDefaults.segmentedColors() else ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     if (onClick != null) SegmentedListItem(onClick = onClick, shapes = shapes, modifier = m, leadingContent = leading,
         supportingContent = supporting, trailingContent = trailing, colors = colors, content = headline)
     else SegmentedListItem(shapes = shapes, modifier = m, leadingContent = leading, supportingContent = supporting,
@@ -351,4 +351,17 @@ fun PeriodNav(label: String, what: String, onPrev: () -> Unit, onNext: () -> Uni
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next $what")
         }
     }
+}
+
+/** True inside a [FormSheet]: grouped rows switch to the sheet-friendly default colours (as the Activity level sheet). */
+val LocalInSheet = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** The app's one bottom sheet: always fully expanded, same colours, motion and drag handle everywhere. */
+@Composable
+fun FormSheet(onDismissRequest: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) { androidx.compose.runtime.CompositionLocalProvider(LocalInSheet provides true) { content() } }
 }

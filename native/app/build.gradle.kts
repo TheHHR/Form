@@ -106,6 +106,9 @@ dependencies {
     implementation("androidx.fragment:fragment:1.8.9")
     // NotificationCompat Live Updates API (setRequestPromotedOngoing, setShortCriticalText).
     implementation("androidx.core:core-ktx:1.19.1")
+    // Home-screen widget (responsive sizes, Material 3 / dynamic colours).
+    implementation("androidx.glance:glance-appwidget:1.2.0")
+    implementation("androidx.glance:glance-material3:1.2.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
