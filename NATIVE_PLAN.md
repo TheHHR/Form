@@ -16,8 +16,8 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 ## Layout
 - `native/` is its own Gradle root, separate from the Capacitor `android/` app. It uses AGP 9.5.1, Gradle 9.6, Kotlin 2.4, compileSdk 37.2, minSdk 29, and Material 3 1.5.0.
 - Exercise data and stills are copied at build time from `www/data` and `www/images`. Videos (`www/videos`) are bundled in prod only.
-- `android-beta.yml` (Form-Beta only) runs the tests, builds `assembleBetaRelease` and publishes the latest release.
-- `android-build.yml` is guarded to `TheHHR/Form` and still ships the web app until cutover.
+- `android-beta.yml` (TheHHR/Form, since 2026-11-27) runs the tests, builds `assembleBetaRelease` signed with the Form Beta key (`FORM_BETA_*` secrets) and publishes a **prerelease** `v4.0.0-beta.<run+100>`. Form-Beta is retired.
+- `android-build.yml` still ships the web app as the Latest release, and only runs when web files change, until cutover.
 
 ## Done (4.0.0-beta)
 - Vault: parse and write all 5 files, the folder picker and first-run seeding.
@@ -44,11 +44,22 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 - `findChild` errors are no longer mistaken for missing files, which forked files as "routines (1).md".
 - `allowBackup=false`.
 
-## Not ported yet (next betas)
-1. AI: bring-your-own-key settings, the meal macro estimate, the review stream and the routine generator.
-2. Text import and export for routines, meals and logs, plus clear data.
-3. A tags editor and filters, plus the custom-exercise create, edit and delete UI. The data is already preserved in `config.md`.
-4. The dashboard month and all-time scopes. (The muscle map is done: MuscleMapJS data, exercise detail and weekly heatmap.)
-5. The update check. (Background rest notification, set timer, reminders, shortcuts, tile, widget, Health Connect and barcode lookup are done.)
-6. Fonts: Space Grotesk and Roboto still need to be bundled as resources.
-7. Cutover: compare 3.6.x and native feature by feature, test an in-place upgrade on a real phone with real data, then ship prod 4.0.0 and retire `android/` and `www/`.
+## Done since beta.10 (2026-11-27)
+- Workout: fullscreen rest/set timer from the clock pill, tap any exercise to do it next (the turn returns on complete, skip or a second tap), one open card, Restore.
+- Live notification: set N/M, next exercise, set progress, Log set / Skip / Skip rest / +30s / Pause, opens the Workout tab. Live Update (promoted ongoing) on Android 16; One UI 8 shows Live Updates in the Now Bar (not verified on a Samsung phone yet).
+- Haptics per event (tick, set, exercise, PR, workout, rest over) with `VibrationAttributes`.
+- System: Glance widget (same `FormWidget` receiver), Workout QS tile, 4 launcher shortcuts plus water, onboarding with Health Connect weight/height import.
+- Theme: light/dark/system and wallpaper colours (device-only prefs), animated colour roles, light-safe accent text roles (unit-tested 4.5:1).
+- Parity: custom exercises, tags, share/import routines and meals, skip meal (web `Skipped` placeholder), editable logs, meal photo for vision models, AI tasks that survive tab switches.
+- Reminder: one switch, config.md `workout-reminder`, shared with the web app.
+
+## Decisions
+- The vault stays the 5 `.md` files (no Room): they are the source of truth and byte-compatible with the web app.
+- Device prefs stay in SharedPreferences (no DataStore migration): small, synchronous, already working.
+- No per-app language picker yet: there are no translated strings. RTL layout was checked with a Persian app locale.
+
+## Not done yet
+1. Translations (then `localeConfig` for per-app language).
+2. Real-device checks: Samsung Now Bar, barcode scanner module download (the test emulator has no Play Store), haptic feel.
+3. The update check, and bundling Roboto.
+4. Cutover: ship prod 4.0.0 from `native/` with the prod key after an in-place upgrade test on a real phone, then retire `android/` and `www/`.

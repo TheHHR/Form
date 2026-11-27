@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths: ['native/**', 'www/data/**', 'www/images/**', '.github/workflows/android-beta.yml']
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: github.repository == 'TheHHR/Form-Beta'
+    if: github.repository == 'TheHHR/Form'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,45 +23,49 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # Native Kotlin/Compose app in native/ (the Capacitor web app in android/ + www/ is no longer built here).
-      # Beta ships without exercise videos; www/images and www/data are bundled by the Gradle build.
+      # Native Kotlin/Compose app in native/. Beta ships without exercise videos; www/images and www/data are bundled by Gradle.
+      # Signed with the Form Beta key (FORM_BETA_* secrets), NOT the prod key, so installed betas keep upgrading.
       - name: Decode beta keystore
         env:
-          FORM_KEYSTORE_BASE64: ${{ secrets.FORM_KEYSTORE_BASE64 }}
-        run: echo "$FORM_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/form-beta.jks"
+          FORM_BETA_KEYSTORE_BASE64: ${{ secrets.FORM_BETA_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$FORM_BETA_KEYSTORE_BASE64" || { echo "::error::Add the FORM_BETA_* secrets (Form Beta signing key) to this repo"; exit 1; }
+          echo "$FORM_BETA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/form-beta.jks"
+
+      # Run numbers restart in this repo; +100 keeps versionCode above the betas published from Form-Beta (up to beta.10).
+      - id: ver
+        run: |
+          N=$((GITHUB_RUN_NUMBER + 100))
+          echo "build=$N" >> "$GITHUB_OUTPUT"
+          echo "version=$(cat native/version.properties)-beta.$N" >> "$GITHUB_OUTPUT"
 
       - name: Test and build beta APK
         env:
           FORM_KEYSTORE: ${{ runner.temp }}/form-beta.jks
-          FORM_KEYSTORE_PASSWORD: ${{ secrets.FORM_KEYSTORE_PASSWORD }}
-          FORM_KEY_ALIAS: ${{ secrets.FORM_KEY_ALIAS }}
-          FORM_KEY_PASSWORD: ${{ secrets.FORM_KEY_PASSWORD }}
-          # versionCode = 40000 + run number, so every beta upgrades the previous one (and the 3.x web beta).
-          FORM_BUILD_NUMBER: ${{ github.run_number }}
+          FORM_KEYSTORE_PASSWORD: ${{ secrets.FORM_BETA_KEYSTORE_PASSWORD }}
+          FORM_KEY_ALIAS: ${{ secrets.FORM_BETA_KEY_ALIAS }}
+          FORM_KEY_PASSWORD: ${{ secrets.FORM_BETA_KEY_PASSWORD }}
+          FORM_BUILD_NUMBER: ${{ steps.ver.outputs.build }}
         run: |
           cd native
           chmod +x gradlew
           ./gradlew testBetaDebugUnitTest assembleBetaRelease --no-daemon
 
-      - id: ver
-        run: echo "version=$(cat native/version.properties)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-
       - run: cp native/app/build/outputs/apk/beta/release/app-beta-release.apk "Form-${{ steps.ver.outputs.version }}.apk"
 
+      # Prerelease: the web app stays the Latest release (and the landing page link) until the native app is promoted.
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: Form ${{ steps.ver.outputs.version }}
-          prerelease: false
-          make_latest: true
+          prerelease: true
+          make_latest: false
           body: |
             **Native Android app** (Kotlin + Jetpack Compose, Material 3 Expressive). No WebView.
-            Installs as "Form Beta" next to the real Form app; upgrades the 3.x web beta in place.
+            Installs as "Form Beta" next to the real Form app and upgrades earlier betas in place.
             Point it at a **copy** of your Form folder while testing.
-            Allow notifications when asked: the rest timer counts down on the lock screen (+30s / Skip / Log set) and buzzes when rest ends, even with the screen off.
-            Also: workout reminders (Settings, off by default), app-icon shortcuts, a "Log water" Quick Settings tile, a "Today" home-screen widget,
-            Health Connect sync (Settings, opt-in), PR haptics, and barcode food lookup (Open Food Facts) in Fuel → Log meal.
-            New: ± steppers and a set timer (▶ on timed sets) in workouts, full progress logging (date, reps or timed, notes), muscle maps (MuscleMapJS).
-            New: AI tab (bring your own key: training review, routine builder, meal estimate), Live Update workout notification (Android 16+), Week/Month/All progress, custom daily targets.
-            Not in this build yet: text import/export, tags editor, custom-exercise editor.
+            New: fullscreen rest timer, tap any exercise to do it next, live workout notification with Log set / Skip,
+            Workout Quick Settings tile, launcher shortcuts, new home-screen widget, light/dark/system theme and wallpaper colours,
+            welcome screen with Health Connect weight/height import, custom exercises, tags, share and import routines/meals,
+            skip meals, meal estimate from a photo, editable logs, redesigned Progress chart.
           files: Form-${{ steps.ver.outputs.version }}.apk
