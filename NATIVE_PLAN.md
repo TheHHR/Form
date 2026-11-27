@@ -16,8 +16,8 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 ## Layout
 - `native/` is its own Gradle root, separate from the Capacitor `android/` app. It uses AGP 9.5.1, Gradle 9.6, Kotlin 2.4, compileSdk 37.2, minSdk 29, and Material 3 1.5.0.
 - Exercise data and stills are copied at build time from `www/data` and `www/images`. Videos (`www/videos`) are bundled in prod only.
-- `android-beta.yml` (TheHHR/Form, since 2026-11-27) runs the tests, builds `assembleBetaRelease` signed with the Form Beta key (`FORM_BETA_*` secrets) and publishes a **prerelease** `v4.0.0-beta.<run+100>`. Form-Beta is retired.
-- `android-build.yml` still ships the web app as the Latest release, and only runs when web files change, until cutover.
+- `android-build.yml` (since 2026-11-27) builds the **native** prod flavor (`com.thehhr.form`, release key `FORM_KEYSTORE_*`, version from `native/version.properties`) as the Latest release and updates the landing page. Bump `native/version.properties` for each release. The Capacitor `android/` app is no longer built.
+- `android-beta.yml` is manual (workflow_dispatch): a "Form Beta" prerelease signed with the beta key (`FORM_BETA_*` secrets).
 
 ## Done (4.0.0-beta)
 - Vault: parse and write all 5 files, the folder picker and first-run seeding.
@@ -62,4 +62,4 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 1. Translations (then `localeConfig` for per-app language).
 2. Real-device checks: Samsung Now Bar, barcode scanner module download (the test emulator has no Play Store), haptic feel.
 3. The update check, and bundling Roboto.
-4. Cutover: ship prod 4.0.0 from `native/` with the prod key after an in-place upgrade test on a real phone, then retire `android/` and `www/`.
+4. Cutover (approved 2026-11-27): prod 4.0.0 ships from `native/`. Still to do: retire `android/` and the web-only parts of `www/` (Gradle bundles `www/data`, `www/images`, `www/videos`).
