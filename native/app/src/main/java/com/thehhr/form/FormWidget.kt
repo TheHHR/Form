@@ -63,6 +63,7 @@ private data class WidgetData(
     val canStart: Boolean,
     val kcal: Double, val kcalTarget: Double,
     val protein: Double, val proteinTarget: Double,
+    val water: Double, val waterTarget: Double,
     val weekSessions: Int, val weekSets: Int,
     val routines: List<Pair<String, String>>,
 )
@@ -85,7 +86,7 @@ class FormGlance : GlanceAppWidget() {
 
     /** Picker preview (Android 15+): sample numbers, real layout. */
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        val sample = WidgetData("lime", false, "Push day", "6 exercises", true, 1240.0, 2100.0, 96.0, 140.0, 3, 54,
+        val sample = WidgetData("lime", false, "Push day", "6 exercises", true, 1240.0, 2100.0, 96.0, 140.0, 1500.0, 2500.0, 3, 54,
             listOf("a" to "Push day", "b" to "Pull day", "c" to "Legs"))
         provideContent { GlanceTheme { WidgetContent(context, sample) } }
     }
@@ -114,6 +115,7 @@ class FormGlance : GlanceAppWidget() {
             accent = d.prefs.accent, training = w != null, title = title, subtitle = subtitle,
             canStart = w == null && routine != null && routine.items.isNotEmpty(),
             kcal = day.meals.sumOf { it.cals }, kcalTarget = t.cals, protein = day.meals.sumOf { it.p }, proteinTarget = t.p,
+            water = day.water, waterTarget = t.water,
             weekSessions = week.map { it.date }.distinct().size,
             weekSets = week.sumOf { if (it.timed) it.intervals ?: 0 else it.sets ?: 0 },
             routines = (d.routines.filter { it.liked }.ifEmpty { d.routines }).filter { it.items.isNotEmpty() }.take(3).map { it.id to it.name },
@@ -151,6 +153,8 @@ private fun WidgetContent(ctx: Context, d: WidgetData?) {
                         Meter("kcal", d.kcal, d.kcalTarget)
                         Spacer(GlanceModifier.height(10.dp))
                         Meter("g protein", d.protein, d.proteinTarget)
+                        Spacer(GlanceModifier.height(6.dp))
+                        Text("Water ${jsRound(d.water)} / ${jsRound(d.waterTarget)} ml", style = TextStyle(color = c.onSurfaceVariant, fontSize = 12.sp), maxLines = 1)
                     }
                 }
                 if (size.height >= 260.dp) {

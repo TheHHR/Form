@@ -136,7 +136,7 @@ fun FolderPicker(vm: FormStore, content: @Composable (launch: () -> Unit) -> Uni
 @Composable
 private fun MainScreen(vm: FormStore) {
     var tab by rememberSaveable { mutableStateOf(Tab.Workout) }
-    val nav = remember { Nav() }
+    val nav = vm.nav // process-level, so rotation or activity recreation keeps the open screen (and library search)
     nav.selectTab = { tab = it }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) {

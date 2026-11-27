@@ -93,6 +93,16 @@ class VaultFormat(private val catalog: Catalog) {
         return routines.map(::sanitizeSupersets)
     }
 
+
+    /**
+     * Routines from [parsed] that aren't already in [existing], compared as written text without id/liked lines, so
+     * superset tokens (renumbered ss11, ss12… on export) and ids don't make a re-import look new.
+     */
+    fun newRoutines(existing: List<Routine>, parsed: List<Routine>): List<Routine> {
+        fun sig(r: Routine) = writeRoutines(listOf(r.copy(id = "x", liked = false))).lines().filterNot { it.startsWith("- id:") || it == "- liked" }.joinToString("\n")
+        val have = existing.map(::sig).toMutableSet()
+        return parsed.filter { have.add(sig(it)) }
+    }
     fun sanitizeSupersets(r: Routine): Routine {
         val counts = r.items.mapNotNull { it.superset }.groupingBy { it }.eachCount()
         return r.copy(items = r.items.map { if (it.superset != null && counts[it.superset] != 2) it.copy(superset = null) else it })

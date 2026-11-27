@@ -111,4 +111,13 @@ class VaultFormatTest {
         assertEquals("Mon, Jan 5, 2026", vaultDateHeading("2026-01-05"))
         assertEquals("2026-01-05", parseVaultDateHeading("Mon, Jan 5, 2026"))
     }
+
+    /** Importing exported routines again (supersets renumbered to ss11, ss12 on export) adds nothing; a changed one is new. */
+    @Test fun reimportAddsNoDuplicates() {
+        val existing = format.parseRoutines(fixture("routines"))
+        val exported = format.parseRoutines(format.writeRoutines(existing))
+        assertEquals(0, format.newRoutines(existing, exported).size)
+        val changed = exported.first().let { it.copy(items = it.items.map { i -> i.copy(sets = i.sets + 1) }) }
+        assertEquals(1, format.newRoutines(existing, listOf(changed)).size)
+    }
 }

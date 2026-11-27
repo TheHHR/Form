@@ -100,7 +100,7 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Workout tile: active while training; updates only when the app asks (ACTIVE_TILE), no polling. -->
+        <!-- Workout tile: active while training; re-rendered each time the shade opens (and on request). -->
         <service
             android:name=".WorkoutTile"
             android:exported="true"
@@ -110,7 +110,6 @@
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
-            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true" />
         </service>
 
         <!-- Google code scanner downloads its UI module on demand. -->

@@ -380,7 +380,7 @@ fun ImportDialog(what: String, example: String, onDismiss: () -> Unit, onImport:
                 Text("Paste $what exported from Form (or written in its format).", style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(text, { text = it.take(100_000) }, Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 320.dp),
                     placeholder = { Text(example, style = MaterialTheme.typography.bodySmall) })
-                if (confirmReplace) Text("Replace deletes your current $what. Tap Replace again to confirm.",
+                if (confirmReplace) Text("Replace deletes your current $what" + (if (what == "routines") " and ends a workout whose routine is gone (its sets stay logged)" else "") + ". Tap Replace again to confirm.",
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         },

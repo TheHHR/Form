@@ -71,6 +71,8 @@ class FormStore private constructor(val app: Application) {
     var message by mutableStateOf<String?>(null)
     /** Where an outside entry point (notification, shortcut, tile, widget) wants the UI to go: a tab name, or "library". */
     var pendingDestination by mutableStateOf<String?>(null)
+    /** Pushed screens above the tabs. Lives with the store (not the composition) so recreation keeps them. */
+    val nav = com.thehhr.form.ui.Nav()
     var themeMode by mutableStateOf(device.themeMode); private set
     var dynamicColor by mutableStateOf(device.dynamicColor); private set
     fun updateTheme(mode: String = themeMode, dynamic: Boolean = dynamicColor) {
@@ -334,14 +336,15 @@ class FormStore private constructor(val app: Application) {
         val stamp = System.currentTimeMillis()
         var added = parsed.size
         if (replace) {
-            workout?.let { w -> if (parsed.none { it.id == w.routineId }) discardWorkout() }
+            // Web endStaleActiveWorkout: a workout whose routine is gone ends; its checked sets stay logged (finish, not discard).
+            workout?.let { w -> if (parsed.none { it.id == w.routineId }) finishWorkout() }
             update(VaultFile.Routines, VaultFile.Config) { d ->
                 val ids = parsed.map { it.id }.toSet()
                 d.copy(routines = parsed, schedule = d.schedule.filterValues { it in ids })
             }
         } else update(VaultFile.Routines) { d ->
             // Exact duplicates (same name and exercises) are skipped, so importing the same text twice adds nothing.
-            val fresh = parsed.filter { p -> d.routines.none { it.name == p.name && it.items == p.items } }.also { added = it.size }
+            val fresh = format.newRoutines(d.routines, parsed).also { added = it.size }
             d.copy(routines = d.routines + fresh.mapIndexed { i, r -> format.sanitizeSupersets(r.copy(id = "r-$stamp-$i")) })
         }
         message = if (replace) "${parsed.size} routine${if (parsed.size == 1) "" else "s"} imported" else if (added == 0) "Already in your routines" else "$added routine${if (added == 1) "" else "s"} added"

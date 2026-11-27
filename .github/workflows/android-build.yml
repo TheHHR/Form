@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     # Web app (Capacitor) only: native/ changes ship through android-beta.yml.
-    paths: ['www/**', 'android/**', 'version.properties', 'package.json', 'package-lock.json', 'capacitor.config.json', '.github/workflows/android-build.yml']
+    paths: ['www/**', 'android/**', 'version.properties', 'package.json', 'package-lock.json', 'capacitor.config.json']
 
 permissions:
   contents: write
