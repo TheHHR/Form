@@ -253,7 +253,7 @@ private fun ReminderSettings(vm: FormStore) {
     var minutes by remember { mutableIntStateOf(vm.device.reminderMinutes) }
     var picking by remember { mutableStateOf(false) }
     fun apply() = Reminders.schedule(ctx, vm.device)
-    SwitchItem(0, 2, "Workout reminder", "On days with scheduled routine", enabled) {
+    SwitchItem(0, 2, "Workout reminder", "On days with scheduled routine, unless you already trained", enabled) {
         enabled = it; vm.setPrefs(vm.data.prefs.copy(workoutReminder = it)) // syncs the device copy and re-arms
     }
     GroupedItem(1, 2, onClick = { picking = true },
