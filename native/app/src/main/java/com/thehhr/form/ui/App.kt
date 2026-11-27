@@ -218,16 +218,15 @@ private fun Tabs(vm: FormStore, nav: Nav, tab: Tab, onTab: (Tab) -> Unit, snackb
         },
         snackbarHost = { SwipeSnackbarHost(snackbar) },
     ) { pad ->
-        // Fade through (M3 navigation-bar destinations): the old page fades out quickly, the new one fades and settles in.
-        // Each page carries its own top bar, so the bar and its list change together and a collapsed bar never sits
-        // over a list that starts back at the top.
+        // Same slide as the Plans sections: the new tab comes in from the side of the tapped item. Each page carries its
+        // own top bar, so the bar and its list move together and a collapsed bar never sits over a list back at the top.
+        val slide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         AnimatedContent(
             tab, Modifier.padding(bottom = pad.calculateBottomPadding()).fillMaxSize(), label = "tab",
             transitionSpec = {
-                // M3 fade-through timings: out in 90 ms, then in over 210 ms from 92% scale, so the pages never overlap.
-                (fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 90)) +
-                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(210, delayMillis = 90), initialScale = 0.92f)) togetherWith
-                    fadeOut(androidx.compose.animation.core.tween(90))
+                val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                (slideInHorizontally(slide) { it / 4 * dir } + fadeIn(fade)) togetherWith (slideOutHorizontally(slide) { -it / 4 * dir } + fadeOut(fade))
             },
         ) { t ->
             val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
