@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['native/**', 'www/data/**', 'www/images/**', 'www/videos/**']
+    paths: ['native/**', 'www/data/**', 'www/images/**']
 
 permissions:
   contents: write

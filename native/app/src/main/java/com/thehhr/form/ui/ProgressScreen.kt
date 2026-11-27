@@ -82,10 +82,11 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         CenteredEmpty("No training logged yet", "Finish a workout or log progress from an exercise and it shows up here.")
         return
     }
-    var scope by rememberSaveable { mutableStateOf(vm.data.prefs.defaultView.takeIf { it in listOf("week", "month", "all") } ?: "week") }
+    // The web config may say "all"; Year replaced it natively.
+    var scope by rememberSaveable { mutableStateOf(vm.data.prefs.defaultView.let { if (it == "all") "year" else it }.takeIf { it in listOf("week", "month", "year") } ?: "week") }
     var offset by rememberSaveable { mutableIntStateOf(0) }
     var shownDays by rememberSaveable { mutableIntStateOf(14) }
-    var selected by rememberSaveable { mutableStateOf<String?>(null) } // "YYYY-MM-DD" or, in All, "YYYY-MM"
+    var selected by rememberSaveable { mutableStateOf<String?>(null) } // "YYYY-MM-DD" or, in Year, "YYYY-MM"
     val weekStart = vm.data.prefs.weekStart
     val today = LocalDate.now()
     val byDate = remember(logs) { logs.groupBy { it.date } }
@@ -96,7 +97,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
             val s = today.minusDays(back.toLong()).plusWeeks(offset.toLong()); s to s.plusDays(6)
         }
         "month" -> { val m = YearMonth.from(today).plusMonths(offset.toLong()); m.atDay(1) to m.atEndOfMonth() }
-        else -> (logs.minOf { it.date }.let(LocalDate::parse)) to today
+        else -> { val y = today.year + offset; LocalDate.of(y, 1, 1) to LocalDate.of(y, 12, 31) }
     }
     // The selection narrows the range everything below reads from.
     val (selFrom, selTo) = when {
@@ -114,7 +115,8 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
     fun select(key: String) { selected = if (selected == key) null else key; shownDays = 14 }
 
     val periodLabel = when {
-        scope == "all" -> "All time"
+        scope == "year" && offset == 0 -> "This year"
+        scope == "year" -> "${from.year}"
         scope == "week" && offset == 0 -> "This week"
         scope == "week" -> "${from.format(DateTimeFormatter.ofPattern("MMM d"))} – ${to.format(DateTimeFormatter.ofPattern("MMM d"))}"
         offset == 0 -> "This month"
@@ -125,7 +127,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
     val exerciseCount = rangeLogs.map { it.exerciseId }.distinct().size
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
-        item { ChoiceGroup(listOf("week" to "Week", "month" to "Month", "all" to "All"), scope, { scope = it; offset = 0; selected = null }, Modifier.padding(vertical = 8.dp)) }
+        item { ChoiceGroup(listOf("week" to "Week", "month" to "Month", "year" to "Year"), scope, { scope = it; offset = 0; selected = null }, Modifier.padding(vertical = 8.dp)) }
         item {
             // Header like M3 Expressive health apps: period title with its arrows, one big number, a plain-language line.
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +136,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                     .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
                         enabled = offset != 0 || selected != null, onClickLabel = "Go to current $scope") { offset = 0; selected = null },
                     style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
-                if (scope != "all") {
+                run {
                     FilledTonalIconButton(onClick = { offset--; selected = null }, shapes = IconButtonDefaults.shapes()) {
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $scope")
                     }
@@ -154,7 +156,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                 when {
                     trainedDays == 0 -> "Nothing logged here yet."
                     selected?.length == 10 -> "$exerciseCount exercise${if (exerciseCount == 1) "" else "s"} on this day."
-                    else -> "You trained on $trainedDays day${if (trainedDays == 1) "" else "s"}" + if (scope == "week" && selected == null) " this week." else "."
+                    else -> "You trained on $trainedDays day${if (trainedDays == 1) "" else "s"}" + if (selected == null && offset == 0) " this $scope." else "."
                 },
                 style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -174,11 +176,11 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                         Column(Modifier.padding(12.dp)) { MonthGrid(YearMonth.from(from), weekStart, byDate.keys, today, selected) { select(it) } }
                     }
                     else -> {
-                        val months = (11 downTo 0).map { YearMonth.from(today).minusMonths(it.toLong()) }
+                        val months = (1..12).map { YearMonth.of(from.year, it) }
                         Bars(months.map { m -> logs.filter { it.date.startsWith(m.toString()) }.sumOf(::setCount) },
                             months.map { it.month.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()) },
                             months.map { it.atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy")) },
-                            months.lastIndex, months.indexOfFirst { it.toString() == selected }) { select(months[it].toString()) }
+                            months.indexOf(YearMonth.from(today)), months.indexOfFirst { it.toString() == selected }) { select(months[it].toString()) }
                     }
                 }
             }

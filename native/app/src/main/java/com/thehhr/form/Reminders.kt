@@ -47,8 +47,10 @@ object Reminders {
         var at = now.toLocalDate().atStartOfDay().plusMinutes(device.reminderMinutes.toLong())
         if (!at.isAfter(now)) at = at.plusDays(1)
         val millis = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        // Inexact is fine for a nudge (within ~10 min) and needs no special permission.
-        alarm.setWindow(AlarmManager.RTC_WAKEUP, millis, 10 * 60_000L, pi(ctx))
+        // Exact: an inexact window is deferred by Doze and app-standby buckets (hours for a rarely opened app), which
+        // looked like "no reminder". USE_EXACT_ALARM covers 13+; 12 falls back to allow-while-idle if not granted.
+        if (android.os.Build.VERSION.SDK_INT < 31 || alarm.canScheduleExactAlarms()) alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi(ctx))
+        else alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi(ctx))
     }
 
     fun cancel(ctx: Context) { ctx.getSystemService(NotificationManager::class.java).cancel(20) }
@@ -73,7 +75,8 @@ class ReminderReceiver : BroadcastReceiver() {
         val pending = goAsync()
         store.launch {
             try {
-                store.whenReady { Reminders.routineToRemind(data, workout, LocalDate.now()) }?.let { Reminders.notify(ctx, it) }
+                // A cold process must load the catalog and vault first; background broadcasts may run up to a minute.
+                store.whenReady(timeoutMs = 40_000) { Reminders.routineToRemind(data, workout, LocalDate.now()) }?.let { Reminders.notify(ctx, it) }
                 Reminders.schedule(ctx, store.device)
             } finally { pending.finish() }
         }

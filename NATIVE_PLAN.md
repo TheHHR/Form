@@ -15,7 +15,7 @@ Form's native Android app is written in Kotlin with Jetpack Compose and Material
 
 ## Layout
 - `native/` is its own Gradle root, separate from the Capacitor `android/` app. It uses AGP 9.5.1, Gradle 9.6, Kotlin 2.4, compileSdk 37.2, minSdk 29, and Material 3 1.5.0.
-- Exercise data and stills are copied at build time from `www/data` and `www/images`. Videos (`www/videos`) are bundled in prod only.
+- Exercise data and stills are copied at build time from `www/data` and `www/images`. Videos (`www/videos`) are left out of all APKs (owner request, 2026-11-27) until `-Pform.videos=true` is turned back on.
 - `android-build.yml` (since 2026-11-27) builds the **native** prod flavor (`com.thehhr.form`, release key `FORM_KEYSTORE_*`, version from `native/version.properties`) as the Latest release and updates the landing page. Bump `native/version.properties` for each release. The Capacitor `android/` app is no longer built.
 - `android-beta.yml` is manual (workflow_dispatch): a "Form Beta" prerelease signed with the beta key (`FORM_BETA_*` secrets).
 

@@ -85,8 +85,8 @@ class FormStore private constructor(val app: Application) {
     private val ready = CompletableDeferred<Unit>()
 
     /** For receivers/tiles: waits for the vault, runs [block] on main, then writes immediately. */
-    suspend fun <T> whenReady(block: FormStore.() -> T): T? {
-        withTimeoutOrNull(8_000) { ready.await() } ?: return null
+    suspend fun <T> whenReady(timeoutMs: Long = 8_000, block: FormStore.() -> T): T? {
+        withTimeoutOrNull(timeoutMs) { ready.await() } ?: return null
         if (status != Status.Ready) return null
         val r = withContext(Dispatchers.Main.immediate) { block() }
         flushNow()
