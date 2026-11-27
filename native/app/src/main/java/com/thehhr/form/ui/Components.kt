@@ -164,13 +164,14 @@ fun GroupedItem(
     leading: (@Composable () -> Unit)? = null,
     supporting: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     headline: @Composable () -> Unit,
 ) {
     val shapes = ListItemDefaults.segmentedShapes(index, count)
     val m = modifier.padding(bottom = if (index < count - 1) ListItemDefaults.SegmentedGap else 0.dp)
     // Rows sit on surfaceContainer so the group reads as one block against the near-black background.
     val colors = if (LocalInSheet.current) ListItemDefaults.segmentedColors() else ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    if (onClick != null) SegmentedListItem(onClick = onClick, shapes = shapes, modifier = m, leadingContent = leading,
+    if (onClick != null) SegmentedListItem(onClick = onClick, onLongClick = onLongClick, shapes = shapes, modifier = m, leadingContent = leading,
         supportingContent = supporting, trailingContent = trailing, colors = colors, content = headline)
     else SegmentedListItem(shapes = shapes, modifier = m, leadingContent = leading, supportingContent = supporting,
         trailingContent = trailing, colors = colors, content = headline)

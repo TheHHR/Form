@@ -54,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -106,9 +107,10 @@ private fun RoutineList(vm: FormStore, nav: Nav) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val routines = vm.data.routines
     androidx.activity.compose.BackHandler(selecting) { selecting = false; picked = emptySet() }
+    LaunchedEffect(picked) { if (picked.isEmpty()) selecting = false } // unticking the last row ends selection
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, if (selecting) 96.dp else 24.dp)) {
-            item { ListHeader("New routine", { creating = true }, { importing = true }, selecting) { selecting = it; picked = emptySet() } }
+            item { ListHeader("New routine", { creating = true }, { importing = true }) }
             if (routines.isEmpty()) item {
                 OutlinedButton(onClick = vm::loadDefaultRoutines, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load Push / Pull / Legs") }
             }
@@ -117,6 +119,7 @@ private fun RoutineList(vm: FormStore, nav: Nav) {
                 GroupedItem(
                     i, routines.size, modifier = Modifier.animateItem(),
                     onClick = { if (selecting) picked = if (on) picked - r.id else picked + r.id else nav.push(Route.RoutineEdit(r.id)) },
+                    onLongClick = { if (!selecting) { selecting = true; picked = setOf(r.id) } }, // hold to start selecting (to share)
                     leading = { if (selecting) androidx.compose.material3.Checkbox(on, null) else RoutineBadge(r, i) },
                     supporting = {
                         val mins = com.thehhr.form.data.WorkoutLogic.minMinutes(r, vm.data.prefs)
@@ -201,12 +204,11 @@ private fun MealLibrary(vm: FormStore) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val meals = vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
     androidx.activity.compose.BackHandler(selecting) { selecting = false; picked = emptySet() }
+    LaunchedEffect(picked) { if (picked.isEmpty()) selecting = false } // unticking the last row ends selection
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, if (selecting) 96.dp else 24.dp)) {
             item {
-                ListHeader("New meal", { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, { importing = true }, selecting) {
-                    selecting = it; picked = emptySet()
-                }
+                ListHeader("New meal", { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, { importing = true })
             }
             if (meals.isEmpty()) item { OutlinedButton(onClick = vm::loadDefaultMeals, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load common foods") } }
             itemsIndexed(meals, key = { _, m -> m.id }) { i, m ->
@@ -214,6 +216,7 @@ private fun MealLibrary(vm: FormStore) {
                 GroupedItem(
                     i, meals.size, modifier = Modifier.animateItem(),
                     onClick = { if (selecting) picked = if (on) picked - m.id else picked + m.id else editing = m },
+                    onLongClick = { if (!selecting) { selecting = true; picked = setOf(m.id) } },
                     leading = if (selecting) ({ androidx.compose.material3.Checkbox(on, null) }) else null,
                     supporting = { Text("${jsNum(m.p100)}p · ${jsNum(m.c100)}c · ${jsNum(m.f100)}f per 100 g · ${jsNum(m.defaultGrams)} g serving") },
                     trailing = {
@@ -414,9 +417,9 @@ fun shareText(ctx: android.content.Context, title: String, text: String) {
     ctx.startActivity(android.content.Intent.createChooser(send, title))
 }
 
-/** Header for Routines / Meals: a New menu (create, or import from text) and a select-to-share mode. */
+/** Header for Routines / Meals: a New menu (create, or import from text). Holding a row starts select-to-share. */
 @Composable
-private fun ListHeader(newLabel: String, onNew: () -> Unit, onImport: () -> Unit, selecting: Boolean, onSelecting: (Boolean) -> Unit) {
+private fun ListHeader(newLabel: String, onNew: () -> Unit, onImport: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.weight(1f)) {
@@ -427,10 +430,6 @@ private fun ListHeader(newLabel: String, onNew: () -> Unit, onImport: () -> Unit
                 DropdownMenuItem(text = { Text(newLabel) }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; onNew() })
                 DropdownMenuItem(text = { Text("Import from text") }, leadingIcon = { Icon(Icons.Rounded.Download, null) }, onClick = { menu = false; onImport() })
             }
-        }
-        androidx.compose.material3.FilledTonalIconToggleButton(checked = selecting, onCheckedChange = onSelecting,
-            shapes = androidx.compose.material3.IconButtonDefaults.toggleableShapes()) {
-            Icon(Icons.Rounded.Share, if (selecting) "Stop selecting" else "Select to share")
         }
     }
 }
