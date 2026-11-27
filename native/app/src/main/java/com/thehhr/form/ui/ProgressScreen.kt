@@ -3,6 +3,17 @@
 package com.thehhr.form.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import com.thehhr.form.data.jsTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -98,50 +109,83 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
     val selLabel = selected?.let { if (it.length == 7) YearMonth.parse(it).atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy")) else displayDate(it) }
     fun select(key: String) { selected = if (selected == key) null else key; shownDays = 14 }
 
+    val periodLabel = when {
+        scope == "all" -> "All time"
+        scope == "week" && offset == 0 -> "This week"
+        scope == "week" -> "${from.format(DateTimeFormatter.ofPattern("MMM d"))} – ${to.format(DateTimeFormatter.ofPattern("MMM d"))}"
+        offset == 0 -> "This month"
+        from.year == today.year -> from.format(DateTimeFormatter.ofPattern("MMMM"))
+        else -> from.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+    }
+    val trainedDays = rangeLogs.map { it.date }.distinct().size
+    val exerciseCount = rangeLogs.map { it.exerciseId }.distinct().size
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
         item { ChoiceGroup(listOf("week" to "Week", "month" to "Month", "all" to "All"), scope, { scope = it; offset = 0; selected = null }, Modifier.padding(vertical = 8.dp)) }
-        if (scope != "all") item {
-            val label = when {
-                scope == "week" && offset == 0 -> "This week"
-                scope == "week" -> "${from.format(DateTimeFormatter.ofPattern("MMM d"))} – ${to.format(DateTimeFormatter.ofPattern("MMM d"))}"
-                offset == 0 -> "This month"
-                from.year == today.year -> from.format(DateTimeFormatter.ofPattern("MMMM"))
-                else -> from.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+        item {
+            // Header like M3 Expressive health apps: period title with its arrows, one big number, a plain-language line.
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(selLabel ?: periodLabel, Modifier.weight(1f).animateContentSize(), style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1)
+                if (scope != "all") {
+                    FilledTonalIconButton(onClick = { offset--; selected = null }, shapes = IconButtonDefaults.shapes()) {
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous $scope")
+                    }
+                    FilledTonalIconButton(onClick = { offset++; selected = null }, enabled = offset < 0, shapes = IconButtonDefaults.shapes()) {
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next $scope")
+                    }
+                }
             }
-            PeriodNav(label, scope, { offset--; selected = null }, { offset++; selected = null }, offset < 0)
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
+                androidx.compose.animation.AnimatedContent(sets, label = "sets", transitionSpec = {
+                    (androidx.compose.animation.slideInVertically { it / 2 } + androidx.compose.animation.fadeIn()) togetherWith
+                        (androidx.compose.animation.slideOutVertically { -it / 2 } + androidx.compose.animation.fadeOut())
+                }) { n -> Text("%,d".format(n), style = MaterialTheme.typography.displayMediumEmphasized) }
+                Text(if (sets == 1) " set" else " sets", Modifier.padding(bottom = 10.dp, start = 4.dp), style = MaterialTheme.typography.titleMediumEmphasized)
+            }
+            Text(
+                when {
+                    trainedDays == 0 -> "Nothing logged here yet."
+                    selected?.length == 10 -> "$exerciseCount exercise${if (exerciseCount == 1) "" else "s"} on this day."
+                    else -> "You trained on $trainedDays day${if (trainedDays == 1) "" else "s"}" + if (scope == "week" && selected == null) " this week." else "."
+                },
+                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         item {
-            // One tonal hero card instead of three boxes; the numbers follow the selection.
-            Card(Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = MaterialTheme.shapes.extraLarge,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                Column(Modifier.padding(20.dp)) {
-                    Text(selLabel ?: "Totals", style = MaterialTheme.typography.labelLargeEmphasized, color = MaterialTheme.colorScheme.primary)
-                    Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        StatValue("$sessions", if (sessions == 1) "session" else "sessions", Modifier.weight(1f))
-                        StatValue("$sets", "sets", Modifier.weight(1f))
-                        StatValue(compact(volume), "${vm.data.prefs.units.weight} volume", Modifier.weight(1f))
+            Box(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
+                when (scope) {
+                    "week" -> {
+                        val days = (0..6).map { from.plusDays(it.toLong()) }
+                        Bars(days.map { d -> byDate[d.toString()].orEmpty().sumOf(::setCount) },
+                            days.map { it.format(DateTimeFormatter.ofPattern("EEEEE")) },
+                            days.map { displayDate(it.toString()) }, days.indexOf(today),
+                            days.indexOfFirst { it.toString() == selected }) { select(days[it].toString()) }
+                    }
+                    "month" -> Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                        Column(Modifier.padding(12.dp)) { MonthGrid(YearMonth.from(from), weekStart, byDate.keys, today, selected) { select(it) } }
+                    }
+                    else -> {
+                        val months = (11 downTo 0).map { YearMonth.from(today).minusMonths(it.toLong()) }
+                        Bars(months.map { m -> logs.filter { it.date.startsWith(m.toString()) }.sumOf(::setCount) },
+                            months.map { it.month.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()) },
+                            months.map { it.atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy")) },
+                            months.lastIndex, months.indexOfFirst { it.toString() == selected }) { select(months[it].toString()) }
                     }
                 }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = MaterialTheme.shapes.extraLarge) {
-                Column(Modifier.padding(16.dp)) {
-                    when (scope) {
-                        "week" -> {
-                            val days = (0..6).map { from.plusDays(it.toLong()) }
-                            Bars(days.map { d -> byDate[d.toString()].orEmpty().sumOf(WorkoutLogic::volume) },
-                                days.map { it.format(DateTimeFormatter.ofPattern("EEEEE")) },
-                                days.map { displayDate(it.toString()) }, days.indexOf(today),
-                                days.indexOfFirst { it.toString() == selected }) { select(days[it].toString()) }
-                        }
-                        "month" -> MonthGrid(YearMonth.from(from), weekStart, byDate.keys, today, selected) { select(it) }
-                        else -> {
-                            val months = (11 downTo 0).map { YearMonth.from(today).minusMonths(it.toLong()) }
-                            Bars(months.map { m -> logs.filter { it.date.startsWith(m.toString()) }.sumOf(WorkoutLogic::volume) },
-                                months.map { it.month.name.take(1) }, months.map { it.atDay(1).format(DateTimeFormatter.ofPattern("MMMM yyyy")) },
-                                months.lastIndex, months.indexOfFirst { it.toString() == selected }) { select(months[it].toString()) }
-                        }
+            // Numbers as a segmented list: label left, big value right.
+            val rows = listOf(
+                (if (sessions == 1) "Session" else "Sessions") to "$sessions",
+                "Exercises" to "$exerciseCount",
+                "Volume (${vm.data.prefs.units.weight})" to compact(volume),
+            )
+            Column(Modifier.padding(top = 8.dp)) {
+                rows.forEachIndexed { i, (label, value) ->
+                    GroupedItem(i, rows.size, trailing = { Text(value, style = MaterialTheme.typography.headlineSmallEmphasized) }) {
+                        Text(label, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
@@ -150,7 +194,25 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
         item {
             Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                 if (heat.isEmpty()) EmptyNote("Nothing trained in this range.")
-                else MuscleMap(heat, vm.data.profile.sex, Modifier.padding(16.dp).height(240.dp))
+                else Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    MuscleMap(heat, vm.data.profile.sex, Modifier.height(240.dp))
+                    // The web dashboard's breakdown: sets and exercises per body part, with a bar against the busiest.
+                    val groups = rangeLogs.groupBy { vm.exercise(it.exerciseId)?.category ?: "other" }
+                        .map { (cat, l) -> Triple(cat, l.sumOf(::setCount), l.map { it.exerciseId }.distinct().size) }
+                        .sortedByDescending { it.second }
+                    val top = groups.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+                    groups.forEach { (cat, s, ex) ->
+                        Column(Modifier.semantics(mergeDescendants = true) {}) {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(jsTitle(cat), Modifier.weight(1f), style = MaterialTheme.typography.titleSmallEmphasized)
+                                Text("$s set${if (s == 1) "" else "s"} · $ex exercise${if (ex == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            LinearProgressIndicator(progress = { s / top.toFloat() }, Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp),
+                                gapSize = 0.dp, drawStopIndicator = {})
+                        }
+                    }
+                }
             }
         }
         item { SectionTitle("History") }
@@ -190,31 +252,63 @@ private fun StatValue(value: String, label: String, modifier: Modifier) {
 
 private fun compact(v: Double) = if (v >= 10_000) "${jsRound(v / 100) / 10.0}k".replace(".0k", "k") else "${jsRound(v)}"
 
-/** Tappable bars: each column selects its day / month. */
+/** Sets in a log: intervals for timed logs. */
+private fun setCount(l: ProgressLog) = if (l.timed) l.intervals ?: 0 else l.sets ?: 0
+
+/**
+ * Tappable pill bars (no track), right-hand scale, the selected column in the complement colour with a
+ * cookie badge on top. Each column selects its day / month.
+ */
 @Composable
-private fun Bars(values: List<Double>, labels: List<String>, names: List<String>, today: Int, selected: Int, onTap: (Int) -> Unit) {
-    val max = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
+private fun Bars(values: List<Int>, labels: List<String>, names: List<String>, today: Int, selected: Int, onTap: (Int) -> Unit) {
+    val max = (values.maxOrNull() ?: 0).coerceAtLeast(1)
     val bar = MaterialTheme.colorScheme.primary
-    val dim = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+    val pick = MaterialTheme.colorScheme.tertiary
+    val empty = MaterialTheme.colorScheme.surfaceContainerHighest
+    val guide = MaterialTheme.colorScheme.outlineVariant
+    val chart = 168.dp
     Row(Modifier.fillMaxWidth()) {
-        values.forEachIndexed { i, v ->
-            val isSel = i == selected
-            Column(
-                Modifier.weight(1f).clip(MaterialTheme.shapes.small).clickable { onTap(i) }
-                    .semantics { contentDescription = "${names[i]}, volume ${jsRound(v)}"; this.selected = isSel }.padding(vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Canvas(Modifier.fillMaxWidth().height(110.dp)) {
-                    val w = size.width * 0.5f
-                    val x = (size.width - w) / 2
-                    drawRoundRect(track, Offset(x, 0f), Size(w, size.height), CornerRadius(w / 2))
-                    val h = (v / max).toFloat() * size.height
-                    if (h > 0) drawRoundRect(if (selected < 0 || isSel) bar else dim, Offset(x, size.height - h), Size(w, h), CornerRadius(w / 2))
-                }
-                Text(labels[i], Modifier.padding(top = 4.dp), style = if (isSel) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelSmall,
-                    color = if (isSel || i == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.weight(1f)) {
+            // Guide line at the top value.
+            Canvas(Modifier.fillMaxWidth().padding(top = 16.dp).height(chart)) {
+                drawLine(guide, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx(),
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 8f)))
             }
+            Row(Modifier.fillMaxWidth()) {
+                values.forEachIndexed { i, v ->
+                    val isSel = i == selected
+                    val h = androidx.compose.animation.core.animateFloatAsState(v / max.toFloat(), MaterialTheme.motionScheme.defaultSpatialSpec(), label = "bar").value
+                    Column(
+                        Modifier.weight(1f).clip(MaterialTheme.shapes.medium).clickable { onTap(i) }
+                            .semantics { contentDescription = "${names[i]}, $v sets"; this.selected = isSel },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(Modifier.fillMaxWidth().height(chart + 16.dp), contentAlignment = Alignment.BottomCenter) {
+                            val color = if (isSel) pick else bar
+                            Canvas(Modifier.fillMaxWidth(0.72f).height(chart)) {
+                                val w = size.width
+                                val barH = if (v == 0) w else (h * size.height).coerceAtLeast(w)
+                                drawRoundRect(if (v == 0) empty else color, Offset(0f, size.height - barH), Size(w, barH), CornerRadius(w / 2))
+                            }
+                            if (isSel && v > 0) Box(
+                                Modifier.align(Alignment.TopCenter).offset(y = chart + 16.dp - (chart * h) - 16.dp).size(32.dp)
+                                    .clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.onTertiary),
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Rounded.Check, null, Modifier.size(18.dp), tint = pick) }
+                        }
+                        Text(labels[i], Modifier.padding(top = 8.dp),
+                            style = if (isSel || i == today) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge,
+                            color = if (isSel) pick else if (i == today) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        // Scale: top value, half, zero.
+        Column(Modifier.padding(start = 6.dp).height(chart + 16.dp + 4.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Spacer(Modifier.height(8.dp))
+            Text("$max", style = MaterialTheme.typography.labelMediumEmphasized)
+            Text("${max / 2}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("0", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
