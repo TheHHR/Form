@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -87,29 +90,43 @@ fun PlansTab(vm: FormStore, nav: Nav) {
 @Composable
 private fun RoutineList(vm: FormStore, nav: Nav) {
     var creating by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf(false) }
+    var selecting by rememberSaveable { mutableStateOf(false) }
+    var picked by rememberSaveable { mutableStateOf(setOf<String>()) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val routines = vm.data.routines
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
-        item {
-            FilledTonalButton(onClick = { creating = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("New routine")
+    androidx.activity.compose.BackHandler(selecting) { selecting = false; picked = emptySet() }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, if (selecting) 96.dp else 24.dp)) {
+            item { ListHeader("New routine", { creating = true }, { importing = true }, selecting) { selecting = it; picked = emptySet() } }
+            if (routines.isEmpty()) item {
+                OutlinedButton(onClick = vm::loadDefaultRoutines, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load Push / Pull / Legs") }
+            }
+            itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
+                val on = r.id in picked
+                GroupedItem(
+                    i, routines.size, modifier = Modifier.animateItem(),
+                    onClick = { if (selecting) picked = if (on) picked - r.id else picked + r.id else nav.push(Route.RoutineEdit(r.id)) },
+                    leading = { if (selecting) androidx.compose.material3.Checkbox(on, null) else RoutineBadge(r, i) },
+                    supporting = {
+                        Text(r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    },
+                    trailing = { if (!selecting) LikeButton(r.liked) { vm.saveRoutine(r.copy(liked = !r.liked)) } },
+                ) { Text(r.name, style = MaterialTheme.typography.titleMedium) }
             }
         }
-        if (routines.isEmpty()) item {
-            OutlinedButton(onClick = vm::loadDefaultRoutines, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load Push / Pull / Legs") }
-        }
-        itemsIndexed(routines, key = { _, r -> r.id }) { i, r ->
-            GroupedItem(
-                i, routines.size, onClick = { nav.push(Route.RoutineEdit(r.id)) },
-                leading = { RoutineBadge(r, i) },
-                supporting = {
-                    Text(r.items.take(4).joinToString { exTitle(vm.exercise(it.exerciseId)) } + if (r.items.size > 4) "…" else "",
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                },
-                trailing = { LikeButton(r.liked) { vm.saveRoutine(r.copy(liked = !r.liked)) } },
-            ) { Text(r.name, style = MaterialTheme.typography.titleMedium) }
+        androidx.compose.animation.AnimatedVisibility(selecting, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut()) {
+            ShareBar(picked.size, routines.size, { picked = if (picked.size == routines.size) emptySet() else routines.map { it.id }.toSet() }) {
+                shareText(ctx, if (picked.size == 1) routines.first { it.id in picked }.name else "Form routines", vm.routinesText(picked))
+                selecting = false; picked = emptySet()
+            }
         }
     }
     if (creating) NameDialog("New routine", "", onDone = { name -> creating = false; if (name != null) nav.push(Route.RoutineEdit(vm.newRoutine(name).id)) })
+    if (importing) ImportDialog("routines", "## Push\n0025 3 * 8\n0314 4 * 12", { importing = false }) { t, replace -> vm.importRoutines(t, replace) }
 }
 
 /** Each routine gets its own expressive shape so the list scans at a glance. */
@@ -166,29 +183,47 @@ private fun WeekSchedule(vm: FormStore) {
 @Composable
 private fun MealLibrary(vm: FormStore) {
     var editing by remember { mutableStateOf<Meal?>(null) }
+    var importing by remember { mutableStateOf(false) }
+    var selecting by rememberSaveable { mutableStateOf(false) }
+    var picked by rememberSaveable { mutableStateOf(setOf<String>()) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val meals = vm.data.meals.sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp)) {
-        item {
-            FilledTonalButton(onClick = { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text("New meal")
+    androidx.activity.compose.BackHandler(selecting) { selecting = false; picked = emptySet() }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, if (selecting) 96.dp else 24.dp)) {
+            item {
+                ListHeader("New meal", { editing = Meal(id = "custom_${System.currentTimeMillis()}", name = "") }, { importing = true }, selecting) {
+                    selecting = it; picked = emptySet()
+                }
+            }
+            if (meals.isEmpty()) item { OutlinedButton(onClick = vm::loadDefaultMeals, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load common foods") } }
+            itemsIndexed(meals, key = { _, m -> m.id }) { i, m ->
+                val on = m.id in picked
+                GroupedItem(
+                    i, meals.size, modifier = Modifier.animateItem(),
+                    onClick = { if (selecting) picked = if (on) picked - m.id else picked + m.id else editing = m },
+                    leading = if (selecting) ({ androidx.compose.material3.Checkbox(on, null) }) else null,
+                    supporting = { Text("${jsNum(m.p100)}p · ${jsNum(m.c100)}c · ${jsNum(m.f100)}f per 100 g · ${jsNum(m.defaultGrams)} g serving") },
+                    trailing = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(jsNum(m.cals100), style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                            if (!selecting) LikeButton(m.liked) { vm.saveMeal(m.copy(liked = !m.liked)) }
+                        }
+                    },
+                ) { Text(m.name, style = MaterialTheme.typography.titleMedium) }
             }
         }
-        if (meals.isEmpty()) item { OutlinedButton(onClick = vm::loadDefaultMeals, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text("Load common foods") } }
-        itemsIndexed(meals, key = { _, m -> m.id }) { i, m ->
-            GroupedItem(
-                i, meals.size, onClick = { editing = m },
-                supporting = { Text("${jsNum(m.p100)}p · ${jsNum(m.c100)}c · ${jsNum(m.f100)}f per 100 g · ${jsNum(m.defaultGrams)} g serving") },
-                trailing = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(jsNum(m.cals100), style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
-                        LikeButton(m.liked) { vm.saveMeal(m.copy(liked = !m.liked)) }
-                    }
-                },
-            ) { Text(m.name, style = MaterialTheme.typography.titleMedium) }
+        androidx.compose.animation.AnimatedVisibility(selecting, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut()) {
+            ShareBar(picked.size, meals.size, { picked = if (picked.size == meals.size) emptySet() else meals.map { it.id }.toSet() }) {
+                shareText(ctx, if (picked.size == 1) meals.first { it.id in picked }.name else "Form meals", vm.mealsText(picked))
+                selecting = false; picked = emptySet()
+            }
         }
     }
     editing?.let { m -> MealEditor(vm, m) { editing = null } }
+    if (importing) ImportDialog("meals", "Chicken Breast (150g)\nPer100g 165cal 31pro 0carb 3.6fat", { importing = false }) { t, replace -> vm.importMeals(t, replace) }
 }
 
 @Composable
@@ -328,4 +363,71 @@ fun RoutineEditorScreen(vm: FormStore, nav: Nav, id: String) {
         confirmButton = { TextButton(onClick = { deleting = false; nav.pop(); vm.deleteRoutine(id) }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
     )
+}
+
+/** Paste routines or meals in Form's text format, then Add (keep yours) or Replace (swap the list). */
+@Composable
+fun ImportDialog(what: String, example: String, onDismiss: () -> Unit, onImport: (text: String, replace: Boolean) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    var confirmReplace by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Download, null) },
+        title = { Text("Import $what") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Paste $what exported from Form (or written in its format).", style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(text, { text = it.take(100_000) }, Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 320.dp),
+                    placeholder = { Text(example, style = MaterialTheme.typography.bodySmall) })
+                if (confirmReplace) Text("Replace deletes your current $what. Tap Replace again to confirm.",
+                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton(onClick = { onImport(text, false); onDismiss() }, enabled = text.isNotBlank()) { Text("Add") } },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { if (confirmReplace) { onImport(text, true); onDismiss() } else confirmReplace = true }, enabled = text.isNotBlank(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Replace") }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
+}
+
+/** Opens the Android share sheet with plain text. */
+fun shareText(ctx: android.content.Context, title: String, text: String) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+        .putExtra(android.content.Intent.EXTRA_SUBJECT, title).putExtra(android.content.Intent.EXTRA_TEXT, text)
+    ctx.startActivity(android.content.Intent.createChooser(send, title))
+}
+
+/** Header for Routines / Meals: new, import, and a select-to-share mode. */
+@Composable
+private fun ListHeader(newLabel: String, onNew: () -> Unit, onImport: () -> Unit, selecting: Boolean, onSelecting: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilledTonalButton(onClick = onNew, shapes = ButtonDefaults.shapes(), modifier = Modifier.weight(1f)) {
+            Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(8.dp)); Text(newLabel)
+        }
+        androidx.compose.material3.FilledTonalIconButton(onClick = onImport, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
+            Icon(Icons.Rounded.Download, "Import")
+        }
+        androidx.compose.material3.FilledTonalIconToggleButton(checked = selecting, onCheckedChange = onSelecting,
+            shapes = androidx.compose.material3.IconButtonDefaults.toggleableShapes()) {
+            Icon(Icons.Rounded.Share, if (selecting) "Stop selecting" else "Select to share")
+        }
+    }
+}
+
+/** Bottom action while selecting: share the picked items as text. */
+@Composable
+private fun ShareBar(count: Int, all: Int, onAll: () -> Unit, modifier: Modifier = Modifier, onShare: () -> Unit) {
+    androidx.compose.material3.Surface(modifier, shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 6.dp) {
+        Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onAll) { Text(if (count == all) "Clear" else "Select all") }
+            Text("$count selected", Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.labelLarge)
+            androidx.compose.material3.Button(onClick = onShare, enabled = count > 0, shapes = ButtonDefaults.shapes()) {
+                Icon(Icons.Rounded.Share, null); Spacer(Modifier.width(8.dp)); Text("Share")
+            }
+        }
+    }
 }

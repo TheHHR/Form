@@ -172,3 +172,7 @@ data class VaultData(
     /** Exercise id -> tags. */
     val exerciseTags: Map<String, List<String>> = emptyMap(),
 )
+
+/** The web app's "skip meal" placeholder: a zero entry named "Skipped" in a slot. */
+const val SKIPPED = "Skipped"
+val MealEntry.isSkipPlaceholder: Boolean get() = name == SKIPPED && cals == 0.0 && p == 0.0 && c == 0.0 && f == 0.0

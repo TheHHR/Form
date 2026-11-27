@@ -161,7 +161,7 @@ fun ProgressTab(vm: FormStore, nav: Nav) {
                     modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp))
             }
             val dayLogs = byDate[date].orEmpty().sortedBy(ProgressLog::createdAt)
-            itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, dayLogs.size) }
+            itemsIndexed(dayLogs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, dayLogs.size) { nav.push(Route.Detail(log.exerciseId)) } }
         }
         if (dates.size > shownDays) item { TextButton(onClick = { shownDays += 14 }, modifier = Modifier.fillMaxWidth()) { Text("Show more") } }
     }

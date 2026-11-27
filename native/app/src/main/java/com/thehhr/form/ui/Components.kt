@@ -331,9 +331,9 @@ fun Pill(
 
 /** Non-interactive tonal badge (exercise muscles, equipment, …). */
 @Composable
-fun Tag(text: String, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Surface(modifier, shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
+fun Tag(text: String, modifier: Modifier = Modifier, accent: Boolean = false) {
+    androidx.compose.material3.Surface(modifier, shape = CircleShape, color = if (accent) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (accent) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer) {
         Text(text, Modifier.padding(horizontal = 14.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
     }
 }

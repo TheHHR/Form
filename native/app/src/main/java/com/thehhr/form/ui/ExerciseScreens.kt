@@ -23,6 +23,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
@@ -94,15 +101,26 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
     var loggedOnly by f::loggedOnly
     var target by f::target
     var equipment by f::equipment
+    var tag by f::tag
+    var creating by remember { mutableStateOf(false) }
     val d = vm.data
     val logged = remember(d.logs) { d.logs.map { it.exerciseId }.toSet() }
-    val list = remember(query, category, target, equipment, likedOnly, loggedOnly, d.liked, logged, d.customExercises, d.exerciseTags) {
+    val tags = vm.allTags
+    val list = remember(query, category, target, equipment, likedOnly, loggedOnly, tag, d.liked, logged, d.customExercises, d.exerciseTags) {
         vm.catalog.all.filter { e ->
             (category.isEmpty() || e.category == category) && (target.isEmpty() || e.target == target) &&
                 (equipment.isEmpty() || e.equipment == equipment) &&
                 (!likedOnly || e.id in d.liked) && (!loggedOnly || e.id in logged) &&
+                (tag.isEmpty() || d.exerciseTags[e.id].orEmpty().any { it.equals(tag, true) }) &&
                 matches(e, query, d.exerciseTags[e.id].orEmpty())
         }.sortedBy { it.name.lowercase() }
+    }
+    // Exercises already in the routine / session: shown greyed with a check, not added twice.
+    val already: Set<String> = when (pick) {
+        is Pick.ToRoutine -> d.routines.firstOrNull { it.id == pick.routineId }?.items?.map { it.exerciseId }?.toSet().orEmpty()
+        Pick.Extra, is Pick.Replace -> vm.workout?.let { w -> d.routines.firstOrNull { it.id == w.routineId }?.let { r ->
+            com.thehhr.form.data.WorkoutLogic.entries(w, r).map { it.item.exerciseId }.toSet() } }.orEmpty()
+        null -> emptySet()
     }
     val title = when (pick) {
         is Pick.ToRoutine -> "Add to ${d.routines.firstOrNull { it.id == pick.routineId }?.name ?: "routine"}"
@@ -110,17 +128,30 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
         is Pick.Replace -> "Replace exercise"
         null -> "Exercises"
     }
+    fun choose(e: com.thehhr.form.data.Exercise) {
+        when (pick) {
+            is Pick.ToRoutine -> { vm.addToRoutine(pick.routineId, e.id); vm.message = "Added ${exTitle(e)}" }
+            Pick.Extra -> { vm.addExtra(e.id); nav.pop() }
+            is Pick.Replace -> { vm.replaceExercise(pick.fromId, e.id); nav.pop() }
+            null -> nav.push(Route.Detail(e.id))
+        }
+    }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = { FormTopBar(title, scroll, subtitle = (pick as? Pick.Replace)?.let { exTitle(vm.exercise(it.fromId)) } ?: "${list.size} exercises", onBack = nav::pop) },
+        topBar = {
+            FormTopBar(title, scroll, subtitle = (pick as? Pick.Replace)?.let { exTitle(vm.exercise(it.fromId)) } ?: "${list.size} exercises", onBack = nav::pop) {
+                IconButton(onClick = { creating = true }) { Icon(Icons.Rounded.Add, "Create custom exercise") }
+            }
+        },
     ) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp)) {
             item {
                 TextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                    placeholder = { Text("Name, muscle, equipment or #id") },
+                    trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, "Clear search") } }) else null,
+                    placeholder = { Text("Name, muscle, equipment, tag or #id") },
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = TextFieldDefaults.colors(focusedIndicatorColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                         unfocusedIndicatorColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
@@ -128,7 +159,7 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                 )
             }
             item {
-                // Three scrollable rows like the original app: toggles + category, muscle, equipment.
+                // Three scrollable rows like the original app: toggles + category, muscle, equipment (+ tags when any exist).
                 // The selected pill leads its row so the active filter is always visible.
                 val muscles = remember { vm.catalog.builtIn.map { it.target }.distinct().sorted() }
                 Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,33 +177,84 @@ fun LibraryScreen(vm: FormStore, nav: Nav, pick: Pick?, f: LibraryFilters) {
                     PillRow {
                         selectedFirst(vm.catalog.equipmentOptions, equipment).forEach { q -> Pill(equipment == q, { equipment = if (equipment == q) "" else q }, { Text(jsTitle(q)) }) }
                     }
+                    if (tags.isNotEmpty()) PillRow {
+                        selectedFirst(tags, tag).forEach { t -> Pill(tag.equals(t, true), { tag = if (tag.equals(t, true)) "" else t }, { Text("#$t") }) }
+                    }
                 }
             }
             if (list.isEmpty()) item { EmptyNote("No exercises match") }
             itemsIndexed(list, key = { _, e -> e.id }) { i, e ->
+                val added = e.id in already
                 GroupedItem(
-                    i, list.size,
-                    onClick = {
-                        when (pick) {
-                            is Pick.ToRoutine -> { vm.addToRoutine(pick.routineId, e.id); vm.message = "Added ${exTitle(e)}" }
-                            Pick.Extra -> { vm.addExtra(e.id); nav.pop() }
-                            is Pick.Replace -> { vm.replaceExercise(pick.fromId, e.id); nav.pop() }
-                            null -> nav.push(Route.Detail(e.id))
-                        }
-                    },
+                    i, list.size, modifier = Modifier.alpha(if (added) 0.5f else 1f)
+                        .semantics { if (added) stateDescription = if (pick is Pick.ToRoutine) "Already in routine" else "Already in workout" },
+                    onClick = { if (added) vm.message = "${exTitle(e)} is already ${if (pick is Pick.ToRoutine) "in this routine" else "in this workout"}" else choose(e) },
                     leading = { ExerciseImage(e, size = 56.dp) },
-                    supporting = { Text(jsTitle("${e.target} · ${e.equipment}")) },
-                    trailing = { LikeButton(e.id in d.liked) { vm.toggleLike(e.id) } },
+                    supporting = { Text(if (added) "Added" else jsTitle("${e.target} · ${e.equipment}") + if (e.custom) " · custom" else "") },
+                    trailing = {
+                        if (added) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+                        else LikeButton(e.id in d.liked) { vm.toggleLike(e.id) }
+                    },
                 ) { Text(exTitle(e), style = MaterialTheme.typography.titleMedium) }
             }
         }
     }
+    if (creating) CustomExerciseDialog(vm, null) { created ->
+        creating = false
+        if (created != null) { if (pick != null) choose(created) else nav.push(Route.Detail(created.id)) }
+    }
 }
+
+/** Create (existing == null) or edit a custom exercise; the web app's custom-exercise form. */
 @Composable
-fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Boolean = true) {
+fun CustomExerciseDialog(vm: FormStore, existing: Exercise?, onDone: (Exercise?) -> Unit) {
+    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
+    var category by remember { mutableStateOf(existing?.category ?: "chest") }
+    var equipment by remember { mutableStateOf(existing?.equipment ?: "body weight") }
+    var target by remember { mutableStateOf(existing?.target?.takeIf { it != existing.category }.orEmpty()) }
+    var description by remember { mutableStateOf(existing?.description.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = { onDone(null) },
+        icon = { Icon(if (existing == null) Icons.Rounded.Add else Icons.Rounded.Edit, null) },
+        title = { Text(if (existing == null) "New exercise" else "Edit exercise") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.OutlinedTextField(name, { name = it.take(80) }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
+                MenuField("Body part", jsTitle(category), Exercise.CATEGORIES.map { it to jsTitle(it) }) { category = it }
+                MenuField("Equipment", jsTitle(equipment), vm.catalog.equipmentOptions.map { it to jsTitle(it) }) { equipment = it }
+                androidx.compose.material3.OutlinedTextField(target, { target = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Target muscle (optional)") }, singleLine = true)
+                androidx.compose.material3.OutlinedTextField(description, { description = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Notes (optional)") }, minLines = 2)
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = name.isNotBlank(), onClick = {
+                if (existing == null) vm.addCustomExercise(name, category, equipment, target, description)?.let(onDone)
+                else if (vm.updateCustomExercise(existing.id, name, category, equipment, target, description)) onDone(vm.exercise(existing.id))
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = { onDone(null) }) { Text("Cancel") } },
+    )
+}
+
+/** Read-only text field that opens a menu of options. */
+@Composable
+fun MenuField(label: String, value: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    androidx.compose.material3.ExposedDropdownMenuBox(open, { open = it }) {
+        androidx.compose.material3.OutlinedTextField(value, {}, Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            readOnly = true, singleLine = true, label = { Text(label) },
+            trailingIcon = { androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(open) })
+        DropdownMenu(open, { open = false }, Modifier.exposedDropdownSize()) {
+            options.forEach { (v, l) -> DropdownMenuItem(text = { Text(l) }, onClick = { onPick(v); open = false }) }
+        }
+    }
+}
+
+@Composable
+fun LogRow(vm: FormStore, log: ProgressLog, index: Int, count: Int, showName: Boolean = true, onClick: (() -> Unit)? = null) {
     var confirm by remember { mutableStateOf(false) }
     GroupedItem(
-        index, count,
+        index, count, onClick = onClick,
         leading = if (showName) ({ ExerciseImage(vm.exercise(log.exerciseId), size = 56.dp) }) else null,
         supporting = { Text(WorkoutLogic.formatLog(log, vm.data.prefs.units) + if (log.notes.isNotEmpty()) " · ${log.notes}" else "") },
         trailing = { IconButton(onClick = { confirm = true }) { Icon(Icons.Rounded.Delete, "Delete log") } },

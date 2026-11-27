@@ -240,4 +240,5 @@ class LibraryFilters {
     var equipment by mutableStateOf("")
     var likedOnly by mutableStateOf(false)
     var loggedOnly by mutableStateOf(false)
+    var tag by mutableStateOf("")
 }

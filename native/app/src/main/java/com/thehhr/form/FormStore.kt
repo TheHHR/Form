@@ -25,6 +25,8 @@ import com.thehhr.form.data.VaultData
 import com.thehhr.form.data.VaultFormat
 import com.thehhr.form.data.WorkoutLogic
 import com.thehhr.form.data.today
+import com.thehhr.form.data.SKIPPED
+import com.thehhr.form.data.isSkipPlaceholder
 import android.content.Context
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -243,6 +245,36 @@ class FormStore private constructor(val app: Application) {
         return e
     }
 
+
+    /** Edits a custom exercise in place (same id, so logs and routines keep pointing at it). */
+    fun updateCustomExercise(id: String, name: String, category: String, equipment: String, target: String, description: String): Boolean {
+        if (data.customExercises.any { it.id != id && it.name.equals(name.trim(), true) }) { message = "An exercise with that name exists"; return false }
+        val e = catalog.normalizeCustom(mapOf("id" to id, "name" to name, "category" to category, "equipment" to equipment, "target" to target, "description" to description),
+            taken = data.customExercises.map { it.id }.toSet() - id) ?: return false
+        val list = data.customExercises.map { if (it.id == id) e else it }
+        catalog.setCustoms(list)
+        update(VaultFile.Config) { it.copy(customExercises = list) }
+        return true
+    }
+
+    /** Removes a custom exercise, its tags, like and routine slots. Past logs stay (as the web app). */
+    fun deleteCustomExercise(id: String) {
+        val list = data.customExercises.filter { it.id != id }
+        catalog.setCustoms(list)
+        update(VaultFile.Config, VaultFile.Routines) { d ->
+            d.copy(customExercises = list, exerciseTags = d.exerciseTags - id, liked = d.liked - id,
+                routines = d.routines.map { r -> r.copy(items = r.items.filter { it.exerciseId != id }) })
+        }
+    }
+
+    /** Tags for one exercise, cleaned like the web app (no , | #, 24 chars, 12 per exercise, no case-duplicates). */
+    fun setTags(id: String, tags: List<String>) {
+        val clean = tags.map { VaultFormat.sanitizeTagName(it) }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }.take(com.thehhr.form.data.Limits.TAGS_PER_EXERCISE)
+        update(VaultFile.Config) { d -> d.copy(exerciseTags = if (clean.isEmpty()) d.exerciseTags - id else d.exerciseTags + (id to clean)) }
+    }
+
+    /** Every tag in use, first spelling wins. */
+    val allTags: List<String> get() = data.exerciseTags.values.flatten().distinctBy { it.lowercase() }.sortedBy { it.lowercase() }
     // ------------------------------------------------------------------ routines & schedule
 
     fun saveRoutine(r: Routine) = update(VaultFile.Routines, VaultFile.Config) { d ->
@@ -279,10 +311,41 @@ class FormStore private constructor(val app: Application) {
         d.copy(routines = d.routines + Defaults.routines.filter { def -> d.routines.none { it.id == def.id } })
     }
 
+
+    /** Pasted routines.md text. Add keeps what's there (fresh ids, so nothing collides); Replace swaps the list. */
+    fun importRoutines(text: String, replace: Boolean): Int {
+        val parsed = format.parseRoutines(text).filter { it.items.isNotEmpty() || it.name.isNotBlank() }
+        if (parsed.isEmpty()) { message = "Nothing to import. Paste routines in Form's format."; return 0 }
+        val stamp = System.currentTimeMillis()
+        var added = parsed.size
+        if (replace) {
+            workout?.let { w -> if (parsed.none { it.id == w.routineId }) discardWorkout() }
+            update(VaultFile.Routines, VaultFile.Config) { d ->
+                val ids = parsed.map { it.id }.toSet()
+                d.copy(routines = parsed, schedule = d.schedule.filterValues { it in ids })
+            }
+        } else update(VaultFile.Routines) { d ->
+            // Exact duplicates (same name and exercises) are skipped, so importing the same text twice adds nothing.
+            val fresh = parsed.filter { p -> d.routines.none { it.name == p.name && it.items == p.items } }.also { added = it.size }
+            d.copy(routines = d.routines + fresh.mapIndexed { i, r -> format.sanitizeSupersets(r.copy(id = "r-$stamp-$i")) })
+        }
+        message = if (replace) "${parsed.size} routine${if (parsed.size == 1) "" else "s"} imported" else if (added == 0) "Already in your routines" else "$added routine${if (added == 1) "" else "s"} added"
+        return parsed.size
+    }
+
+    fun routinesText(ids: Set<String>) = format.writeRoutines(data.routines.filter { it.id in ids })
     // ------------------------------------------------------------------ logs
 
     fun addLog(log: ProgressLog) = update(VaultFile.TrainingLogs) { it.copy(logs = it.logs + log) }
     fun deleteLog(id: String) = update(VaultFile.TrainingLogs) { it.copy(logs = it.logs.filter { l -> l.id != id }) }
+
+    /** Rewrites a manual log (keeps id, creation time and session). A log the running workout owns is edited in the workout. */
+    fun updateLog(log: ProgressLog): Boolean {
+        val w = workout
+        if (w != null && (log.sessionId == w.token || log.id.startsWith("${w.token}-aw-"))) { message = "Edit this one in the active workout"; return false }
+        update(VaultFile.TrainingLogs) { d -> d.copy(logs = d.logs.map { if (it.id == log.id) log.copy(createdAt = it.createdAt, sessionId = it.sessionId) else it }) }
+        return true
+    }
 
     // ------------------------------------------------------------------ meals & diary
 
@@ -292,11 +355,35 @@ class FormStore private constructor(val app: Application) {
     fun deleteMeal(id: String) = update(VaultFile.Meals) { d -> d.copy(meals = d.meals.filter { it.id != id }) }
     fun loadDefaultMeals() = update(VaultFile.Meals) { d -> d.copy(meals = d.meals + Defaults.meals.filter { def -> d.meals.none { it.id == def.id } }) }
 
+    /** Pasted meals.md text; Add gives fresh ids, Replace swaps the library. */
+    fun importMeals(text: String, replace: Boolean): Int {
+        val parsed = format.parseMeals(text)
+        if (parsed.isEmpty()) { message = "Nothing to import. Paste meals in Form's format."; return 0 }
+        val stamp = System.currentTimeMillis()
+        var added = parsed.size
+        update(VaultFile.Meals) { d ->
+            val fresh = parsed.filter { p -> d.meals.none { it.copy(id = p.id, liked = p.liked) == p } }.also { if (!replace) added = it.size }
+            d.copy(meals = if (replace) parsed else d.meals + fresh.mapIndexed { i, m -> m.copy(id = "custom_${stamp}_$i") })
+        }
+        message = if (replace) "${parsed.size} meal${if (parsed.size == 1) "" else "s"} imported" else if (added == 0) "Already in your meals" else "$added meal${if (added == 1) "" else "s"} added"
+        return parsed.size
+    }
+
+    fun mealsText(ids: Set<String>) = format.writeMeals(data.meals.filter { it.id in ids })
+
+    /** The web app's skipMealEntry: a zero "Skipped" entry for the slot (once). A real meal later replaces it, see [logMeal]. */
+    fun skipMeal(date: String, slot: String) {
+        if (data.history[date]?.meals?.any { it.name == SKIPPED && it.category == slot } == true) return
+        editDay(date) { it.copy(meals = it.meals + MealEntry(newMealEntryId(), SKIPPED, 0.0, 0.0, 0.0, 0.0, slot)) }
+        message = "$slot skipped"
+    }
+
     private fun editDay(date: String, f: (DayLog) -> DayLog) = update(VaultFile.NutritionDiary) { d ->
         d.copy(history = d.history + (date to f(d.history[date] ?: DayLog())))
     }
     fun logMeal(date: String, entry: MealEntry) {
-        editDay(date) { it.copy(meals = it.meals + entry) }
+        // A real meal replaces a "Skipped" placeholder for the same slot (web addMeal).
+        editDay(date) { d -> d.copy(meals = d.meals.filterNot { it.isSkipPlaceholder && it.category == entry.category } + entry) }
         HealthSync.writeMeal(this, date, entry)
     }
     fun deleteMealEntry(date: String, id: String) {

@@ -25,7 +25,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.Button
@@ -87,12 +93,21 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
     val pr = WorkoutLogic.record(d.logs, id)
     var routineMenu by remember { mutableStateOf(false) }
     var logging by remember { mutableStateOf(false) }
+    var editingLog by remember { mutableStateOf<ProgressLog?>(null) }
+    var editingTags by remember { mutableStateOf(false) }
+    var editingCustom by remember { mutableStateOf(false) }
+    var deletingCustom by remember { mutableStateOf(false) }
+    val tags = d.exerciseTags[id].orEmpty()
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             FormTopBar(exTitle(e), scroll, subtitle = e?.let { jsTitle("${it.target} · ${it.equipment}") }, onBack = nav::pop) {
                 LikeButton(id in d.liked) { vm.toggleLike(id) }
+                if (e?.custom == true) {
+                    IconButton(onClick = { editingCustom = true }) { Icon(Icons.Rounded.Edit, "Edit exercise") }
+                    IconButton(onClick = { deletingCustom = true }) { Icon(Icons.Rounded.Delete, "Delete exercise") }
+                }
             }
         },
     ) { pad ->
@@ -106,9 +121,14 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
                 ) { ExerciseImage(e, Modifier.fillMaxHeight().aspectRatio(1f), animated = true) }
             }
             item {
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Muscle badges, then the user's tags in the same row, then a tag editor button.
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                     listOfNotNull(e?.category, e?.muscleGroup?.takeIf { it.isNotEmpty() }).plus(e?.secondary.orEmpty()).distinct()
                         .forEach { Tag(jsTitle(it)) }
+                    tags.forEach { Tag("#$it", accent = true) }
+                    androidx.compose.material3.FilledTonalIconButton(onClick = { editingTags = true }, shapes = androidx.compose.material3.IconButtonDefaults.shapes(),
+                        modifier = Modifier.size(36.dp)) { Icon(Icons.Rounded.Sell, if (tags.isEmpty()) "Add tags" else "Edit tags", Modifier.size(18.dp)) }
                 }
             }
             item {
@@ -167,10 +187,21 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
             }
             item { SectionTitle("History") }
             if (logs.isEmpty()) item { EmptyNote("No logs yet") }
-            itemsIndexed(logs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, logs.size, showName = false) }
+            itemsIndexed(logs, key = { _, l -> l.id }) { i, log -> LogRow(vm, log, i, logs.size, showName = false) { editingLog = log } }
         }
     }
     if (logging && e != null) LogProgressSheet(vm, e) { logging = false }
+    editingLog?.let { log -> if (e != null) LogProgressSheet(vm, e, log) { editingLog = null } }
+    if (editingTags) TagsDialog(tags, vm.allTags, { editingTags = false }) { vm.setTags(id, it); editingTags = false }
+    if (editingCustom && e != null) CustomExerciseDialog(vm, e) { editingCustom = false }
+    if (deletingCustom && e != null) AlertDialog(
+        onDismissRequest = { deletingCustom = false },
+        icon = { Icon(Icons.Rounded.Delete, null) },
+        title = { Text("Delete ${exTitle(e)}?") },
+        text = { Text("It's removed from your routines. Past logs are kept.") },
+        confirmButton = { TextButton(onClick = { deletingCustom = false; nav.pop(); vm.deleteCustomExercise(id) }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = { deletingCustom = false }) { Text("Cancel") } },
+    )
 }
 
 /**
@@ -178,26 +209,27 @@ fun ExerciseDetailScreen(vm: FormStore, nav: Nav, id: String) {
  * distance, and a note. Save rules follow saveProgressLog in www/app.js.
  */
 @Composable
-private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
+private fun LogProgressSheet(vm: FormStore, e: Exercise, editing: ProgressLog? = null, onClose: () -> Unit) {
     val units = vm.data.prefs.units
     val logs = vm.data.logs.filter { it.exerciseId == e.id }.sortedWith(compareByDescending<ProgressLog> { it.date }.thenByDescending { it.createdAt })
-    val lastTimed = logs.firstOrNull { it.timed }
-    val lastStrength = logs.firstOrNull { !it.timed }
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var timed by remember { mutableStateOf(e.timedCardio || (lastStrength == null && lastTimed != null)) }
+    // Editing prefills from that log; a new entry prefills from the latest log of each kind.
+    val lastTimed = editing?.takeIf { it.timed } ?: logs.firstOrNull { it.timed }
+    val lastStrength = editing?.takeIf { !it.timed } ?: logs.firstOrNull { !it.timed }
+    var date by remember { mutableStateOf(editing?.let { LocalDate.parse(it.date) } ?: LocalDate.now()) }
+    var timed by remember { mutableStateOf(editing?.timed ?: (e.timedCardio || (lastStrength == null && lastTimed != null))) }
     var sec by remember { mutableStateOf(lastTimed?.durUnit?.let { it == "sec" } ?: !e.timedCardio) }
-    var showWeight by remember { mutableStateOf(e.equipment != "body weight" || (lastStrength?.setWeights?.any { it > 0 } == true)) }
-    var showDistance by remember { mutableStateOf(e.timedCardio || lastTimed?.setDistances != null) }
+    var showWeight by remember { mutableStateOf(editing?.let { (it.weight ?: 0.0) > 0 || it.setWeights?.any { w -> w > 0 } == true } ?: (e.equipment != "body weight" || (lastStrength?.setWeights?.any { it > 0 } == true))) }
+    var showDistance by remember { mutableStateOf(if (editing != null) editing.setDistances != null else e.timedCardio || lastTimed?.setDistances != null) }
     val lastW = WorkoutLogic.lastWeight(vm.data.logs, e.id, includeTimed = true)
-    var reps by remember { mutableStateOf(lastStrength?.setReps?.takeIf { it.isNotEmpty() } ?: List(3) { lastStrength?.reps ?: 10 }) }
-    var weights by remember { mutableStateOf(lastStrength?.setWeights?.takeIf { it.isNotEmpty() }?.let { w -> List(reps.size) { w.getOrElse(it) { w.last() } } } ?: List(reps.size) { lastW }) }
+    var reps by remember { mutableStateOf(lastStrength?.setReps?.takeIf { it.isNotEmpty() } ?: List((lastStrength?.sets ?: 3).coerceIn(1, Limits.SETS)) { lastStrength?.reps ?: 10 }) }
+    var weights by remember { mutableStateOf(lastStrength?.setWeights?.takeIf { it.isNotEmpty() }?.let { w -> List(reps.size) { w.getOrElse(it) { w.last() } } } ?: List(reps.size) { editing?.weight ?: lastW }) }
     // Durations kept in the display unit while editing; stored as minutes on save.
     var durations by remember {
         mutableStateOf(lastTimed?.setDurations?.map { if (sec) round1(it * 60) else round1(it) }?.takeIf { it.isNotEmpty() } ?: List(lastTimed?.intervals ?: 1) { if (sec) 30.0 else 20.0 })
     }
-    var distances by remember { mutableStateOf(lastTimed?.setDistances?.takeIf { it.isNotEmpty() } ?: List(durations.size) { 0.0 }) }
-    var timedWeights by remember { mutableStateOf(List(durations.size) { lastW }) }
-    var notes by remember { mutableStateOf("") }
+    var distances by remember { mutableStateOf(List(durations.size) { lastTimed?.setDistances?.getOrNull(it) ?: 0.0 }) }
+    var timedWeights by remember { mutableStateOf(List(durations.size) { i -> editing?.takeIf { it.timed }?.setWeights?.getOrNull(i) ?: lastW }) }
+    var notes by remember { mutableStateOf(editing?.notes.orEmpty()) }
     var pickingDate by remember { mutableStateOf(false) }
 
     fun <T> resize(list: List<T>, n: Int, fill: T) = List(n) { list.getOrElse(it) { list.lastOrNull() ?: fill } }
@@ -226,8 +258,8 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
             base.copy(sets = count, reps = reps.first(), setReps = reps,
                 weight = if (weighted) w.last { it > 0 } else null, setWeights = w.takeIf { weighted })
         }
-        vm.addLog(log)
-        vm.message = "Progress saved"
+        if (editing != null) { if (!vm.updateLog(log.copy(id = editing.id))) return } else vm.addLog(log)
+        vm.message = if (editing != null) "Log updated" else "Progress saved"
         onClose()
     }
 
@@ -236,25 +268,27 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
             Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(exTitle(e), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(if (editing != null) "Edit log · ${exTitle(e)}" else exTitle(e), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            ChoiceGroup(listOf(false to "Reps", true to "Timed"), timed, { timed = it })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { pickingDate = true }, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 12.dp)) {
-                    Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                androidx.compose.material3.FilledTonalButton(onClick = { pickingDate = true }, shapes = ButtonDefaults.shapes(),
+                    contentPadding = PaddingValues(horizontal = 16.dp), modifier = Modifier.weight(1f).height(48.dp)) {
+                    Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                     Text(if (date == LocalDate.now()) "Today" else displayDate(date.toString()), maxLines = 1)
                 }
-                ChoiceGroup(listOf(false to "Reps", true to "Timed"), timed, { timed = it }, Modifier.weight(1f))
-            }
-            if (timed) ChoiceGroup(listOf(true to "Seconds", false to "Minutes"), sec, { new ->
-                if (new != sec) durations = durations.map { if (new) round1(it * 60) else round1(it / 60) }
-                sec = new
-            })
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
                 Stepper(if (timed) "intervals" else "sets", count.toDouble(), 1.0, 1.0..Limits.SETS.toDouble(), { setCount(it.toInt()) })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Pill(showWeight, { showWeight = !showWeight }, label = { Text("Weight") })
                 if (timed) Pill(showDistance, { showDistance = !showDistance }, label = { Text("Distance") })
+                if (timed) {
+                    Spacer(Modifier.weight(1f))
+                    ChoiceGroup(listOf(true to "Sec", false to "Min"), sec, { new ->
+                        if (new != sec) durations = durations.map { if (new) round1(it * 60) else round1(it / 60) }
+                        sec = new
+                    }, Modifier.width(132.dp))
+                }
             }
             // Column header, then one row per set.
             val cols = buildList {
@@ -310,4 +344,43 @@ private fun LogProgressSheet(vm: FormStore, e: Exercise, onClose: () -> Unit) {
             dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Cancel") } },
         ) { DatePicker(state) }
     }
+}
+
+/** Edit one exercise's tags: remove chips, type a new one, or reuse a tag from other exercises. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun TagsDialog(current: List<String>, known: List<String>, onDismiss: () -> Unit, onSave: (List<String>) -> Unit) {
+    var tags by remember { mutableStateOf(current) }
+    var text by remember { mutableStateOf("") }
+    fun add(t: String) {
+        val clean = com.thehhr.form.data.VaultFormat.sanitizeTagName(t)
+        if (clean.isNotEmpty() && tags.none { it.equals(clean, true) } && tags.size < Limits.TAGS_PER_EXERCISE) tags = tags + clean
+        text = ""
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Sell, null) },
+        title = { Text("Tags") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tags.forEach { t ->
+                        androidx.compose.material3.InputChip(selected = true, onClick = { tags = tags - t }, label = { Text(t) },
+                            trailingIcon = { Icon(Icons.Rounded.Close, "Remove $t", Modifier.size(18.dp)) })
+                    }
+                }
+                androidx.compose.material3.OutlinedTextField(text, { text = it.take(Limits.TAG_LENGTH) }, Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("New tag") }, supportingText = { Text("${tags.size}/${Limits.TAGS_PER_EXERCISE}") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { add(text) }),
+                    trailingIcon = { IconButton(onClick = { add(text) }, enabled = text.isNotBlank()) { Icon(Icons.Rounded.Add, "Add tag") } })
+                val suggestions = known.filter { k -> tags.none { it.equals(k, true) } && k.contains(text.trim(), true) }.take(8)
+                if (suggestions.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    suggestions.forEach { s -> Pill(false, { add(s) }, label = { Text("#$s") }) }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(if (text.isNotBlank()) (tags + text) else tags) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
