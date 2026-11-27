@@ -31,6 +31,9 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.animation.animateContentSize
+import com.thehhr.form.data.isSkipPlaceholder
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -167,16 +170,17 @@ fun FuelTab(vm: FormStore) {
             if (meals.isNotEmpty()) {
                 item(key = "h-$cat") { SectionTitle("$cat · ${jsRound(meals.sumOf { it.cals })} kcal") }
                 itemsIndexed(meals, key = { _, m -> "m-${m.id}-${m.name}" }) { i, m ->
+                    val skipped = m.isSkipPlaceholder
                     GroupedItem(
-                        i, meals.size,
-                        supporting = { Text("${jsNum(m.p)}p · ${jsNum(m.c)}c · ${jsNum(m.f)}f") },
+                        i, meals.size, modifier = Modifier.animateItem(),
+                        supporting = if (skipped) null else ({ Text("${jsNum(m.p)}p · ${jsNum(m.c)}c · ${jsNum(m.f)}f") }),
                         trailing = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("${jsRound(m.cals)}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
+                                if (!skipped) Text("${jsRound(m.cals)}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary)
                                 IconButton(onClick = { vm.deleteMealEntry(date, m.id) }) { Icon(Icons.Rounded.Close, "Remove ${m.name}") }
                             }
                         },
-                    ) { Text(m.name) }
+                    ) { Text(m.name, color = if (skipped) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified) }
                 }
             }
         }
@@ -208,8 +212,16 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
     var mp by remember { mutableStateOf(0.0) }; var mc by remember { mutableStateOf(0.0) }; var mf by remember { mutableStateOf(0.0) }
     val addLabel = "Add to $slot"
     ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Log meal", style = MaterialTheme.typography.titleMediumEmphasized)
+        // Height follows the content with the theme's spring, so switching tabs grows/shrinks the sheet instead of jumping.
+        Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).imePadding().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Log meal", Modifier.weight(1f), style = MaterialTheme.typography.titleMediumEmphasized)
+                // Web parity: a main meal slot with nothing in it can be marked skipped (a zero "Skipped" entry).
+                if (slot != "Snacks" && day.meals.none { it.category == slot }) TextButton(onClick = { vm.skipMeal(date, slot); onClose() }) {
+                    Icon(Icons.Rounded.DoNotDisturbOn, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Skip $slot")
+                }
+            }
             ChoiceGroup(Fuel.SLOTS.map { it to it }, slot, { slot = it })
             ChoiceGroup(listOf(0 to "Library", 1 to "Manual", 2 to "Barcode"), mode, { mode = it })
             if (mode == 2) {

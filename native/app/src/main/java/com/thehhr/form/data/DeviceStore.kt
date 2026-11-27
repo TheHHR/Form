@@ -27,6 +27,10 @@ class DeviceStore(context: Context) {
     var lastAccent: String
         get() = prefs.getString("last_accent", null) ?: "lime"
         set(v) = prefs.edit().putString("last_accent", v).apply()
+    /** Last AI pane: coach, routine or meal. */
+    var aiTab: String
+        get() = prefs.getString("ai_tab", null)?.takeIf { it in listOf("coach", "routine", "meal") } ?: "coach"
+        set(v) = prefs.edit().putString("ai_tab", v).apply()
     var notificationsAsked: Boolean
         get() = prefs.getBoolean("notifications_asked", false)
         set(v) = prefs.edit().putBoolean("notifications_asked", v).apply()

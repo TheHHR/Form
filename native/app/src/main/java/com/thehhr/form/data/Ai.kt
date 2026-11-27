@@ -56,7 +56,14 @@ object AiClient {
         else -> "Request failed (HTTP $status)"
     }
 
-    fun complete(cfg: AiConfig, system: String, prompt: String, maxTokens: Int, timeoutMs: Int): String {
+    fun complete(cfg: AiConfig, system: String, prompt: String, maxTokens: Int, timeoutMs: Int, image: ByteArray? = null): String {
+        val b64 = image?.let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) }
+        val geminiParts = JSONArray().put(JSONObject().put("text", prompt)).apply {
+            if (b64 != null) put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/jpeg").put("data", b64)))
+        }
+        // OpenAI-compatible multimodal content: text part plus a data-URI image part.
+        val userContent: Any = if (b64 == null) prompt else JSONArray().put(JSONObject().put("type", "text").put("text", prompt))
+            .put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$b64")))
         if (!cfg.configured) throw AiException("Set up a provider in the AI tab first")
         val gemini = cfg.provider == "gemini"
         val url = when (cfg.provider) {
@@ -67,10 +74,10 @@ object AiClient {
         if (!url.startsWith("https://")) throw AiException("The provider URL must start with https://")
         val body = if (gemini) JSONObject()
             .put("system_instruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
-            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt)))))
+            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", geminiParts)))
             .put("generationConfig", JSONObject().put("temperature", 0.5).put("maxOutputTokens", maxTokens))
         else JSONObject().put("model", cfg.model)
-            .put("messages", JSONArray().put(JSONObject().put("role", "system").put("content", system)).put(JSONObject().put("role", "user").put("content", prompt)))
+            .put("messages", JSONArray().put(JSONObject().put("role", "system").put("content", system)).put(JSONObject().put("role", "user").put("content", userContent)))
             .put("temperature", 0.5)
             .put(if (cfg.provider == "openai") "max_completion_tokens" else "max_tokens", maxTokens)
         val conn = URL(url).openConnection() as HttpURLConnection
