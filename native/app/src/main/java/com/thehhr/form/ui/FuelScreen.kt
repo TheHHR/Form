@@ -221,7 +221,6 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
                 view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 vm.skipMeal(date, s); onClose()
             })
-            ChoiceGroup(listOf(0 to "Library", 1 to "Manual"), mode, { mode = it })
             if (mode == 0) {
                 val meal = picked
                 if (meal == null) {
@@ -234,14 +233,19 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
                     )
                     val list = vm.data.meals.filter { it.name.contains(query.trim(), true) }
                         .sortedWith(compareByDescending<Meal> { it.liked }.thenBy { it.name.lowercase() })
-                    if (list.isEmpty()) EmptyNote("No meals yet. Add some in Plans → Meals, or try Manual.")
-                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    if (list.isEmpty()) EmptyNote("No meals yet. Tap Add to log one by hand, or save some in Plans → Meals.")
+                    // Library first; a FAB opens manual entry (name + macros) for anything not in the library.
+                    Box(Modifier.fillMaxWidth()) {
+                    LazyColumn(Modifier.heightIn(max = 360.dp), contentPadding = PaddingValues(bottom = 72.dp)) {
                         itemsIndexed(list, key = { _, m -> m.id }) { i, m ->
                             GroupedItem(i, list.size, onClick = { picked = m; grams = m.defaultGrams },
                                 supporting = { Text("${jsNum(m.defaultGrams)} g serving") },
                                 trailing = { Text("${jsNum(m.cals100)}", style = MaterialTheme.typography.titleMediumEmphasized, color = MaterialTheme.colorScheme.primary) },
                             ) { Text(m.name) }
                         }
+                    }
+                    androidx.compose.material3.ExtendedFloatingActionButton(onClick = { mode = 1 }, icon = { Icon(Icons.Rounded.Add, null) },
+                        text = { Text("Add") }, modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp))
                     }
                 } else {
                     val e = Fuel.entryFor(meal, grams, slot, "")
@@ -281,6 +285,7 @@ private fun LogMealSheet(vm: FormStore, date: String, day: DayLog, onClose: () -
                 }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(ButtonDefaults.MediumContainerHeight)) {
                     Text(addLabel, style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight))
                 }
+                TextButton(onClick = { mode = 0 }, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Back to library") }
             }
         }
     }
